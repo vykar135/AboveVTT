@@ -1711,6 +1711,14 @@ function token_context_menu_expanded(tokenIds, e, crossScenePortalData) {
 
 	body.append(conditionsRow);
 
+	let statusEffectsMenuItem = $(`<div class="token-image-modal-footer-select-wrapper flyout-from-menu-item"><div class="token-image-modal-footer-title">Status Effects</div></div>`);
+	statusEffectsMenuItem.hover(function (hoverEvent) {
+		context_menu_flyout("conditions-flyout", hoverEvent, function(flyout) {
+			flyout.append(build_status_effects_flyout_menu(tokens));
+		})
+	});
+	body.append(statusEffectsMenuItem);
+
 
 	// Auras (torch, lantern, etc)
 	let aurasRow = $(`<div class="token-image-modal-footer-select-wrapper flyout-from-menu-item"><div class="token-image-modal-footer-title">Token Auras</div></div>`);
@@ -3997,6 +4005,21 @@ function build_conditions_and_markers_flyout_menu(tokenIds) {
 		body.find(".active-condition").click(); // anything that is active should be deactivated.
 	});
 	conditionsList.prepend(removeAllItem);
+
+	return body;
+}
+
+function build_status_effects_flyout_menu(tokens) {
+	let body = $("<div></div>");
+	body.css({
+		width: "fit-content", // once we add Markers, make this wide enough to contain them all
+		padding: "5px",
+		display: "flex",
+		"flex-direction": "row"
+	});
+
+	let standIn = $(`<div>Selected ${tokens?.length || 0} tokens</div>`)
+	body.append(standIn);
 
 	return body;
 }
