@@ -22,13 +22,14 @@
 /**
  * @typedef {StatusEffect & ConcentrationEffectExtensions} ConcentrationEffect
  * @typedef ConcentrationEffectExtensions
- * @property {string[]} appliedTo - Collection of token identifiers that the effect is being applied to.
+ * @property {string[]} targets - Collection of token identifiers that the effect is being applied to.
  */
 
 /**
  * @typedef {StatusEffect & ActiveStatusEffectExtensions} ActiveStatusEffect
  * @typedef ActiveStatusEffectExtensions
- * @property {string} appliedBy - The identifier of the token that applied the effect when the effect is being concentrated on or has token-based trigger action
+ * @property {string} source - The identifier of the token that applied the effect when the effect is being concentrated on or has token-based trigger action
+ * @property {boolean} concentration - Whether the effect is being maintained through concentration
  */
 
 /**
