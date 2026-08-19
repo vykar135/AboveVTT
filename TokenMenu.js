@@ -4009,7 +4009,7 @@ function build_status_effects_flyout_menu(tokens) {
 		"flex-direction": "row"
 	});
 
-	let standIn = $(`<div>Selected ${tokens?.length || 0} tokens</div>`)
+	let standIn = $(`<div>Selected ${(tokens?.length ?? 0) > 0 ? tokens[0].statusEffects.reviewConcentration() : 'asdf'} tokens</div>`)
 	body.append(standIn);
 
 	return body;
