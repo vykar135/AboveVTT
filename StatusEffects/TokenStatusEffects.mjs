@@ -280,7 +280,7 @@ export default class TokenStatusEffects {
         const rebuild = current.filter(item => item.tracking !== tracking);
         settings.maintaining = rebuild;
 
-        const removed = (rebuild.length !== current.length);
+        let removed = (rebuild.length !== current.length);
         this.#hasPendingChanges(removed);
 
         if (removed) {
@@ -305,7 +305,7 @@ export default class TokenStatusEffects {
         for (const [key, value] in Object.entries(window.TOKEN_OBJECTS)) {
             const removed = value.statusEffects.dropActiveEffect(tracking);
 
-            if (remove) {
+            if (removed) {
                 removedAnywhere = true;
                 changes[key] = value.statusEffects;
             }
