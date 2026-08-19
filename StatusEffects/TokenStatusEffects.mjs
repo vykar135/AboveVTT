@@ -9,6 +9,8 @@ import { ResolutionTrigger, ImpactTrigger, EffectResolution } from './enums.mjs'
 export default class TokenStatusEffects {
     #token;
     #pendingChanges;
+    #pendingSceneTokens;
+    #pendingCampaignTokens;
 
     /**
      * Manages the status effects associated with the provided Token
@@ -17,26 +19,52 @@ export default class TokenStatusEffects {
     constructor(token){
         this.#token = token;
         this.#pendingChanges = false;
+        this.#pendingSceneTokens = {};
+        this.#pendingCampaignTokens = {};
     }
 
     /** Requests a token update message to be dispatched only if there are pending changes that have been observed by this instance */
     syncPending() {
-        if (this.#pendingChanges !== true) {
-            return;
+        if (this.#pendingChanges === true) {
+            this.#pendingChanges = false;
+            this.#token.sync();
         }
 
-        this.#pendingChanges = false;
-        this.#token.sync();
+        const scene = {...this.#pendingSceneTokens};
+        const campaign = {...this.#pendingCampaignTokens};
+
+        this.#pendingSceneTokens = {};
+        this.#pendingCampaignTokens = {};
+
+        for (const target of scene) {
+            target.syncPending();
+        }
+
+        for (const target of campaign) {
+            target.syncPending();
+        }
     }
 
     /** Requests a token update message to be dispatched and updates any related interface components only if there are pending changes that have been observed by this instance */
     syncPendingAndUpdate() {
-        if (this.#pendingChanges !== true) {
-            return;
+        if (this.#pendingChanges === true) {
+            this.#pendingChanges = false;
+            this.#token.update_and_sync();
         }
 
-        this.#pendingChanges = false;
-        this.#token.update_and_sync();
+        const scene = {...this.#pendingSceneTokens};
+        const campaign = {...this.#pendingCampaignTokens};
+
+        this.#pendingSceneTokens = {};
+        this.#pendingCampaignTokens = {};
+
+        for (const target of scene) {
+            target.syncPendingAndUpdate();
+        }
+
+        for (const target of campaign) {
+            target.syncPendingAndUpdate();
+        }
     }
 
     /**
@@ -256,8 +284,8 @@ export default class TokenStatusEffects {
         this.#hasPendingChanges(removed);
 
         if (removed) {
-            this.#dropGlobalActiveEffects(window.TOKEN_OBJECTS, tracking);
-            this.#dropGlobalActiveEffects(window.all_token_objects, tracking);
+            removed = this.#dropGlobalActiveEffects(window.TOKEN_OBJECTS, tracking, this.#pendingSceneTokens) || removed;
+            removed = this.#dropGlobalActiveEffects(window.all_token_objects, tracking, this.#pendingCampaignTokens) || removed;
         }
         
         return removed;
@@ -268,14 +296,22 @@ export default class TokenStatusEffects {
      * @param {Object.<string, Token>} tokens - The collection of 
      * @param {string} tracking - The tracking identifier of the effect to drop.
      */
-    #dropGlobalActiveEffects(tokens, tracking) {
+    #dropGlobalActiveEffects(tokens, tracking, changes) {
         if (tokens == null) {
             return;
         }
 
+        let removedAnywhere = false;
         for (const [key, value] in Object.entries(window.TOKEN_OBJECTS)) {
-            value.statusEffects.dropActiveEffect(tracking);
+            const removed = value.statusEffects.dropActiveEffect(tracking);
+
+            if (remove) {
+                removedAnywhere = true;
+                changes[key] = value.statusEffects;
+            }
         }
+
+        return removedAnywhere;
     }
 
     /**
