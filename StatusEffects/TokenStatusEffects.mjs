@@ -1,71 +1,345 @@
-/** @import { Token } from '../Token.js' */
-/** @import { Concentration, TokenStatusEffectContainer } from './types.js' */
+/** @import { TokenStatusEffectContainer, Concentration, MaintainedEffect, ActiveStatusEffect, PassiveStatusEffect, StatusEffect } from './types.js' */
 
 import * as Enums from '../CoreEnums.mjs'
 import { ResolutionTrigger, ImpactTrigger, EffectResolution } from './enums.mjs'
 
+/**
+ * Manages the active, passive, and maintained (concentration) status effects that are currently effecting to a token.
+ */
 export default class TokenStatusEffects {
-    #parent;
+    #token;
+    #pendingChanges;
 
     /**
      * Manages the status effects associated with the provided Token
      * @param {Token} parent
      */
-    constructor(parent){
-        this.#parent = parent;
+    constructor(token){
+        this.#token = token;
+        this.#pendingChanges = false;
+    }
 
-        if (!('status_effects' in this.#parent.options)) {
-            this.#parent.options.status_effects = {};
+    /** Requests a token update message to be dispatched only if there are pending changes that have been observed by this instance */
+    syncPending() {
+        if (this.#pendingChanges !== true) {
+            return;
         }
+
+        this.#pendingChanges = false;
+        this.#token.sync();
     }
 
-    /** @returns {TokenStatusEffectContainer} */
-    get #container() {
-        return this.#parent.options.status_effects;
-    }
+    /** Requests a token update message to be dispatched and updates any related interface components only if there are pending changes that have been observed by this instance */
+    syncPendingAndUpdate() {
+        if (this.#pendingChanges !== true) {
+            return;
+        }
 
-    get #concentration() {
-        return this.#container?.concentration || {};
-    }
-
-    /** Whether the token is currently concentrating on at least 1 status effect. */
-    get isConcentrating() {
-        const settings = this.#concentration;
-        return (settings.allowed || false) && (settings.maintaining || []).length > 0;
+        this.#pendingChanges = false;
+        this.#token.update_and_sync();
     }
 
     /**
-     * Whether the token is allowed to concetrate on status effects
-     * @param {boolean} allowed 
-     * */
-    canConcentrate(allowed) {
-        const settings = this.#concentration;
-        settings.allowed = allowed || false;
+     * Updates the current state of the pending changes flag; preserving if it was already set.
+     * @param {boolean} modified - Whether a modification occurred.
+     */
+    #hasPendingChanges(modified) {
+        if (modified === true) {
+            this.#pendingChanges = true;
+        }
+    }
 
-        if (!settings.allowed !== true) {
+    /**
+     * @return {Token} The token that is being managed
+     */
+    get token() {
+        return this.#token;
+    }
+
+    /**
+     * @returns {string} The identifier of the token being managed
+     */
+    get id() {
+        return this.#token.options.id;
+    }
+
+    /**
+     * Retrieves or initialized the main status effects container from the token options.
+     * @returns {TokenStatusEffectContainer}
+     */
+    #getContainer() {
+        if (this.#token.options.status_effects == null) {
+            this.#token.options.status_effects = {};
+        }
+
+        return this.#token.options.status_effects;
+    }
+
+    /**
+     * Retrieves or initialized the concentration settings for the token.
+     * @param {TokenStatusEffectContainer?} container - The status effect container to retrieve the concentration settings from.
+     * @returns {Concentration}
+     */
+    #getConcentration(container = undefined) {
+        const settings = container ?? this.#getContainer();
+        if (settings.concentration == null) {
+            settings.concentration = {};
+        }
+
+        return settings.concentration;
+    }
+
+    /**
+     * Retrieves or initialized the collection of effects being maintained by the token.
+     * @param {TokenStatusEffectContainer?} container - The status effect container to retrieve the concentration settings from.
+     * @returns {MaintainedEffect[]}
+     */
+    getMaintaining(container = undefined) {
+        const settings = container ?? this.#getContainer();
+        if (settings.maintaining == null) {
+            settings.maintaining = [];
+        }
+
+        return settings.maintaining;
+    }
+
+    /**
+     * Retrieves or initialized the collection of effects being maintained by the token.
+     * @param {TokenStatusEffectContainer?} container - The status effect container to retrieve the concentration settings from.
+     * @returns {ActiveStatusEffect[]}
+     */
+    getActive(container = undefined) {
+        const settings = container ?? this.#getContainer();
+        if (settings.active == null) {
+            settings.active = [];
+        }
+
+        return settings.active;
+    }
+
+    /**
+     * Retrieves or initialized the collection of effects being maintained by the token.
+     * @param {TokenStatusEffectContainer?} container - The status effect container to retrieve the concentration settings from.
+     * @returns {PassiveStatusEffect[]}
+     */
+    getPassive(container = undefined) {
+        const settings = container ?? this.#getContainer();
+        if (settings.passive == null) {
+            settings.passive = [];
+        }
+
+        return settings.passive;
+    }
+
+    /** Whether the token is currently affected by the Incapacitated state */
+    get incapacitated() {
+        return this.#getContainer().incapacitated ?? false;
+    }
+
+    /** Whether the token is currently concentrating on one or more effects */
+    get concentrating() {
+        return this.#getContainer().concentrating ?? false;
+    }
+
+    /** Whether the token is permitted to concentrate */
+    get concentrationAllowed() {
+        return this.#getContainer().concentration?.allowed ?? true;
+    }
+
+    /** Whether concentration for the the token is temporarily being prevented */
+    get concentrationBlocked() {
+        return this.#getContainer().concentration?.blocked ?? false;
+    }
+
+    /** The amount of status effects that the token is allowed to concentrate on */
+    get concentrationLimit() {
+        return this.#getContainer().concentration?.limit ?? 1;
+    }
+
+    /**
+     * Whether the token is entering or leaving the Incapacitated state
+     * @param {boolean} affected - true when incapacitated; otherwise false
+     * */
+    isIncapacitated(affected) {
+        const settings = this.#getContainer();
+        const previous = settings.incapacitated;
+
+        settings.incapacitated = (affected ?? false);
+
+        this.#hasPendingChanges(settings.incapacitated !== previous);
+
+        if (settings.incapacitated === true) {
             this.dropConcentration();
         }
     }
 
     /**
-     * Applies a status effect that is being concentrated on by the token to the specified targets.
-     * @param {StatusEffect} effect - The effect to concentrate on
-     * @param {string[]} targets - Collection of token identifiers that the effect is being applied to.
-     */
-    applyConcentration(effect, targets) {
-        const settings = this.#concentration;
-        if (!(settings.allowed || true)) {
-            return;
-        }
+     * Whether the token is allowed to concetrate on status effects
+     * @param {boolean} allowed - Whether the token is permitted to concentrate
+     * @param {number} limit - The maximum number of effects that the token can concentrate on
+     * @param {boolean} blocked - Whether concentration for the the token is temporarily being prevented
+     * */
+    canConcentrate(allowed, limit, blocked) {
+        const settings = this.#getConcentration();
+        const wasAllowed = settings.allowed;
+        const wasBlocked = settings.blocked;
+        const previousLimit = settings.limit;
 
+        settings.allowed = allowed ?? true;
+        settings.blocked = blocked ?? true;
+        settings.limit = limit ?? 1;
+
+        this.#hasPendingChanges(settings.allowed !== wasAllowed || settings.blocked !== wasBlocked || settings.limit !== previousLimit);
+        this.reviewConcentration();
+    }
+
+    /** Drops all ongoing concentration effects */
+    dropConcentration() {
+        const settings = this.#getContainer();
+        const wasConcentrating = settings.concentrating;
+        settings.concentrating = false;
+
+        this.#hasPendingChanges(settings.concentrating !== wasConcentrating);
+
+        const current = maintaining.filter(item => this.requiresConcentration(item));
+        for (const effect in abandoned) {
+            this.dropMaintainedEffect(effect.tracking);
+        }
     }
 
     /**
-     * Drops all ongoing concentration effects
-     * @param {number?} - The index of the status effect being concentrated on to drop.
+     * Clears a passive status effect from the token by its tracking identifier.
+     * @param {string} tracking - The tracking identifier of the effect to drop.
      */
-    dropConcentration(index) {
+    dropPassiveEffect(tracking) {
+        const settings = this.#getContainer();
+        const current = this.getPassive(settings);
 
+        const rebuild = current.filter(item => item.tracking !== tracking);
+        settings.passive = rebuild;
+
+        const removed = (rebuild.length !== current.length);
+        this.#hasPendingChanges(removed);
+        return removed;
+    }
+
+    /**
+     * Clears an active status effect from the token by its tracking identifier.
+     * @param {string} tracking - The tracking identifier of the effect to drop.
+     * @returns {boolean} - Whether an effect was removed.
+     */
+    dropActiveEffect(tracking) {
+        const settings = this.#getContainer();
+        const current = this.getActive(settings);
+
+        const rebuild = current.filter(item => item.tracking !== tracking);
+        settings.active = rebuild;
+
+        const removed = (rebuild.length !== current.length);
+        this.#hasPendingChanges(removed);
+        return removed;
+    }
+
+    /**
+     * Clears a maintained status effect from the token by its tracking identifier along with any active effects on other tokens.
+     * @param {string} tracking - The tracking identifier of the effect to drop.
+     * @returns {boolean} - Whether an effect was removed.
+     */
+    dropMaintainedEffect(tracking) {
+        const settings = this.#getContainer();
+        const current = this.getMaintaining(settings);
+
+        const rebuild = current.filter(item => item.tracking !== tracking);
+        settings.maintaining = rebuild;
+
+        const removed = (rebuild.length !== current.length);
+        this.#hasPendingChanges(removed);
+
+        if (removed) {
+            this.#dropGlobalActiveEffects(window.TOKEN_OBJECTS, tracking);
+            this.#dropGlobalActiveEffects(window.all_token_objects, tracking);
+        }
+        
+        return removed;
+    }
+
+    /**
+     * Clears an active status effect from all tokens in the collection by its tracking identifier.
+     * @param {Object.<string, Token>} tokens - The collection of 
+     * @param {string} tracking - The tracking identifier of the effect to drop.
+     */
+    #dropGlobalActiveEffects(tokens, tracking) {
+        if (tokens == null) {
+            return;
+        }
+
+        for (const [key, value] in Object.entries(window.TOKEN_OBJECTS)) {
+            value.statusEffects.dropActiveEffect(tracking);
+        }
+    }
+
+    /**
+     * Review the current settings and maintained effects to determine if any updates to the token need to occur.
+     * @returns {number} - The number of effects that are currently being concentrated on.
+     */
+    reviewConcentration() {
+        const settings = this.#getContainer();
+        const concentration = this.#getConcentration(settings);
+        const maintaining = this.getMaintaining(settings);
+
+        if (settings.incapacitated === true || concentration.allowed === false || concentration.blocked === true) {
+            this.dropConcentration();
+            return 0;
+        }
+
+        const current = maintaining.filter(item => this.requiresConcentration(item));
+        if (current.length === 0) {
+            if (settings.concentrating !== false) {
+                this.#pendingChanges = true;
+                settings.concentrating = false;
+            }
+
+            return 0;
+        }
+
+        let limit = concentration.limit || 1;
+        if (limit < 0) {
+            this.#pendingChanges = true;
+            concentration.limit = limit = 0;
+        }
+
+        if (current.length <= limit) {
+            return current.length;
+        }
+
+        if (limit < 1) {
+            this.dropConcentration();
+            return 0;
+        }
+        
+        this.#pendingChanges = true;
+        const abandoned = [];
+
+        // Since the token is beyond its concentration limit, 
+        // we need to end the appropriate number of the earliest effects
+        while (current.length > limit) {
+            const leaving = current.shift();
+            abandoned.push(leaving);
+        }
+
+        for (const effect in abandoned) {
+            this.dropMaintainedEffect(effect.tracking);
+        }
+
+        return current.length;
+    }
+
+    /**
+     * Determines whether the provided status effect requires concentration
+     * @param {StatusEffect} effect 
+     */
+    requiresConcentration(effect) {
+        return effect.concentration ?? false
     }
 }
 
