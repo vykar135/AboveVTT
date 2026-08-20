@@ -1,10 +1,12 @@
 /** @import * as CoreEnums from '../CoreEnums.types.js'  */
 
 /**
- * @typedef {'hit' | 'hit:attack' | 'hit:spell' | 'ability' | 'skill' | 'damage' | 'heal' | 'modifier'} EffectImpactType
+ * @typedef {'effect:damage' | 'effect:heal' | 'effect:modify'} EffectImpactType
  * @typedef { CoreEnums.DiceSizeType | CoreEnums.AbilityCheckType | CoreEnums.SavingThrowType | CoreEnums.SkillCheckType } EffectResolutionType
- * @typedef {'turn:start' | 'turn:end' | 'round:start' | 'source:start' | 'source:end' | 'initiative:start' | 'initiative:end'} EffectResolutionTriggerType
- * @typedef {EffectResolutionTriggerType | 'movement' | 'action' | 'action:any' | 'action:bonus' | 'reaction'} EffectImpactTriggerType
+ * 
+ * @typedef {'turn:start' | 'turn:end' | 'round:start' | 'source:start' | 'source:end' | 'initiative:start' | 'initiative:end'} CombatTrackerTriggerType
+ * @typedef {'movement' | 'action' | 'action:any' | 'action:bonus' | 'reaction'} ActionBasedTriggerType
+ * @typedef {CombatTrackerTriggerType | ActionBasedTriggerType} EffectImpactTriggerType
  */
 
 /**
@@ -32,6 +34,7 @@
  * @typedef {StatusEffect & ActiveStatusEffectExtensions} ActiveStatusEffect
  * @typedef ActiveStatusEffectExtensions
  * @property {string} source - The identifier of the token that applied the effect when the effect is being concentrated on or has token-based trigger action
+ * @property {boolean} fromMaintained - The details for the active effect are to be retrieved from maintained effect list for the token
  */
 
 /**
@@ -47,7 +50,7 @@
  * @property {boolean?} resilient - Override for whether the effect persists even when the token is incapacitated
  * @property {boolean?} concentration - Override for whether the effect is being maintained through concentration
  * @property {number?} remaining - The number of resolution attempts remaining before the effect ends on its own
- * @property {EffectResolutionTriggerType?} resolveAt - Overrides the points in the initiative order that the token can attempt to resolve the effect
+ * @property {EffectTrigger?} resolveTrigger - Overrides the points when the token can attempt to resolve the effect
  * @property {number?} resolveOffset - The value at which the trigger fires when it involves a position such as initiative order
  * @property {EffectResolutionType[]?} resolveWith - Overrides the type of dice roll that the token owner can use to fully resolve the effect
  * @property {StatusEffectImpact[]?} impacts - Override of the rolls used to determine the impact when the effect is triggered
@@ -55,8 +58,9 @@
 
 /**
  * @typedef StatusEffectImpact
- * @property {EffectImpactType} type - The type of impact that is applied by the roll
- * @property {EffectImpactTriggerType?} trigger - When the effect triggers a dice roll to determine the impact on the token
+ * @property {EffectImpactType} type - The type of change that is applied
+ * @property {CoreEnums.StatModifierType} modifies - The property on the character sheet or monster stat block that is being modified
+ * @property {EffectTrigger?} trigger - When the effect triggers a dice roll to determine the impact on the token
  * @property {number?} triggerOffset - The value at which the trigger fires when it involves a position such as initiative order
  * @property {number?} fixed - The fixed amount that is applied by the effect when it is triggered
  * @property {string} roll - Dice notation for the amount of damage or healing applied by the effect when it is triggered
