@@ -11,21 +11,17 @@ import { DiceType, SavingThrow, AbilityCheck, SkillCheck } from '../CoreEnums.mj
  * @enum {string}
  */
 export const EffectImpact = Object.freeze({
-    AttackAny: Object.freeze({ uri: 'hit', name: 'Any Attack' }),
-    MeleeAttack: Object.freeze({ uri: 'hit:attack', name: 'Melee Attack' }),
-    SpellAttack: Object.freeze({ uri: 'hit:spell', name: 'Spell Attack' }),
-    AbilityCheck: Object.freeze({ uri: 'ability', name: 'Ability Check' }),
-    SkillCheck: Object.freeze({ uri: 'skill', name: 'Skill Check' }),
-    Damage: Object.freeze({ uri: 'damage', name: 'Damage Dealt' }),
-    Heal: Object.freeze({ uri: 'heal', name: 'Healing Applied' }),
-    Modifier: Object.freeze({ uri: 'modifier', name: 'Sheet Modifier' })
+    Damage: Object.freeze({ uri: 'effect:damage', name: 'Damage Target' }),
+    Heal: Object.freeze({ uri: 'effect:heal', name: 'Heal Target' }),
+    Heal: Object.freeze({ uri: 'effect:temp', name: 'Grant Temporary HP To Target' }),
+    Modify: Object.freeze({ uri: 'effect:modify', name: 'Modify Property Of Target' })
 });
 
 /**
  * @readonly
  * @enum {string}
  */
-export const ResolutionTrigger = Object.freeze({
+export const CombatTrackingTrigger = Object.freeze({
     TurnStart: Object.freeze({ uri: 'turn:start', name: 'Start of Your Turn' }),
     TurnEnd: Object.freeze({ uri: 'turn:end', name: 'End of Your Turn' }),
     RoundStart: Object.freeze({ uri: 'round:start', name: 'Start of New Round' }),
@@ -39,13 +35,21 @@ export const ResolutionTrigger = Object.freeze({
  * @readonly
  * @enum {string}
  */
-export const ImpactTrigger = Object.freeze({
-    ...ResolutionTrigger,
+export const ActionBasedTrigger = Object.freeze({
     Movement: Object.freeze({ uri: 'movement', name: 'While Moving' }),
     AnyAction: Object.freeze({ uri: 'action:any', name: 'On Any Action' }),
     Action: Object.freeze({ uri: 'action', name: 'On Standard Action' }),
     BonusAction: Object.freeze({ uri: 'action:bonus', name: 'On Bonus Action' }),
     Reaction: Object.freeze({ uri: 'reaction', name: 'On Reaction' })
+});
+
+/**
+ * @readonly
+ * @enum {string}
+ */
+export const EffectTrigger = Object.freeze({
+    ...CombatTrackingTrigger,
+    ...ActionBasedTrigger
 });
 
 /**
