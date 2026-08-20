@@ -1,7 +1,7 @@
 /** @import { TokenStatusEffectContainer, Concentration, MaintainedEffect, ActiveStatusEffect, PassiveStatusEffect, StatusEffect } from './types.js' */
 
 import * as Enums from '../CoreEnums.mjs'
-import { ResolutionTrigger, ImpactTrigger, EffectResolution } from './enums.mjs'
+import { EffectTrigger, EffectResolution, EffectImpact } from './enums.mjs'
 
 /**
  * Manages the active, passive, and maintained (concentration) status effects that are currently effecting to a token.
