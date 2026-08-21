@@ -515,9 +515,15 @@ export default class TokenStatusEffects {
      */
     #dropGlobalTargetEffects(tokens, tracking, changes) {
         let removedAnywhere = false;
-        for (const [key, value] of Object.entries(tokens)) {
-            const removed = value.statusEffects.dropActiveEffect(tracking);
 
+        for (const [key, value] of Object.entries(tokens)) {
+            const settings = this.#getContainer(value);
+            const current = this.getActive(settings);
+
+            const rebuild = current.filter(item => item.tracking !== tracking);
+            settings.active = rebuild;
+
+            const removed = (rebuild.length !== current.length);
             if (removed) {
                 removedAnywhere = true;
                 changes[key] = value;
