@@ -520,7 +520,7 @@ export default class TokenStatusEffects {
 
             if (removed) {
                 removedAnywhere = true;
-                changes[key] = value.statusEffects;
+                changes[key] = value;
             }
         }
 
