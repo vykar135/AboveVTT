@@ -185,62 +185,6 @@ export default class TokenStatusEffects {
         return [this.#getContainer(token), token];
     }
 
-    /**
-     * Retrieves or initialized the concentration settings for the token.
-     * @param {TokenStatusEffectContainer?} container - The status effect container to retrieve the concentration settings from.
-     * @returns {Concentration}
-     */
-    #getConcentration(container = undefined) {
-        const settings = container ?? this.#getContainer();
-        if (settings.concentration == null) {
-            settings.concentration = {};
-        }
-
-        return settings.concentration;
-    }
-
-    /**
-     * Retrieves or initialized the collection of effects being maintained by the token.
-     * @param {TokenStatusEffectContainer?} container - The status effect container to retrieve the concentration settings from.
-     * @returns {MaintainedEffect[]}
-     */
-    getMaintaining(container = undefined) {
-        const settings = container ?? this.#getContainer();
-        if (settings.maintaining == null) {
-            settings.maintaining = [];
-        }
-
-        return settings.maintaining;
-    }
-
-    /**
-     * Retrieves or initialized the collection of effects being maintained by the token.
-     * @param {TokenStatusEffectContainer?} container - The status effect container to retrieve the concentration settings from.
-     * @returns {ActiveStatusEffect[]}
-     */
-    getActive(container = undefined) {
-        const settings = container ?? this.#getContainer();
-        if (settings.active == null) {
-            settings.active = [];
-        }
-
-        return settings.active;
-    }
-
-    /**
-     * Retrieves or initialized the collection of effects being maintained by the token.
-     * @param {TokenStatusEffectContainer?} container - The status effect container to retrieve the concentration settings from.
-     * @returns {PassiveStatusEffect[]}
-     */
-    getPassive(container = undefined) {
-        const settings = container ?? this.#getContainer();
-        if (settings.passive == null) {
-            settings.passive = [];
-        }
-
-        return settings.passive;
-    }
-
     /** Whether the token is currently affected by the Incapacitated state */
     get incapacitated() {
         return this.#getContainer().incapacitated ?? false;
@@ -283,13 +227,26 @@ export default class TokenStatusEffects {
     }
 
     /**
+     * Retrieves or initialized the concentration settings for the token.
+     * @param {TokenStatusEffectContainer?} container - The status effect container to retrieve the concentration settings from.
+     * @returns {Concentration}
+     */
+    static #initConcentration(container) {
+        if (container.concentration == null) {
+            container.concentration = {};
+        }
+
+        return container.concentration;
+    }
+
+    /**
      * Whether the token is allowed to concetrate on status effects
      * @param {boolean} allowed - Whether the token is permitted to concentrate
      * @param {number} limit - The maximum number of effects that the token can concentrate on
      * */
     canConcentrate(allowed, limit) {
         const callback = (target) => {
-            const settings = this.#getConcentration(target.settings);
+            const settings = TokenStatusEffects.#initConcentration(target.settings);
             const wasAllowed = settings.allowed;
             const previousLimit = settings.limit;
 
@@ -313,6 +270,28 @@ export default class TokenStatusEffects {
     }
 
     /**
+     * Retrieves or initialized the collection of passive effects for the token.
+     * @returns {PassiveStatusEffect[]}
+     */
+    getPassive() {
+        const settings = this.#getContainer();
+        return TokenStatusEffects.#initPassive(settings);
+    }
+
+    /**
+     * Retrieves or initialized the collection of passive effects for the token.
+     * @param {TokenStatusEffectContainer?} container - The status effect container to retrieve the concentration settings from.
+     * @returns {PassiveStatusEffect[]}
+     */
+    static #initPassive(container) {
+        if (container.passive == null) {
+            container.passive = [];
+        }
+
+        return container.passive;
+    }
+
+    /**
      * Appends a passive effect to the to the token.
      * @param {PassiveStatusEffect} effect - The status effect to append to the token.
      * @returns {string} The tracking identifier of the effect.
@@ -321,7 +300,7 @@ export default class TokenStatusEffects {
         effect.tracking = uuid();
 
         const callback = (target) => {
-            const current = this.getPassive(target.settings);
+            const current = TokenStatusEffects.#initPassive(target.settings);
             TokenStatusEffects.#applyEffect(target, current, effect);
         }
 
@@ -340,7 +319,7 @@ export default class TokenStatusEffects {
         let removedAnywhere = false;
 
         const callback = (target) => {
-            const current = this.getPassive(target.settings);
+            const current = TokenStatusEffects.#initPassive(target.settings);
 
             const rebuild = current.filter(item => item.tracking !== tracking);
             settings.passive = rebuild;
@@ -360,6 +339,28 @@ export default class TokenStatusEffects {
     }
 
     /**
+     * Retrieves or initialized the collection of active effects for the token.
+     * @returns {ActiveStatusEffect[]}
+     */
+    getActive() {
+        const settings = this.#getContainer();
+        return TokenStatusEffects.#initActive(settings);
+    }
+
+    /**
+     * Retrieves or initialized the collection of active effects for the token.
+     * @param {TokenStatusEffectContainer?} container - The status effect container to retrieve the concentration settings from.
+     * @returns {ActiveStatusEffect[]}
+     */
+    static #initActive(container) {
+        if (container.active == null) {
+            container.active = [];
+        }
+
+        return container.active;
+    }
+
+    /**
      * Appends a active effect to the to the token.
      * @param {ActiveStatusEffect} effect - The status effect to append to the token.
      * @returns {string} The tracking identifier of the effect.
@@ -368,7 +369,7 @@ export default class TokenStatusEffects {
         effect.tracking = uuid();
 
         const callback = (target) => {
-            const current = this.getActive(target.settings);
+            const current = TokenStatusEffects.#initActive(target.settings);
             TokenStatusEffects.#applyEffect(target, current, effect);
         }
 
@@ -387,7 +388,7 @@ export default class TokenStatusEffects {
         let removedAnywhere = false;
 
         const callback = (target) => {
-            const current = this.getActive(target.settings);
+            const current = TokenStatusEffects.#initActive(target.settings);
 
             const rebuild = current.filter(item => item.tracking !== tracking);
             settings.active = rebuild;
@@ -408,19 +409,43 @@ export default class TokenStatusEffects {
 
     /** Drops all ongoing concentration effects */
     dropConcentration() {
-        const callback = (target) => {
-            const wasConcentrating = target.settings.concentrating;
-            target.settings.concentrating = false;
-            target.hasChanges(target.settings.concentrating !== wasConcentrating);
-        }
-
         const containers = this.#getMyContainers();
-        TokenStatusEffects.#applyContainerChanges(containers, callback);
+        TokenStatusEffects.#applyContainerChanges(containers, TokenStatusEffects.#dropConcentrationCallback);
 
         const current = maintaining.filter(item => this.requiresConcentration(item));
         for (const effect of current) {
             this.dropMaintainedEffect(effect.tracking);
         }
+    }
+
+    /** Removes the concentration flag from the target */
+    static #dropConcentrationCallback(target) {
+        if (target.settings.concentrating !== false) {
+            target.settings.concentrating = false;
+            target.hasChanges(true);
+        }
+    }
+
+    /**
+     * Retrieves or initialized the collection of maintained effects for the token.
+     * @returns {MaintainingStatusEffect[]}
+     */
+    getMaintaining() {
+        const settings = this.#getContainer();
+        return TokenStatusEffects.#initMaintaining(settings);
+    }
+
+    /**
+     * Retrieves or initialized the collection of maintained effects for the token.
+     * @param {TokenStatusEffectContainer?} container - The status effect container to retrieve the concentration settings from.
+     * @returns {MaintainingStatusEffect[]}
+     */
+    static #initMaintaining(container) {
+        if (container.maintaining == null) {
+            container.maintaining = [];
+        }
+
+        return container.maintaining;
     }
 
     /**
@@ -432,7 +457,7 @@ export default class TokenStatusEffects {
         effect.tracking = uuid();
 
         const callback = (target) => {
-            const current = this.getMaintaining(target.settings);
+            const current = TokenStatusEffects.#initMaintaining(target.settings);
             TokenStatusEffects.#applyEffect(target, current, effect);
         }
 
@@ -463,7 +488,7 @@ export default class TokenStatusEffects {
 
             for (const effect of spreading) {
                 const callback = (applyTo) => {
-                    const active = this.getActive(applyTo.settings);
+                    const active = TokenStatusEffects.#initActive(applyTo.settings);
                     const find = active.findIndex((check) => check.tracking === id);
                     if (find === -1) {
                         TokenStatusEffects.#applyEffect(applyTo, active, effect);
@@ -484,7 +509,7 @@ export default class TokenStatusEffects {
         let removedAnywhere = false;
 
         const callback = (target) => {
-            const current = this.getMaintaining(target.settings);
+            const current = TokenStatusEffects.#initMaintaining(target.settings);
 
             const rebuild = current.filter(item => item.tracking !== tracking);
             settings.maintaining = rebuild;
@@ -518,7 +543,7 @@ export default class TokenStatusEffects {
 
         for (const [key, value] of Object.entries(tokens)) {
             const settings = this.#getContainer(value);
-            const current = this.getActive(settings);
+            const current = TokenStatusEffects.#initActive(settings);
 
             const rebuild = current.filter(item => item.tracking !== tracking);
             settings.active = rebuild;
@@ -539,14 +564,14 @@ export default class TokenStatusEffects {
      */
     reviewConcentration() {
         const settings = this.#getContainer();
-        const concentration = this.#getConcentration(settings);
+        const concentration = TokenStatusEffects.#initConcentration(settings);
 
         if (settings.incapacitated === true || concentration.allowed === false) {
             this.dropConcentration();
             return 0;
         }
 
-        const maintaining = this.getMaintaining(settings);
+        const maintaining = TokenStatusEffects.#initMaintaining(settings);
         const current = maintaining.filter(item => this.requiresConcentration(item));
         if (current.length === 0) {
             if (settings.concentrating !== false) {
@@ -559,7 +584,7 @@ export default class TokenStatusEffects {
         let limit = concentration.limit || 1;
         if (limit < 0) {
             const callback = (target) => {
-                const localChange = this.#getConcentration(target.settings);
+                const localChange = TokenStatusEffects.#initConcentration(target.settings);
                 localChange.limit = 0;
                 target.hasChanges(true);
             }
