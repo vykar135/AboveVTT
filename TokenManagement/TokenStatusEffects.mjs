@@ -111,8 +111,8 @@ export default class TokenStatusEffects {
     #getMyContainers() {
         const target = this.id;
         const local = this.#getContainer();
-        const scene = this.#getGlobalContainer(window.TOKEN_OBJECTS, target);
-        const campaign = this.#getGlobalContainer(window.all_token_objects, target);
+        const [scene] = this.#getGlobalContainer(window.TOKEN_OBJECTS, target);
+        const [campaign] = this.#getGlobalContainer(window.all_token_objects, target);
 
         const containers = [ { settings: local, hasChanges: (modified) => this.#hasPendingChanges(modified) }];
 
@@ -136,15 +136,15 @@ export default class TokenStatusEffects {
      * @returns {GlobalStatusEffectConfig[]} - The collection of tokens within any global container.
      */
     #getTargetContainers(target) {
-        const scene = this.#getGlobalContainer(window.TOKEN_OBJECTS, target);
-        const campaign = this.#getGlobalContainer(window.all_token_objects, target);
+        const [scene, sceneToken] = this.#getGlobalContainer(window.TOKEN_OBJECTS, target);
+        const [campaign, campaignToken] = this.#getGlobalContainer(window.all_token_objects, target);
         const hasScene = (scene != null);
 
         const containers = [];
         if (scene != null) {
             containers.push({ settings: scene, hasChanges: (modified) => {
                 if (modified === true) {
-                    this.#pendingSceneTokens[target] = scene;
+                    this.#pendingSceneTokens[target] = sceneToken;
                 }
             }});
         }
@@ -152,7 +152,7 @@ export default class TokenStatusEffects {
         if (campaign != null && campaign !== scene) {
             containers.push({ settings: campaign, hasChanges: (modified) => {
                 if (!hasScene && modified === true) {
-                    this.#pendingCampaignTokens[target] = campaign;
+                    this.#pendingCampaignTokens[target] = campaignToken;
                 }
             }});
         }
@@ -179,10 +179,10 @@ export default class TokenStatusEffects {
     #getGlobalContainer(tokens, target) {
         const token = tokens[target];
         if (token == null) {
-            return null;
+            return [null, null];
         }
 
-        return this.#getContainer(token);
+        return [this.#getContainer(token), token];
     }
 
     /**
