@@ -410,8 +410,8 @@ export default class TokenStatusEffects {
     dropConcentration() {
         const callback = (target) => {
             const wasConcentrating = target.settings.concentrating;
-            settings.concentrating = false;
-            target.hasChanges(settings.concentrating !== wasConcentrating);
+            target.settings.concentrating = false;
+            target.hasChanges(target.settings.concentrating !== wasConcentrating);
         }
 
         const containers = this.#getMyContainers();
