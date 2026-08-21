@@ -121,7 +121,6 @@
         // AboveVTT Files
         "environment.js",
         "CoreFunctions.js", // Make sure CoreFunctions executes before anything else
-        "CoreEnums.mjs",
         "avttS3Upload.js",
         "AboveApi.js",
         "DDBApi.js",
@@ -141,8 +140,9 @@
         "SidebarPanel.js",
         "StatHandler.js",
         "Token.js",
-        "StatusEffects/enums.mjs",
-        "StatusEffects/TokenStatusEffects.mjs",
+        "TokenManagement/CoreEnums.mjs",
+        "TokenManagement/StatusEffectEnums.mjs",
+        "TokenManagement/TokenStatusEffects.mjs",
         "constants/names.js",
         "TokenMenu.js",
         "ChatObserver.js",
