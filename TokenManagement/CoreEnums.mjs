@@ -1,5 +1,6 @@
 /**
  * @typedef PropertyConfiguration
+ * @readonly
  * @property {string} uri - The value that is intended to be persisted within token options
  * @property {string} name - The value that is intended to be displayed to users
  * @property {string} short - An abbreviated value that is intended to be displayed to users
@@ -19,14 +20,14 @@
  * @enum {PropertyConfiguration}
  */
 export const PropertyType = Object.freeze({
-    Number: Object.freeze({ uri: 'number', name: 'Number' }),
-    Toggle: Object.freeze({ uri: 'toggle', name: 'Toggle' }),
-    Charges: Object.freeze({ uri: 'charges', name: 'Charges' }),
-    Roll: Object.freeze({ uri: 'roll', name: 'Dice Roll' }),
-    Proficiency: Object.freeze({ uri: 'proficiency', name: 'Proficiency' }),
-    Advantage: Object.freeze({ uri: 'advantage', name: 'Advantage' }),
-    Resistance: Object.freeze({ uri: 'resistance', name: 'Resistance' }),
-    AbilityModifier: Object.freeze({ uri: 'ability:modifier', name: 'Ability Modifier' })
+    Number: Object.freeze({ uri: 'prop:number', name: 'Number' }),
+    Toggle: Object.freeze({ uri: 'prop:toggle', name: 'Toggle' }),
+    Charges: Object.freeze({ uri: 'prop:charges', name: 'Charges' }),
+    Roll: Object.freeze({ uri: 'prop:roll', name: 'Dice Roll' }),
+    Proficiency: Object.freeze({ uri: 'prop:proficiency', name: 'Proficiency' }),
+    Advantage: Object.freeze({ uri: 'prop:advantage', name: 'Advantage' }),
+    Resistance: Object.freeze({ uri: 'prop:resistance', name: 'Resistance' }),
+    AbilityModifier: Object.freeze({ uri: 'prop:ability:modifier', name: 'Ability Modifier' })
 });
 
 /**
@@ -227,13 +228,21 @@ export const AbilityScore = Object.freeze({
  * @enum {PropertyConfiguration}
  */
 export const AbilityConstraints = Object.freeze({
-    ConcentrationAllowed: Object.freeze({ uri: 'concentration', name: 'Can Concentrate', type: PropertyType.Toggle }),
-    ConcentrationLimit: Object.freeze({ uri: 'concentration:limit', name: 'Concentration Limit', type: PropertyType.Charges }),
     AdvantageLimit: Object.freeze({ uri: 'advantage:limit', name: 'Advantage Limit', type: PropertyType.Number }), // Max number of dice that can be granted for advantage or disadvantage
     ActionLimit: Object.freeze({ uri: 'action:limit', name: 'Action Limit', type: PropertyType.Charges }),
     BonusActionLimit: Object.freeze({ uri: 'action:bonus:limit', name: 'Bonus Action Limit', type: PropertyType.Charges }),
     ReactionLimit: Object.freeze({ uri: 'reaction:limit', name: 'Reaction Limit', type: PropertyType.Charges }),
-    WeaponAttackLimit: Object.freeze({ uri: 'weapon:attack:limit', name: 'Weapon Attack Limit', type: PropertyType.Charges }),
+    WeaponAttackLimit: Object.freeze({ uri: 'weapon:attack:limit', name: 'Weapon Attack Limit', type: PropertyType.Charges })
+});
+
+/**
+ * Defines constraints that can be applied to a token
+ * @readonly
+ * @enum {PropertyConfiguration}
+ */
+export const SpellTracking = Object.freeze({
+    ConcentrationAllowed: Object.freeze({ uri: 'concentration', name: 'Can Concentrate', type: PropertyType.Toggle }),
+    ConcentrationLimit: Object.freeze({ uri: 'concentration:limit', name: 'Concentration Limit', type: PropertyType.Number }),
     SpellSlotLevel1: Object.freeze({ uri: 'spell:slot:1', name: '1st Level Spell Slots', type: PropertyType.Charges }),
     SpellSlotLevel2: Object.freeze({ uri: 'spell:slot:2', name: '2nd Level Spell Slots', type: PropertyType.Charges }),
     SpellSlotLevel3: Object.freeze({ uri: 'spell:slot:3', name: '3rd Level Spell Slots', type: PropertyType.Charges }),
@@ -278,14 +287,14 @@ export const HitPoint = Object.freeze({
  * @enum {PropertyConfiguration}
  */
 export const AbilityCheck = Object.freeze({
-    Any: Object.freeze({ uri: 'check', name: 'Any Ability Check', type: PropertyType.Roll, rollType: RollType.AbilityCheck,  diceTags: Object.freeze([ AbilityCheck.Any.uri ]) }),
-    STR: Object.freeze({ uri: 'check:str', name: 'Strength Check', type: PropertyType.Roll, rollType: RollType.AbilityCheck, diceTags: Object.freeze([ AbilityCheck.Any.uri, AbilityScore.STR.uri ]) }),
-    DEX: Object.freeze({ uri: 'check:dex', name: 'Dexterity Check', type: PropertyType.Roll, rollType: RollType.AbilityCheck, diceTags: Object.freeze([ AbilityCheck.Any.uri, AbilityScore.DEX.uri ]) }),
-    CON: Object.freeze({ uri: 'check:con', name: 'Constitution Check', type: PropertyType.Roll, rollType: RollType.AbilityCheck, diceTags: Object.freeze([ AbilityCheck.Any.uri, AbilityScore.CON.uri ]) }),
-    INT: Object.freeze({ uri: 'check:int', name: 'Intelligence Check', type: PropertyType.Roll, rollType: RollType.AbilityCheck, diceTags: Object.freeze([ AbilityCheck.Any.uri, AbilityScore.INT.uri ]) }),
-    WIS: Object.freeze({ uri: 'check:wis', name: 'Wisdom Check', type: PropertyType.Roll, rollType: RollType.AbilityCheck, diceTags: Object.freeze([ AbilityCheck.Any.uri, AbilityScore.WIS.uri ]) }),
-    CHA: Object.freeze({ uri: 'check:cha', name: 'Charisma Check', type: PropertyType.Roll, rollType: RollType.AbilityCheck, diceTags: Object.freeze([ AbilityCheck.Any.uri, AbilityScore.CHA.uri ]) }),
-    Proficiency: Object.freeze({ uri: 'check:pb', name: 'Proficiency Check', type: PropertyType.Roll, rollType: RollType.AbilityCheck, diceTags: Object.freeze([ AbilityCheck.Any.uri, AbilityScore.Proficiency.uri ]) })
+    Any: Object.freeze({ uri: 'check', name: 'Any Ability Check', type: PropertyType.Roll, rollType: RollType.AbilityCheck,  diceTags: Object.freeze([ 'check' ]) }),
+    STR: Object.freeze({ uri: 'check:str', name: 'Strength Check', type: PropertyType.Roll, rollType: RollType.AbilityCheck, diceTags: Object.freeze([ 'check', AbilityScore.STR.uri ]) }),
+    DEX: Object.freeze({ uri: 'check:dex', name: 'Dexterity Check', type: PropertyType.Roll, rollType: RollType.AbilityCheck, diceTags: Object.freeze([ 'check', AbilityScore.DEX.uri ]) }),
+    CON: Object.freeze({ uri: 'check:con', name: 'Constitution Check', type: PropertyType.Roll, rollType: RollType.AbilityCheck, diceTags: Object.freeze([ 'check', AbilityScore.CON.uri ]) }),
+    INT: Object.freeze({ uri: 'check:int', name: 'Intelligence Check', type: PropertyType.Roll, rollType: RollType.AbilityCheck, diceTags: Object.freeze([ 'check', AbilityScore.INT.uri ]) }),
+    WIS: Object.freeze({ uri: 'check:wis', name: 'Wisdom Check', type: PropertyType.Roll, rollType: RollType.AbilityCheck, diceTags: Object.freeze([ 'check', AbilityScore.WIS.uri ]) }),
+    CHA: Object.freeze({ uri: 'check:cha', name: 'Charisma Check', type: PropertyType.Roll, rollType: RollType.AbilityCheck, diceTags: Object.freeze([ 'check', AbilityScore.CHA.uri ]) }),
+    Proficiency: Object.freeze({ uri: 'check:pb', name: 'Proficiency Check', type: PropertyType.Roll, rollType: RollType.AbilityCheck, diceTags: Object.freeze([ 'check', AbilityScore.Proficiency.uri ]) })
 });
 
 /**

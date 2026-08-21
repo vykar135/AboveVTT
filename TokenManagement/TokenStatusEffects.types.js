@@ -1,12 +1,10 @@
-/** @import * as CoreEnums from '../CoreEnums.types.js'  */
+/** @import * as CoreEnums from './CoreEnums.types.js'  */
+/** @import * as StatusEnums from './StatusEffectEnums.types.js'  */
 
 /**
- * @typedef {'effect:damage' | 'effect:heal' | 'effect:modify'} EffectImpactType
- * @typedef { CoreEnums.DiceSizeType | CoreEnums.AbilityCheckType | CoreEnums.SavingThrowType | CoreEnums.SkillCheckType } EffectResolutionType
- * 
- * @typedef {'turn:start' | 'turn:end' | 'round:start' | 'source:start' | 'source:end' | 'initiative:start' | 'initiative:end'} CombatTrackerTriggerType
- * @typedef {'movement' | 'action' | 'action:any' | 'action:bonus' | 'reaction'} ActionBasedTriggerType
- * @typedef {CombatTrackerTriggerType | ActionBasedTriggerType} EffectImpactTriggerType
+ * @typedef GlobalStatusEffectConfig
+ * @property {TokenStatusEffectContainer} settings - The configuration for status effects.
+ * @property {(modified: boolean) => void} hasChanges - Callback used to notify the status effect manager of a change
  */
 
 /**
@@ -22,7 +20,6 @@
 /**
  * @typedef Concentration
  * @property {boolean} allowed - Whether the token is permitted to concentrate
- * @property {boolean} blocked - Whether concentration for the the token is temporarily being prevented
  * @property {number} limit - The maximum number of items that the token is allowed to concentrate on
  */
 
