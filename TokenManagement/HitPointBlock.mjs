@@ -7,8 +7,6 @@ import StatBlock from "./StatBlock.mjs";
 export default class HitPointBlock {
     /** @type {StatBlock} */
     #statBlock;
-    /** @type {TokenHitPointInfo} */
-    #expectedHitPoints;
 
     /**
      * @param {StatBlock} stats The stat block to retrieve the hit point metadata for
@@ -33,22 +31,35 @@ export default class HitPointBlock {
         return info;
     }
 
-    #expects() {
+    /** @returns {TokenHitPointInfo} The snapshot of hit point information being tracked by the token outside of the player's character sheet */
+    #getSnapshot() {
         if (!this.#statBlock.isPlayer) {
+            if ('hpSnapshot' in this.#statBlock.token.options) {
+                delete this.#statBlock.token.options.hpSnapshot;
+            }
+
             return null;
         }
-        
-        if (this.#expectedHitPoints == null) {
-            const info = this.#hitPointInfo;
 
-            // We omit max HP from this because it is managed by the numeric properties of the stat block
-            this.#expectedHitPoints = {
+        let snapshot = this.#statBlock.token.options.hpSnapshot;
+
+        if (snapshot == null) {
+            // We omit max HP from this because it is snapshot by the numeric property collection of the stat block
+            snapshot = {
                 current: info.current,
                 temp: info.temp
             };
+
+            this.#statBlock.token.options.hpSnapshot = snapshot;
         }
 
-        return this.#expectedHitPoints;
+        return snapshot;
+    }
+
+    /** Removes the snapshot hit point information. */
+    resetSnapshot() {
+        delete this.#statBlock.token.options.hpSnapshot;
+        this.#statBlock.hasPendingChanges(true);
     }
 
     /**
@@ -110,7 +121,7 @@ export default class HitPointBlock {
             return outcome;
         }
 
-        const expected = this.#expectedHitPoints;
+        const expected = this.#getSnapshot();
         if (expected == null) {
             return outcome;
         }
@@ -131,11 +142,6 @@ export default class HitPointBlock {
         return outcome;
     }
 
-    /** Resets the expected hit point values to the ones from the token. */
-    resetExpected() {
-        this.#expectedHitPoints = null;
-    }
-
     /**
      * 
      * @param {number} amount - The amount of damage dealt.
@@ -143,25 +149,34 @@ export default class HitPointBlock {
      * @returns {number} The new remaining hit points after the damage was applied.
      */
     damage(amount, tags) {
-        const info = this.#hitPointInfo;
         if (amount <= 0) {
             return this.total;
         }
 
-        // Being lazy with the null coalesce here just to not have to check if player over and over
-        const expects = this.#expects() ?? {};
+        const snapshot = this.#getSnapshot();
+        if (snapshot != null) {
+            this.#statBlock.hasPendingChanges(true);
+        }
 
+        const info = this.#hitPointInfo;
         let temp = info.temp;
         if (temp >= amount) {
             temp = temp - amount;
             info.temp = temp;
-            expects.temp = temp;
+
+            if (snapshot != null) {
+                snapshot.temp = temp;
+            }
+            
             return this.total;
 
         } else if (temp > 0) {
             amount = amount - temp;
             info.temp = 0;
-            expects.temp = 0;
+
+            if (snapshot != null) {
+                snapshot.temp = 0;
+            }
         }
 
         let remaining = info.current - amount;
@@ -170,7 +185,11 @@ export default class HitPointBlock {
         }
 
         info.current = remaining;
-        expects.current = remaining;
+
+        if (snapshot != null) {
+            snapshot.current = remaining;
+        }
+
         return this.total;
     }
 
@@ -190,7 +209,8 @@ export default class HitPointBlock {
 
         info.current = amount;
         if (this.#statBlock.isPlayer) {
-            this.#expects().current = amount;
+            this.#getSnapshot().current = amount;
+            this.#statBlock.hasPendingChanges(true);
         }
 
         return amount;
@@ -207,7 +227,8 @@ export default class HitPointBlock {
 
         this.#hitPointInfo.temp = amount;
         if (this.#statBlock.isPlayer) {
-            this.#expects().temp = amount;
+            this.#getSnapshot().temp = amount;
+            this.#statBlock.hasPendingChanges(true);
         }
         
         return amount;
@@ -223,7 +244,8 @@ export default class HitPointBlock {
         const current = info.temp;
         if (current != null && current >= amount) {
             if (this.#statBlock.isPlayer) {
-                this.#expects().temp = current;
+                this.#getSnapshot().temp = current;
+                this.#statBlock.hasPendingChanges(true);
             }
 
             return current;
@@ -231,7 +253,8 @@ export default class HitPointBlock {
 
         info.temp = amount;
         if (this.#statBlock.isPlayer) {
-            this.#expects().temp = amount;
+            this.#getSnapshot().temp = amount;
+            this.#statBlock.hasPendingChanges(true);
         }
 
         return amount;
