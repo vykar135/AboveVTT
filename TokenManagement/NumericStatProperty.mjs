@@ -1,9 +1,13 @@
+import StatBlock from "./StatBlock.mjs";
+
 /**
  * Manages a numberic property value that can have status effects applied to it.
  */
 export default class NumericStatProperty {
-    /** @type {boolean} */
-    #player
+    /** @type {StatBlock} */
+    #stats
+    /** @type {string} */
+    #uri;
     /** @type {number} */
     #base;
     /** @type {number | undefined} */
@@ -12,11 +16,13 @@ export default class NumericStatProperty {
     #calculated;
 
     /**
+     * @param {StatBlock} stats - The stat block that this property is for.
+     * @param {string} uri - The identifier of the property.
      * @param {number} value - The initial value for the property.
-     * @param {boolean} player 
      */
-    constructor(value, player){
-        this.#player = (player === true);
+    constructor(stats, uri, value){
+        this.#uri = uri;
+        this.#stats = stats;
         this.#base = value;
         this.#calculated = 0;
         this.#snapshot = undefined;
@@ -29,7 +35,7 @@ export default class NumericStatProperty {
 
     /** The current value of the property adjusted for a snapshot at the time an effect was applied. */
     get current() {
-        if (this.#player) {
+        if (this.#stats.isPlayer) {
             return (this.#snapshot ?? this.#base) + this.#calculated;
         }
 
@@ -51,9 +57,9 @@ export default class NumericStatProperty {
         return this.#calculated;
     }
 
-    /** @returns {boolean} Whether the player controlled value is not synced with the campaign. */
+    /** @returns {boolean} Whether the player's character sheet is not synced with the campaign. */
     isNotSynced() {
-        if (!this.#player || this.#snapshot === undefined) {
+        if (!this.#stats.isPlayer || this.#snapshot === undefined) {
             return false;
         }
 
@@ -63,12 +69,10 @@ export default class NumericStatProperty {
     }
 
     /**
-     * Updates the base value for the property and recalculates the current value.
+     * Updates the base value for the property.
      * @param {number} value - The new value to assign
-     * @param {boolean} player - Whether the stat is for a player character sheet
      */
-    setBaseValue(value, player) {
-        this.#player = player;
+    setBaseValue(value) {
         this.#base = value;
     }
 
@@ -82,23 +86,43 @@ export default class NumericStatProperty {
 
     /** Snapshots the current base value for the property */
     takeSnapshot() {
-        this.setSnapshot(this.#base);
+        this.setSnapshot(this.#base, true);
     }
 
     /** Removes the current snapshot */
     resetSnapshot() {
-        this.setSnapshot(undefined);
+        this.setSnapshot(undefined, true);
     }
 
     /**
      * The value to assign to the snapshot for this property.
      * @param {number | undefined} value - The value to assign to the snapshot.
+     * @param {boolean} canWrite - Whether the snapshot value can be written back to the stat block as a pending update
      */
-    setSnapshot(value) {
+    setSnapshot(value, canWrite) {
         if (typeof value === "string") {
             value = parseInt(value);
         }
 
+        const modified = (this.#snapshot !== value);
         this.#snapshot = value;
+
+        if (!canWrite || !modified) {
+            return;
+        }
+
+        const snapshots = this.#stats.token.options.snapshots;
+        if (snapshots == null) {
+            snapshots = {};
+            this.#stats.token.options.snapshots = snapshots;
+        }
+
+        if (value == null) {
+            delete snapshots[this.#uri];
+        } else {
+            snapshots[this.#uri] = value;
+        }
+        
+        this.#stats.hasPendingChanges(true);
     }
 }

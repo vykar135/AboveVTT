@@ -53,6 +53,8 @@ function refreshGlobalPlayerSheets(tokens, player) {
  * Manages a normalized stat block for the provided token
  */
 export default class StatBlock {
+    /** @type {boolean} */
+    #pendingChanges;
     /** @type {Token} */
     #token;
     /** @type {boolean} */
@@ -71,6 +73,7 @@ export default class StatBlock {
      */
     constructor(token){
         this.#token = token;
+        this.#pendingChanges = false;
         this.#numeric = {};
         this.#hitPoints = new HitPointBlock(this);
         this.#effects = new TokenStatusEffects(this);
@@ -78,6 +81,34 @@ export default class StatBlock {
         /* this.#dndBeyond = window.ddbConfigJson; */
 
         this.rebuild();
+    }
+
+    /** Requests a token update message to be dispatched only if there are pending changes that have been observed by this instance */
+    sync() {
+        if (this.#pendingChanges === true) {
+            this.#pendingChanges = false;
+            this.#token.sync();
+        }
+    }
+
+    /**
+     * Requests a token update message to be dispatched and updates any related interface components 
+     * only if there are pending changes that have been observed by this instance */
+    update_and_sync() {
+        if (this.#pendingChanges === true) {
+            this.#pendingChanges = false;
+            this.#token.update_and_sync();
+        }
+    }
+
+    /**
+     * Updates the current state of the pending changes flag; preserving if it was already set.
+     * @param {boolean} modified - Whether a modification occurred.
+     */
+    hasPendingChanges(modified) {
+        if (modified === true) {
+            this.#pendingChanges = true;
+        }
     }
 
     /** @returns {Token} The token that is being managed */
@@ -88,6 +119,11 @@ export default class StatBlock {
     /** @returns {TokenStatusEffects} The manager for active, passive, and maintained token status effects. */
     get statusEffects() {
         return this.#effects;
+    }
+
+    /** @returns {boolean} Whether the stat block is for a player */
+    get isPlayer() {
+        return this.#player;
     }
 
     /**
@@ -193,16 +229,20 @@ export default class StatBlock {
 
         let property = this.#numeric[uri];
         if (property == null) {
-            property = new NumericStatProperty(value, this.#player);
+            property = new NumericStatProperty(this, uri, value);
             this.#numeric[uri] = property;
-
-            const snapshots = this.#token.options.snapshots;
-            if (snapshots != null) {
-                property.setSnapshot(snapshots[uri]);
-            }
         }
 
-        property.setBaseValue(value, this.#player);
+        property.setBaseValue(value);
+
+        const snapshots = this.#token.options.snapshots;
+        if (snapshots != null) {
+            if (this.#player) {
+                property.setSnapshot(snapshots[uri], false);
+            } else if (uri in snapshots) {
+                property.setSnapshot(undefined, true);
+            }
+        }
     }
 
     /**
