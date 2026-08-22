@@ -34,11 +34,16 @@ export default class HitPointBlock {
     }
 
     #expects() {
+        if (!this.#statBlock.isPlayer) {
+            return null;
+        }
+        
         if (this.#expectedHitPoints == null) {
             const info = this.#hitPointInfo;
+
+            // We omit max HP from this because it is managed by the numeric properties of the stat block
             this.#expectedHitPoints = {
                 current: info.current,
-                maximum: info.maximum,
                 temp: info.temp
             };
         }
@@ -94,12 +99,16 @@ export default class HitPointBlock {
     }
 
     /** Review the reported values for the player sheet when available against the expected amounts. */
-    reviewPlayer() {
+    isPlayerNotSynced() {
         const outcome = {
-            maximum: true,
-            remaining: true,
-            temp: true
+            maximum: false,
+            remaining: false,
+            temp: false
         };
+
+        if (!this.#statBlock.isPlayer) {
+            return outcome;
+        }
 
         const expected = this.#expectedHitPoints;
         if (expected == null) {
@@ -108,15 +117,14 @@ export default class HitPointBlock {
 
         const reported = this.#statBlock.reportedHp;
         if (reported == null) {
-            console.log('Hit point review ignored; not a player');
             return outcome;
         }
 
-        outcome.maximum = (reported.maximum === this.maximum);
-        outcome.remaining = (reported.current === expected.current);
-        outcome.temp = (reported.temp === expected.temp);
+        outcome.maximum = (reported.maximum !== this.maximum);
+        outcome.remaining = (reported.current !== expected.current);
+        outcome.temp = (reported.temp !== expected.temp);
 
-        if (outcome.maximum && outcome.remaining && outcome.temp) {
+        if (!outcome.maximum && !outcome.remaining && !outcome.temp) {
             this.resetExpected();
         }
 
@@ -140,7 +148,8 @@ export default class HitPointBlock {
             return this.total;
         }
 
-        const expects = this.#expects();
+        // Being lazy with the null coalesce here just to not have to check if player over and over
+        const expects = this.#expects() ?? {};
 
         let temp = info.temp;
         if (temp >= amount) {
@@ -180,7 +189,10 @@ export default class HitPointBlock {
         }
 
         info.current = amount;
-        this.#expects().current = amount;
+        if (this.#statBlock.isPlayer) {
+            this.#expects().current = amount;
+        }
+
         return amount;
     }
 
@@ -194,7 +206,10 @@ export default class HitPointBlock {
         }
 
         this.#hitPointInfo.temp = amount;
-        this.#expects().temp = amount;
+        if (this.#statBlock.isPlayer) {
+            this.#expects().temp = amount;
+        }
+        
         return amount;
     }
 
@@ -207,12 +222,18 @@ export default class HitPointBlock {
         const info = this.#hitPointInfo;
         const current = info.temp;
         if (current != null && current >= amount) {
-            this.#expects().temp = current;
+            if (this.#statBlock.isPlayer) {
+                this.#expects().temp = current;
+            }
+
             return current;
         }
 
         info.temp = amount;
-        this.#expects().temp = amount;
+        if (this.#statBlock.isPlayer) {
+            this.#expects().temp = amount;
+        }
+
         return amount;
     }
 }
