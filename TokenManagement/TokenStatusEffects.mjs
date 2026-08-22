@@ -1,23 +1,27 @@
+/** @import { Token } from './Token.types.js' */
 /** @import { GlobalStatusEffectConfig, TokenStatusEffectContainer, Concentration, MaintainedEffect, ActiveStatusEffect, PassiveStatusEffect, StatusEffect } from './TokenStatusEffects.types.js' */
 
-import * as Enums from './CoreEnums.mjs'
-import { EffectTrigger, EffectResolution, EffectImpact } from './StatusEffectEnums.mjs'
+import StatBlock from './StatBlock.mjs';
 
 /**
  * Manages the active, passive, and maintained (concentration) status effects that are currently effecting to a token.
  */
 export default class TokenStatusEffects {
-    #token;
+    /** @type {StatBlock} */
+    #stats;
+    /** @type {boolean} */
     #pendingChanges;
+    /** @type {{ [key: string]: Token}} */
     #pendingSceneTokens;
+    /** @type {{ [key: string]: Token}} */
     #pendingCampaignTokens;
 
     /**
      * Manages the status effects associated with the provided Token
-     * @param {Token} parent
+     * @param {StatBlock} stats
      */
-    constructor(token){
-        this.#token = token;
+    constructor(stats){
+        this.#stats = stats;
         this.#pendingChanges = false;
         this.#pendingSceneTokens = {};
         this.#pendingCampaignTokens = {};
@@ -45,7 +49,7 @@ export default class TokenStatusEffects {
 
         if (this.#pendingChanges === true) {
             this.#pendingChanges = false;
-            callback(this.#token);
+            callback(this.token);
 
             const target = this.id;
             delete scene[target];
@@ -75,60 +79,75 @@ export default class TokenStatusEffects {
         }
     }
 
-    /**
-     * @return {Token} The token that is being managed
-     */
-    get token() {
-        return this.#token;
+    /** @returns {StatBlock} The stat block that is being modified by these effects. */
+    get stats() {
+        return this.#stats;
     }
 
-    /**
-     * @returns {string} The identifier of the token being managed
-     */
+    /** @returns {Token} The token that is being managed */
+    get token() {
+        return this.#stats.token;
+    }
+
+    /** @returns {string} The identifier of the token being managed */
     get id() {
-        return this.#token.options.id;
+        return this.#stats.token.options.id;
     }
 
     /**
      * Retrieves or initialized the main status effects container from the token options.
-     * @param {Token?} fromToken - The token to retrieve the options container.
      * @returns {TokenStatusEffectContainer}
      */
-    #getContainer(fromToken = undefined) {
-        const settings = fromToken ?? this.#token;
-
-        if (settings.options.status_effects == null) {
-            settings.options.status_effects = {};
-        }
-
-        return settings.options.status_effects;
+    #getContainer() {
+        return TokenStatusEffects.#initContainer(this.#stats.token);
     }
 
     /**
-     * Retrieves the main status effects container for the current token within a global token stores with the ability to notify of a change.
+     * Retrieves or initialized the main status effects container from the token options.
+     * @param {Token} forToken - The token to retrieve the status effect container for.
+     * @returns {TokenStatusEffectContainer}
+     */
+    static #initContainer(forToken) {
+        if (forToken.options.status_effects == null) {
+            forToken.options.status_effects = {
+                incapacitated: false,
+                concentrating: false
+            };
+        }
+
+        return forToken.options.status_effects;
+    }
+
+    /**
+     * Retrieves the main status effects container for the current token within global token stores with the ability to notify of a change.
      * @returns {GlobalStatusEffectConfig[]} - The collection of tokens within any global container.
      */
     #getMyContainers() {
         const target = this.id;
         const local = this.#getContainer();
-        const [scene] = this.#getGlobalContainer(window.TOKEN_OBJECTS, target);
-        const [campaign] = this.#getGlobalContainer(window.all_token_objects, target);
+        const [scene, sceneToken] = TokenStatusEffects.#getGlobalContainer(window.TOKEN_OBJECTS, target);
+        const [campaign, campaignToken] = TokenStatusEffects.#getGlobalContainer(window.all_token_objects, target);
 
         const containers = [ { settings: local, hasChanges: (modified) => this.#hasPendingChanges(modified) }];
 
         if (scene != null && scene !== local) {
-            containers.push({ settings: scene, hasChanges: TokenStatusEffects.#doNothing});
+            containers.push({ settings: scene, hasChanges: (modified) => {
+                if (modified === true) {
+                    this.#pendingSceneTokens[target] = sceneToken;
+                }
+            }});
         }
 
         if (campaign != null && campaign !== local && campaign !== scene) {
-            containers.push({ settings: campaign, hasChanges: TokenStatusEffects.#doNothing});
+            containers.push({ settings: campaign, hasChanges: (modified) => {
+                if (modified === true) {
+                    this.#pendingCampaignTokens[target] = campaignToken;
+                }
+            }});
         }
 
         return containers;
     }
-
-    /** Callback used when we are applying changes across the global token stores but we know the local token will be handling the sync */
-    static #doNothing() { };
     
     /**
      * Retrieves the main status effects container for the targeted token within a global token stores with the ability to notify of a change.
@@ -136,9 +155,8 @@ export default class TokenStatusEffects {
      * @returns {GlobalStatusEffectConfig[]} - The collection of tokens within any global container.
      */
     #getTargetContainers(target) {
-        const [scene, sceneToken] = this.#getGlobalContainer(window.TOKEN_OBJECTS, target);
-        const [campaign, campaignToken] = this.#getGlobalContainer(window.all_token_objects, target);
-        const hasScene = (scene != null);
+        const [scene, sceneToken] = TokenStatusEffects.#getGlobalContainer(window.TOKEN_OBJECTS, target);
+        const [campaign, campaignToken] = TokenStatusEffects.#getGlobalContainer(window.all_token_objects, target);
 
         const containers = [];
         if (scene != null) {
@@ -151,7 +169,7 @@ export default class TokenStatusEffects {
 
         if (campaign != null && campaign !== scene) {
             containers.push({ settings: campaign, hasChanges: (modified) => {
-                if (!hasScene && modified === true) {
+                if (modified === true) {
                     this.#pendingCampaignTokens[target] = campaignToken;
                 }
             }});
@@ -176,13 +194,13 @@ export default class TokenStatusEffects {
      * @param {Object.<string, Token>} tokens - The collection of tokens to update
      * @param {string} target - The identifier of the token to update
      */
-    #getGlobalContainer(tokens, target) {
+    static #getGlobalContainer(tokens, target) {
         const token = tokens[target];
         if (token == null) {
             return [null, null];
         }
 
-        return [this.#getContainer(token), token];
+        return [TokenStatusEffects.#initContainer(token), token];
     }
 
     /** Whether the token is currently affected by the Incapacitated state */
@@ -233,7 +251,10 @@ export default class TokenStatusEffects {
      */
     static #initConcentration(container) {
         if (container.concentration == null) {
-            container.concentration = {};
+            container.concentration = {
+                allowed: true,
+                limit: 1
+            };
         }
 
         return container.concentration;
@@ -409,9 +430,12 @@ export default class TokenStatusEffects {
 
     /** Drops all ongoing concentration effects */
     dropConcentration() {
+        console.log(`Dropping concentration for ${this.id}`);
+
         const containers = this.#getMyContainers();
         TokenStatusEffects.#applyContainerChanges(containers, TokenStatusEffects.#dropConcentrationCallback);
 
+        const maintaining = this.getMaintaining();
         const current = maintaining.filter(item => this.requiresConcentration(item));
         for (const effect of current) {
             this.dropMaintainedEffect(effect.tracking);
@@ -542,7 +566,7 @@ export default class TokenStatusEffects {
         let removedAnywhere = false;
 
         for (const [key, value] of Object.entries(tokens)) {
-            const settings = this.#getContainer(value);
+            const settings = TokenStatusEffects.#initContainer(value);
             const current = TokenStatusEffects.#initActive(settings);
 
             const rebuild = current.filter(item => item.tracking !== tracking);
@@ -627,6 +651,3 @@ export default class TokenStatusEffects {
         return effect.concentration ?? false
     }
 }
-
-// Addressing compatibility issues
-window.initTokenStatusEffects = (token) => new TokenStatusEffects(token);

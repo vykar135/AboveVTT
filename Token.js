@@ -1,4 +1,6 @@
-﻿const TOKEN_COLORS = ["1A6AFF", "FF7433", "FFD433", "884DFF", "5F0404", "EC8AFF", "00E5FF",
+﻿/** @import StatBlock from "./TokenManagement/StatBlock.mjs" */
+
+const TOKEN_COLORS = ["1A6AFF", "FF7433", "FFD433", "884DFF", "5F0404", "EC8AFF", "00E5FF",
 					"000000", "F032E6", "911EB4", //END OF NEW COLORS
 					"800000", "008000", "000080", "808000", "800080", "008080", "808080", "C00000", "00C000", "0000C0",
 					"C0C000", "C000C0", "00C0C0", "C0C0C0", "400000", "004000", "000040",
@@ -120,7 +122,8 @@ function random_token_color() {
 }
 
 class Token {
-	#statusEffects;
+	/** @type {StatBlock} */
+	#stats
 
 	// Defines how many token-sizes a token is allowed to be moved outside of the scene.
 	SCENE_MOVE_GRID_PADDING_MULTIPLIER = 1;
@@ -152,12 +155,17 @@ class Token {
 		delete this.options.hp;
 		delete this.options.temp_hp;
 
-		this.#statusEffects = window.initTokenStatusEffects(this);
+		this.#stats = window.initStatBlock(this);
 	}
 
-	/** @return {TokenStatusEffectContainer} The manager for active, passive, and maintained status effects applied to the token */
+	/** @return {StatBlock} The normalized stat block for the token */
+	get stats() {
+		return this.#stats;
+	}
+
+	/** @return {TokenStatusEffects} The manager for active, passive, and maintained status effects applied to the token */
 	get statusEffects() {
-		return this.#statusEffects;
+		return this.#stats.statusEffects;
 	}
 
 	/** @return {number} the total of this token's HP and temp HP */
