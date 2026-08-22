@@ -8,20 +8,34 @@ import { DiceType, SavingThrow, AbilityCheck, SkillCheck } from './CoreEnums.mjs
 
 /**
  * @readonly
- * @enum {string}
+ * @enum {EnumWithName}
  */
 export const EffectImpact = Object.freeze({
     Damage: Object.freeze({ uri: 'effect:damage', name: 'Damage Target' }),
     Heal: Object.freeze({ uri: 'effect:heal', name: 'Heal Target' }),
-    Heal: Object.freeze({ uri: 'effect:temp', name: 'Grant Temporary HP To Target' }),
+    TempHP: Object.freeze({ uri: 'effect:temp', name: 'Grant Temporary HP To Target' }),
     Modify: Object.freeze({ uri: 'effect:modify', name: 'Modify Property Of Target' })
+});
+
+
+/**
+ * @readonly
+ * @enum {EnumWithName}
+ */
+export const EffectDuration = Object.freeze({
+    Indefinite: Object.freeze({ uri: 'indefinite', name: 'Until Cancelled' }),
+    TurnsStarted: Object.freeze({ uri: 'turn:start', name: 'Turns Started' }),
+    TurnsEnded: Object.freeze({ uri: 'turn:end', name: 'Turns Ended' }),
+    Rounds: Object.freeze({ uri: 'round:start', name: 'Rounds Started' }),
+    ShortRest: Object.freeze({ uri: 'rest:short', name: 'On Short Rest' }),
+    LongRest: Object.freeze({ uri: 'rest:long', name: 'On Long Rest' })
 });
 
 /**
  * @readonly
- * @enum {string}
+ * @enum {EnumWithName}
  */
-export const CombatTrackingTrigger = Object.freeze({
+export const InitiativeTrigger = Object.freeze({
     TurnStart: Object.freeze({ uri: 'on:turn:start', name: 'Start of Your Turn' }),
     TurnEnd: Object.freeze({ uri: 'on:turn:end', name: 'End of Your Turn' }),
     RoundStart: Object.freeze({ uri: 'on:round:start', name: 'Start of New Round' }),
@@ -33,41 +47,60 @@ export const CombatTrackingTrigger = Object.freeze({
 
 /**
  * @readonly
- * @enum {string}
+ * @enum {EnumWithName}
  */
-export const ActionBasedTrigger = Object.freeze({
-    AnyAction: Object.freeze({ uri: 'on:action:any', name: 'On Any Action' }),
-    Action: Object.freeze({ uri: 'on:action', name: 'On Standard Action' }),
-    BonusAction: Object.freeze({ uri: 'on:action:bonus', name: 'On Bonus Action' }),
-    Action: Object.freeze({ uri: 'on:spell', name: 'When Casting A Spell' }),
-    Action: Object.freeze({ uri: 'on:attack:weapon', name: 'On Weapon Attack' }),
-    Action: Object.freeze({ uri: 'on:attack:melee', name: 'On Melee Attack' }),
-    Action: Object.freeze({ uri: 'on:attack:range', name: 'On Ranged Attack' }),
+export const ActionTrigger = Object.freeze({
+    Any: Object.freeze({ uri: 'on:action', name: 'On Any Action' }),
+    Standard: Object.freeze({ uri: 'on:action:standard', name: 'On Action' }),
+    Bonus: Object.freeze({ uri: 'on:action:bonus', name: 'On Bonus Action' }),
     Reaction: Object.freeze({ uri: 'on:reaction', name: 'On Reaction' }),
-    Movement: Object.freeze({ uri: 'on:movement', name: 'On Any Movement' }),
-    Movement: Object.freeze({ uri: 'on:movement:walk', name: 'When Walking' }),
-    Movement: Object.freeze({ uri: 'on:movement:fly', name: 'When Flying' }),
-    Movement: Object.freeze({ uri: 'on:movement:climb', name: 'When Climbing' }),
-    Movement: Object.freeze({ uri: 'on:movement:swim', name: 'When Swimming' }),
-    Movement: Object.freeze({ uri: 'on:movement:burrow', name: 'When Burrowing' })
+    SpellCast: Object.freeze({ uri: 'on:spell', name: 'When Casting A Spell' }),
+    WeaponAttack: Object.freeze({ uri: 'on:attack:weapon', name: 'On Weapon Attack' }),
+    MeleeAttack: Object.freeze({ uri: 'on:attack:melee', name: 'On Melee Attack' }),
+    RangedAttack: Object.freeze({ uri: 'on:attack:range', name: 'On Ranged Attack' }),
+    ChargesUsed: Object.freeze({ uri: 'on:charges:used', name: 'On Charges Use' }),
 });
 
 /**
  * @readonly
- * @enum {string}
+ * @enum {EnumWithName}
  */
-export const EffectTrigger = Object.freeze({
-    ...CombatTrackingTrigger,
-    ...ActionBasedTrigger
+export const MovementTrigger = Object.freeze({
+    Any: Object.freeze({ uri: 'on:movement', name: 'On Any Movement' }),
+    Walk: Object.freeze({ uri: 'on:movement:walk', name: 'When Walking' }),
+    Fly: Object.freeze({ uri: 'on:movement:fly', name: 'When Flying' }),
+    Climb: Object.freeze({ uri: 'on:movement:climb', name: 'When Climbing' }),
+    Swim: Object.freeze({ uri: 'on:movement:swim', name: 'When Swimming' }),
+    Burrow: Object.freeze({ uri: 'on:movement:burrow', name: 'When Burrowing' })
 });
 
 /**
  * @readonly
- * @enum {string}
+ * @enum {EnumWithName}
  */
-export const EffectResolution = Object.freeze({
+export const ResolutionTrigger = Object.freeze({
+    Initiative: InitiativeTrigger,
+    Action: ActionTrigger,
+    Movement: MovementTrigger
+});
+
+/**
+ * @readonly
+ * @enum {EnumWithName}
+ */
+export const ResolutionAction = Object.freeze({
     Dice: DiceType,
     Save: SavingThrow,
     Check: AbilityCheck,
     Skill: SkillCheck
+});
+
+/**
+ * @readonly
+ * @enum {EnumWithName}
+ */
+export const ImpactTrigger = Object.freeze({
+    Initiative: InitiativeTrigger,
+    Action: ActionTrigger,
+    Movement: MovementTrigger
 });

@@ -230,11 +230,11 @@ export default class StatBlock {
      * @param {number} value 
      */
     #updateNumeric(uri, value) {
-        if (typeof uri !== "string") {
+        if (typeof uri === 'object') {
             uri = uri.uri;
         }
 
-        if (typeof value === "string") {
+        if (typeof value === 'string') {
             value = parseInt(value);
         }
 
