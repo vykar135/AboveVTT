@@ -70,19 +70,19 @@ export default class HitPointBlock {
     static fix(info) {
         if (info.current == null) {
             info.current = 0;
-        } else if (!isNaN(info.current)) {
+        } else if (typeof info.current === 'string') {
             info.current = parseInt(info.current);
         }
         
         if (info.temp == null) {
             info.temp = 0;
-        } else if (!isNaN(info.temp)) {
+        } else if (typeof info.temp === 'string') {
             info.temp = parseInt(info.temp);
         }
         
         if (info.maximum == null) {
             info.maximum = 0;
-        } else if (!isNaN(info.maximum)) {
+        } else if (typeof info.maximum === 'string') {
             info.maximum = parseInt(info.maximum);
         }
         
@@ -143,7 +143,6 @@ export default class HitPointBlock {
     }
 
     /**
-     * 
      * @param {number} amount - The amount of damage dealt.
      * @param {string[]} tags - Tags that describe how the damage was dealt so that we can apply resistances and other effects.
      * @returns {number} The new remaining hit points after the damage was applied.
@@ -194,6 +193,65 @@ export default class HitPointBlock {
     }
 
     /**
+     * @param {number} amount - The amount of healing received.
+     * @param {string[]} tags - Tags that describe how the healing was received so that we can apply bonuses and other effects.
+     * @returns {number} The new remaining hit points after the damage was applied.
+     */
+    heal(amount, tags) {
+        if (amount <= 0) {
+            return this.total;
+        }
+
+        const snapshot = this.#getSnapshot();
+        if (snapshot != null) {
+            this.#statBlock.hasPendingChanges(true);
+        }
+
+        const info = this.#hitPointInfo;
+        const max = this.maximum;
+
+        let remaining = info.current + amount;
+        if (remaining > max) {
+            remaining = max;
+        }
+
+        info.current = remaining;
+
+        if (snapshot != null) {
+            snapshot.current = remaining;
+        }
+
+        return this.total;
+    }
+
+    /**
+     * Requests a number of temporary hit points to be assigned; if this value is less than the current amount it is ignored.
+     * @param {number} amount - The requested amount of temporary hit points to assign
+     * @param {string[]} tags - Tags that describe how the healing was received so that we can apply bonuses and other effects.
+     * @returns {number} The number of temporarily hit points that are currently applied
+     */
+    applyTemp(amount, tags){
+        const info = this.#hitPointInfo;
+        const current = info.temp;
+        if (current != null && current >= amount) {
+            if (this.#statBlock.isPlayer) {
+                this.#getSnapshot().temp = current;
+                this.#statBlock.hasPendingChanges(true);
+            }
+
+            return current;
+        }
+
+        info.temp = amount;
+        if (this.#statBlock.isPlayer) {
+            this.#getSnapshot().temp = amount;
+            this.#statBlock.hasPendingChanges(true);
+        }
+
+        return amount;
+    }
+
+    /**
      * Sets the amount of remaining hit points to the amount specified; only checking that the value is within the bounds of the maximum hit points.
      * @param {number} amount - The amount of remaining hit points to set
      */
@@ -231,32 +289,6 @@ export default class HitPointBlock {
             this.#statBlock.hasPendingChanges(true);
         }
         
-        return amount;
-    }
-
-    /**
-     * Requests a number of temporary hit points to be assigned; if this value is less than the current amount it is ignored.
-     * @param {number} amount - The requested amount of temporary hit points to assign
-     * @returns {number} The number of temporarily hit points that are currently applied
-     */
-    applyTemp(amount){
-        const info = this.#hitPointInfo;
-        const current = info.temp;
-        if (current != null && current >= amount) {
-            if (this.#statBlock.isPlayer) {
-                this.#getSnapshot().temp = current;
-                this.#statBlock.hasPendingChanges(true);
-            }
-
-            return current;
-        }
-
-        info.temp = amount;
-        if (this.#statBlock.isPlayer) {
-            this.#getSnapshot().temp = amount;
-            this.#statBlock.hasPendingChanges(true);
-        }
-
         return amount;
     }
 }
