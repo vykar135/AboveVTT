@@ -83,22 +83,33 @@ export default class StatBlock {
         this.rebuild();
     }
 
-    /** Requests a token update message to be dispatched only if there are pending changes that have been observed by this instance */
+    /**
+     * Requests a token update message to be dispatched only if there are pending changes that have been observed by this instance
+     * @returns {boolean} Whether the stat block requested to be synced.
+    */
     sync() {
         if (this.#pendingChanges === true) {
             this.#pendingChanges = false;
             this.#token.sync();
+            return true;
         }
+
+        return false;
     }
 
     /**
      * Requests a token update message to be dispatched and updates any related interface components 
-     * only if there are pending changes that have been observed by this instance */
+     * only if there are pending changes that have been observed by this instance
+     * @returns {boolean} Whether the stat block requested to be synced.
+     */
     update_and_sync() {
         if (this.#pendingChanges === true) {
             this.#pendingChanges = false;
             this.#token.update_and_sync();
+            return true;
         }
+
+        return false;
     }
 
     /**
@@ -235,7 +246,7 @@ export default class StatBlock {
 
         property.setBaseValue(value);
 
-        const snapshots = this.#token.options.snapshots;
+        const snapshots = this.#token.options.snapshots?.numeric;
         if (snapshots != null) {
             if (this.#player) {
                 property.setSnapshot(snapshots[uri], false);

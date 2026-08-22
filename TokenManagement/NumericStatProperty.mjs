@@ -107,7 +107,7 @@ export default class NumericStatProperty {
         const modified = (this.#snapshot !== value);
         this.#snapshot = value;
 
-        if (!canWrite || !modified) {
+        if (!canWrite || !modified || !this.stats.isPlayer) {
             return;
         }
 
@@ -117,10 +117,16 @@ export default class NumericStatProperty {
             this.#stats.token.options.snapshots = snapshots;
         }
 
+        const properties = snapshots.numeric;
+        if (properties == null) {
+            properties = {};
+            snapshots.numeric = properties;
+        }
+
         if (value == null) {
-            delete snapshots[this.#uri];
+            delete properties[this.#uri];
         } else {
-            snapshots[this.#uri] = value;
+            properties[this.#uri] = value;
         }
         
         this.#stats.hasPendingChanges(true);
