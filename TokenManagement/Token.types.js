@@ -7,6 +7,8 @@
  *     conditions: (string | TokenCondition)[],
  *     custom_conditions: (string | TokenCondition)[],
  *     hitPointInfo: TokenHitPointInfo,
+ *     hpSnapshot: TokenHitPointInfo,
+ *     snapshots: TokenSnapshotInfo,
  *     armorClass: number | string,
  *     name: string,
  *     left: string,
@@ -24,6 +26,11 @@
  * @property {number | string} maximum - The token's maximum hit points.
  * @property {number | string} current - The token's current hit points, excluding temporary hit points.
  * @property {number | string} temp - The token's temporary hit points.
+ */
+
+/**
+ * @typedef {Object} TokenSnapshotInfo
+ * @property {{ [uri: string]: numeric }} numeric - Snapshots of the base value for numeric properties at the time an effect is applied.
  */
 
 /**

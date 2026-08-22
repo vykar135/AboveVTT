@@ -9,8 +9,6 @@ import StatBlock from './StatBlock.mjs';
 export default class TokenStatusEffects {
     /** @type {StatBlock} */
     #stats;
-    /** @type {boolean} */
-    #pendingChanges;
     /** @type {{ [key: string]: Token}} */
     #pendingSceneTokens;
     /** @type {{ [key: string]: Token}} */
@@ -22,24 +20,26 @@ export default class TokenStatusEffects {
      */
     constructor(stats){
         this.#stats = stats;
-        this.#pendingChanges = false;
         this.#pendingSceneTokens = {};
         this.#pendingCampaignTokens = {};
     }
 
     /** Requests a token update message to be dispatched only if there are pending changes that have been observed by this instance */
     sync() {
-        this.#syncWithCallback((token) => token.sync());
+        this.#syncWithCallback((stats) => stats.sync());
     }
 
     /**
      * Requests a token update message to be dispatched and updates any related interface components 
      * only if there are pending changes that have been observed by this instance */
     update_and_sync() {
-        this.#syncWithCallback((token) => token.update_and_sync());
+        this.#syncWithCallback((stats) => stats.update_and_sync());
     }
 
-    /** Performs the sync operation using the provided callback. */
+    /**
+     * Performs the sync operation using the provided callback.
+     * @param {(stats: StatBlock) => boolean} callback - The callback made to sync the stat block
+     */
     #syncWithCallback(callback) {
         const scene = {...this.#pendingSceneTokens};
         const campaign = {...this.#pendingCampaignTokens};
@@ -47,10 +47,7 @@ export default class TokenStatusEffects {
         this.#pendingSceneTokens = {};
         this.#pendingCampaignTokens = {};
 
-        if (this.#pendingChanges === true) {
-            this.#pendingChanges = false;
-            callback(this.token);
-
+        if (callback(this.#stats) === true) {
             const target = this.id;
             delete scene[target];
             delete campaign[target];
@@ -61,21 +58,11 @@ export default class TokenStatusEffects {
         }
 
         for (const target of Object.values(scene)) {
-            callback(target);
+            callback(target.stats);
         }
 
         for (const target of Object.values(campaign)) {
-            callback(target);
-        }
-    }
-
-    /**
-     * Updates the current state of the pending changes flag; preserving if it was already set.
-     * @param {boolean} modified - Whether a modification occurred.
-     */
-    #hasPendingChanges(modified) {
-        if (modified === true) {
-            this.#pendingChanges = true;
+            callback(target.stats);
         }
     }
 
@@ -128,7 +115,7 @@ export default class TokenStatusEffects {
         const [scene, sceneToken] = TokenStatusEffects.#getGlobalContainer(window.TOKEN_OBJECTS, target);
         const [campaign, campaignToken] = TokenStatusEffects.#getGlobalContainer(window.all_token_objects, target);
 
-        const containers = [ { settings: local, hasChanges: (modified) => this.#hasPendingChanges(modified) }];
+        const containers = [ { settings: local, hasChanges: (modified) => this.#stats.hasPendingChanges(modified) }];
 
         if (scene != null && scene !== local) {
             containers.push({ settings: scene, hasChanges: (modified) => {
