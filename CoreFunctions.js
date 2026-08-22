@@ -2422,6 +2422,8 @@ if (index < 0) {
     lastSynchronized: Date.now()
   }
  
+  window?.refreshPlayerTokenStats(window.pcs[index].sheet)
+
   if (!window.PC_TOKENS_NEEDING_UPDATES.includes(playerId)) {
     window.PC_TOKENS_NEEDING_UPDATES.push(playerId);
   }
