@@ -1,23 +1,50 @@
 /**
  * @typedef PropertyConfiguration
- * @readonly
  * @property {string} uri - The value that is intended to be persisted within token options
  * @property {string} name - The value that is intended to be displayed to users
  * @property {string} short - An abbreviated value that is intended to be displayed to users
  * @property {string[]} diceTags - The tags found on a dice roll that make it qualify for the property
- * @property {boolean} ability - The ability score that can be applied to a property
+ * @property {string} ability - The default ability score that is used for a property
+ * @property {(amount: number) => number} apply - Method used to apply the effect of the configuration onto a given amount
+ * @property {number} d20test - The number of additional dice that the configuration either awards or removes from a d20 test
+ * @property {number} dndBeyond - The numerical value that D&D Beyond uses to reference this property
+ */
+
+/**
+ * @typedef PropertyTypeEnum
+ * @property {string} uri - The value that is intended to be persisted within token options
+ * @property {string} name - The value that is intended to be displayed to users
+ */
+
+/**
+ * @typedef RollTypeEnum
+ * @property {string} uri - The value that is intended to be persisted within token options
+ * @property {string} name - The value that is intended to be displayed to users
  * @property {boolean} proficiency - Whether a roll can be subject to the effects of proficiency
  * @property {boolean} advantage - Whether a roll can be subject to the effects of advantage and disadvantage
  * @property {boolean} critical - Whether a roll can be subject to the effects of critical damage
- * @property {(amount: number) => number} apply - Method used to apply the effect of the configuration onto a given amount
- * @property {number} d20test - The number of additional dice that the configuration either awards or removes from a d20 test
- * @property {number} diceSize - The size of dice to use for the configuration
  */
+
+/**
+ * @typedef DieSizeEnum
+ * @property {string} uri - The value that is intended to be persisted within token options
+ * @property {string} name - The value that is intended to be displayed to users
+ * @property {number} dieSize - The numerical value for the size of the die
+ */
+
+/**
+ * @typedef ProficiencyTypeEnum
+ * @property {string} uri - The value that is intended to be persisted within token options.
+ * @property {string} name - The value that is intended to be displayed to users.
+ * @property {(amt: number) => number} apply - Method used to modify a value based on the proficiency type.
+ * @property {number} d20test - The number of dice added or removed from a d20 test.
+ */
+
 
 /**
  * Defines the type of behavior that a property on a token utilizies
  * @readonly
- * @enum {PropertyConfiguration}
+ * @enum {PropertyTypeEnum}
  */
 export const PropertyType = Object.freeze({
     Number: Object.freeze({ uri: 'prop:number', name: 'Number' }),
@@ -27,13 +54,14 @@ export const PropertyType = Object.freeze({
     Proficiency: Object.freeze({ uri: 'prop:proficiency', name: 'Proficiency' }),
     Advantage: Object.freeze({ uri: 'prop:advantage', name: 'Advantage' }),
     Resistance: Object.freeze({ uri: 'prop:resistance', name: 'Resistance' }),
-    AbilityModifier: Object.freeze({ uri: 'prop:ability:modifier', name: 'Ability Modifier' })
+    AbilityModifier: Object.freeze({ uri: 'prop:ability:modifier', name: 'Ability Modifier' }),
+    DieSize: Object.freeze({ uri: 'prop:die:size', name: 'Die Size' })
 });
 
 /**
  * Defines the type of behavior for a given style of dice roll
  * @readonly
- * @enum {PropertyConfiguration}
+ * @enum {RollTypeEnum}
  */
 export const RollType = Object.freeze({
     Unspecified: Object.freeze({ uri: 'roll:basic', name: 'Roll', proficiency: true, critical: true, advantage: true }),
@@ -41,25 +69,23 @@ export const RollType = Object.freeze({
     SkillCheck: Object.freeze({ uri: 'roll:skill', name: 'Skill Check', proficiency: true, critical: false, advantage: true }),
     SavingThrow: Object.freeze({ uri: 'roll:save', name: 'Saving Throw', proficiency: true, critical: false, advantage: true }),
     ToHit: Object.freeze({ uri: 'roll:tohit', name: 'To Hit', proficiency: true, critical: false, advantage: true }),
-
-    // We include advantage for damage and heal rolls to make feats like Savage Attacker work
-    Damage: Object.freeze({ uri: 'roll:damage', name: 'Damage', proficiency: true, critical: true, advantage: true }),
-    Heal: Object.freeze({ uri: 'roll:heal', name: 'Heal', proficiency: true, critical: true, advantage: true })
+    Damage: Object.freeze({ uri: 'roll:damage', name: 'Damage', proficiency: true, critical: true, advantage: false }),
+    Heal: Object.freeze({ uri: 'roll:heal', name: 'Heal', proficiency: true, critical: true, advantage: false })
 });
 
 /**
  * Defines the type of dice rolls that are available
  * @readonly
- * @enum {PropertyConfiguration}
+ * @enum {DieSizeEnum}
  */
 export const DiceType = Object.freeze({
-    d4: Object.freeze({ uri: 'd4', name: 'd4', diceSize: 4 }),
-    d6: Object.freeze({ uri: 'd6', name: 'd6', diceSize: 6 }),
-    d8: Object.freeze({ uri: 'd8', name: 'd8', diceSize: 8 }),
-    d10: Object.freeze({ uri: 'd10', name: 'd10', diceSize: 10 }),
-    d12: Object.freeze({ uri: 'd12', name: 'd12', diceSize: 12 }),
-    d20: Object.freeze({ uri: 'd20', name: 'd20', diceSize: 20 }),
-    d100: Object.freeze({ uri: 'd100', name: 'd100', diceSize: 100 })
+    d4: Object.freeze({ uri: 'd4', name: 'd4', dieSize: 4 }),
+    d6: Object.freeze({ uri: 'd6', name: 'd6', dieSize: 6 }),
+    d8: Object.freeze({ uri: 'd8', name: 'd8', dieSize: 8 }),
+    d10: Object.freeze({ uri: 'd10', name: 'd10', dieSize: 10 }),
+    d12: Object.freeze({ uri: 'd12', name: 'd12', dieSize: 12 }),
+    d20: Object.freeze({ uri: 'd20', name: 'd20', dieSize: 20 }),
+    d100: Object.freeze({ uri: 'd100', name: 'd100', dieSize: 100 })
 });
 
 /**
@@ -213,13 +239,40 @@ export const ConditionResistance = Object.freeze({
  * @enum {PropertyConfiguration}
  */
 export const AbilityScore = Object.freeze({
-    STR: Object.freeze({ uri: 'str', name: 'Strength Score', short: 'Strength', type: PropertyType.Number }),
-    DEX: Object.freeze({ uri: 'dex', name: 'Dexterity Score', short: 'Dexterity', type: PropertyType.Number }),
-    CON: Object.freeze({ uri: 'con', name: 'Constitution Score', short: 'Constitution', type: PropertyType.Number }),
-    INT: Object.freeze({ uri: 'int', name: 'Intelligence Score', short: 'Intelligence', type: PropertyType.Number }),
-    WIS: Object.freeze({ uri: 'wis', name: 'Wisdom Score', short: 'Wisdom', type: PropertyType.Number }),
-    CHA: Object.freeze({ uri: 'cha', name: 'Charisma Score', short: 'Charisma', type: PropertyType.Number }),
-    Proficiency: Object.freeze({ uri: 'pb', name: 'Proficiency Bonus', type: PropertyType.Number })
+    STR: Object.freeze({ uri: 'str', name: 'Strength Score', short: 'Strength', type: PropertyType.Number, dndBeyond: 1 }),
+    DEX: Object.freeze({ uri: 'dex', name: 'Dexterity Score', short: 'Dexterity', type: PropertyType.Number, dndBeyond: 2 }),
+    CON: Object.freeze({ uri: 'con', name: 'Constitution Score', short: 'Constitution', type: PropertyType.Number, dndBeyond: 3 }),
+    INT: Object.freeze({ uri: 'int', name: 'Intelligence Score', short: 'Intelligence', type: PropertyType.Number, dndBeyond: 4 }),
+    WIS: Object.freeze({ uri: 'wis', name: 'Wisdom Score', short: 'Wisdom', type: PropertyType.Number, dndBeyond: 5 }),
+    CHA: Object.freeze({ uri: 'cha', name: 'Charisma Score', short: 'Charisma', type: PropertyType.Number, dndBeyond: 6 }),
+    ArmorClass: Object.freeze({ uri: 'ac', name: 'Armor Class', type: PropertyType.Number }),
+    ProficiencyBonus: Object.freeze({ uri: 'pb', name: 'Proficiency Bonus', type: PropertyType.Number })
+});
+
+/**
+ * Defines the top-level modifiers based on ability scores for a token
+ * @readonly
+ * @enum {PropertyConfiguration}
+ */
+export const AbilityModifier = Object.freeze({
+    STR: Object.freeze({ uri: 'modifier:str', name: 'Strength Modifier', type: PropertyType.Number }),
+    DEX: Object.freeze({ uri: 'modifier:dex', name: 'Dexterity Modifier', type: PropertyType.Number }),
+    CON: Object.freeze({ uri: 'modifier:con', name: 'Constitution Modifier', type: PropertyType.Number }),
+    INT: Object.freeze({ uri: 'modifier:int', name: 'Intelligence Modifier', type: PropertyType.Number }),
+    WIS: Object.freeze({ uri: 'modifier:wis', name: 'Wisdom Modifier', type: PropertyType.Number }),
+    CHA: Object.freeze({ uri: 'modifier:cha', name: 'Charisma Modifier', type: PropertyType.Number }),
+    CHA: Object.freeze({ uri: 'modifier:initiative', name: 'Initiative', type: PropertyType.Number })
+});
+
+/**
+ * Defines the type of hit points that can be managed for a token
+ * @readonly
+ * @enum {PropertyConfiguration}
+ */
+export const HitPoint = Object.freeze({
+    HitDieCount: Object.freeze({ uri: 'hit:dice', name: 'Hit Die Count', type: PropertyType.Number }),
+    HitDieSize: Object.freeze({ uri: 'hit:dice:size', name: 'Hit Die Size', type: PropertyType.DieSize }),
+    Maximum: Object.freeze({ uri: 'hp:max', name: 'Hit Point Maximum', type: PropertyType.Number })
 });
 
 /**
@@ -255,31 +308,6 @@ export const SpellTracking = Object.freeze({
 });
 
 /**
- * Defines the top-level modifiers based on ability scores for a token
- * @readonly
- * @enum {PropertyConfiguration}
- */
-export const AbilityModifier = Object.freeze({
-    STR: Object.freeze({ uri: 'modifier:str', name: 'Strength Modifier', type: PropertyType.Number }),
-    DEX: Object.freeze({ uri: 'modifier:dex', name: 'Dexterity Modifier', type: PropertyType.Number }),
-    CON: Object.freeze({ uri: 'modifier:con', name: 'Constitution Modifier', type: PropertyType.Number }),
-    INT: Object.freeze({ uri: 'modifier:int', name: 'Intelligence Modifier', type: PropertyType.Number }),
-    WIS: Object.freeze({ uri: 'modifier:wis', name: 'Wisdom Modifier', type: PropertyType.Number }),
-    CHA: Object.freeze({ uri: 'modifier:cha', name: 'Charisma Modifier', type: PropertyType.Number })
-});
-
-/**
- * Defines the type of hit points that can be managed for a token
- * @readonly
- * @enum {PropertyConfiguration}
- */
-export const HitPoint = Object.freeze({
-    HitDice: Object.freeze({ uri: 'hit:dice', name: 'Hit Dice', type: PropertyType.Number }),
-    Damage: Object.freeze({ uri: 'hp:max', name: 'Hit Point Maximum', type: PropertyType.Number }),
-    Temporary: Object.freeze({ uri: 'hp:temp', name: 'Temporary Hit Points', type: PropertyType.Number })
-});
-
-/**
  * While proficiency and critical are disabled for a pure dice roll against the ability,
  * these can also serve as modifiers that are broadly applied to more well-defined dice rolls
  * such as status effects that target DEX ability checks also applying to DEX skill checks
@@ -294,7 +322,7 @@ export const AbilityCheck = Object.freeze({
     INT: Object.freeze({ uri: 'check:int', name: 'Intelligence Check', type: PropertyType.Roll, rollType: RollType.AbilityCheck, diceTags: Object.freeze([ 'check', AbilityScore.INT.uri ]) }),
     WIS: Object.freeze({ uri: 'check:wis', name: 'Wisdom Check', type: PropertyType.Roll, rollType: RollType.AbilityCheck, diceTags: Object.freeze([ 'check', AbilityScore.WIS.uri ]) }),
     CHA: Object.freeze({ uri: 'check:cha', name: 'Charisma Check', type: PropertyType.Roll, rollType: RollType.AbilityCheck, diceTags: Object.freeze([ 'check', AbilityScore.CHA.uri ]) }),
-    Proficiency: Object.freeze({ uri: 'check:pb', name: 'Proficiency Check', type: PropertyType.Roll, rollType: RollType.AbilityCheck, diceTags: Object.freeze([ 'check', AbilityScore.Proficiency.uri ]) })
+    Proficiency: Object.freeze({ uri: 'check:pb', name: 'Proficiency Check', type: PropertyType.Roll, rollType: RollType.AbilityCheck, diceTags: Object.freeze([ 'check', AbilityScore.ProficiencyBonus.uri ]) })
 });
 
 /**
