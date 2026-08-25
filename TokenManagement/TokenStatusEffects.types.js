@@ -1,4 +1,4 @@
-/** @import { EffectInitiativeSnapshot, EffectResolutionRules } from './Effects/EffectDefinition.types.js' */
+/** @import { EffectInitiativeSnapshot, EffectResolutionRules } from './EffectDefinition.types.js' */
 
 /**
  * @typedef GlobalStatusEffectConfig

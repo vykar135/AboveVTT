@@ -54,6 +54,8 @@ export const ActionTrigger = Object.freeze({
     Standard: Object.freeze({ uri: 'on:action:standard', name: 'On Action' }),
     Bonus: Object.freeze({ uri: 'on:action:bonus', name: 'On Bonus Action' }),
     Reaction: Object.freeze({ uri: 'on:reaction', name: 'On Reaction' }),
+    Help: Object.freeze({ uri: 'on:action:help', name: 'On Help Action' }),
+    Helped: Object.freeze({ uri: 'on:action:helped', name: 'When Helped' }),
     SpellCast: Object.freeze({ uri: 'on:spell', name: 'When Casting A Spell' }),
     WeaponAttack: Object.freeze({ uri: 'on:attack:weapon', name: 'On Weapon Attack' }),
     MeleeAttack: Object.freeze({ uri: 'on:attack:melee', name: 'On Melee Attack' }),
@@ -78,10 +80,21 @@ export const MovementTrigger = Object.freeze({
  * @readonly
  * @enum {EnumWithName}
  */
+export const HitPointTrigger = Object.freeze({
+    Damaged: Object.freeze({ uri: 'on:hp:damage', name: "On Taking Damage"}),
+    Healed: Object.freeze({ uri: 'on:hp:heal', name: "On Receiving Heal"}),
+    Shielded: Object.freeze({ uri: 'on:hp:temp', name: "On Receiving Temp HP"})
+})
+
+/**
+ * @readonly
+ * @enum {EnumWithName}
+ */
 export const ResolutionTrigger = Object.freeze({
     Initiative: InitiativeTrigger,
     Action: ActionTrigger,
-    Movement: MovementTrigger
+    Movement: MovementTrigger,
+    HitPoint: HitPointTrigger
 });
 
 /**
@@ -102,5 +115,6 @@ export const ResolutionAction = Object.freeze({
 export const ImpactTrigger = Object.freeze({
     Initiative: InitiativeTrigger,
     Action: ActionTrigger,
-    Movement: MovementTrigger
+    Movement: MovementTrigger,
+    HitPoint: HitPointTrigger
 });
