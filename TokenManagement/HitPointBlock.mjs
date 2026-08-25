@@ -17,7 +17,7 @@ export default class HitPointBlock {
     }
 
     /** @returns {TokenHitPointInfo} The hit point information that is stored on the token */
-    get #hitPointInfo() {
+    #getCurrent() {
         if (this.#statBlock.token.options.hitPointInfo == null) {
             this.#statBlock.token.options.hitPointInfo = {
                 maximum: 0,
@@ -96,7 +96,7 @@ export default class HitPointBlock {
 
     /** @returns {number} The remaining number of hit points that the creature or object has before it will either die or begin making death saving throws  */
     get remaining() {
-        return this.#hitPointInfo.current ?? 0;
+        return this.#getCurrent().current ?? 0;
     }
 
     /** @returns {number} The total number of hit points the creature or object has including temporary hit hpoints */
@@ -106,7 +106,7 @@ export default class HitPointBlock {
 
     /** @returns {number} The number of temporary hit hpoints that the creature or object has */
     get temp() {
-        return this.#hitPointInfo.temp ?? 0;
+        return this.#getCurrent().temp ?? 0;
     }
 
     /** Review the reported values for the player sheet when available against the expected amounts. */
@@ -157,7 +157,7 @@ export default class HitPointBlock {
             this.#statBlock.hasPendingChanges(true);
         }
 
-        const info = this.#hitPointInfo;
+        const info = this.#getCurrent();
         let temp = info.temp;
         if (temp >= amount) {
             temp = temp - amount;
@@ -207,7 +207,7 @@ export default class HitPointBlock {
             this.#statBlock.hasPendingChanges(true);
         }
 
-        const info = this.#hitPointInfo;
+        const info = this.#getCurrent();
         const max = this.maximum;
 
         let remaining = info.current + amount;
@@ -231,7 +231,7 @@ export default class HitPointBlock {
      * @returns {number} The number of temporarily hit points that are currently applied
      */
     applyTemp(amount, tags){
-        const info = this.#hitPointInfo;
+        const info = this.#getCurrent();
         const current = info.temp;
         if (current != null && current >= amount) {
             if (this.#statBlock.isPlayer) {
@@ -256,7 +256,7 @@ export default class HitPointBlock {
      * @param {number} amount - The amount of remaining hit points to set
      */
     setRemaining(amount) {
-        const info = this.#hitPointInfo;
+        const info = this.#getCurrent();
         const max = info.maximum;
 
         if (amount < 0) {
@@ -283,7 +283,7 @@ export default class HitPointBlock {
             amount = 0;
         }
 
-        this.#hitPointInfo.temp = amount;
+        this.#getCurrent().temp = amount;
         if (this.#statBlock.isPlayer) {
             this.#getSnapshot().temp = amount;
             this.#statBlock.hasPendingChanges(true);

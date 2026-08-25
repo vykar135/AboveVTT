@@ -8,38 +8,29 @@
  * @property {(amount: number) => number} apply - Method used to apply the effect of the configuration onto a given amount
  * @property {number} d20test - The number of additional dice that the configuration either awards or removes from a d20 test
  * @property {number} dndBeyond - The numerical value that D&D Beyond uses to reference this property
- */
-
-/**
+ *
  * @typedef PropertyTypeEnum
  * @property {string} uri - The value that is intended to be persisted within token options
  * @property {string} name - The value that is intended to be displayed to users
- */
-
-/**
+ *
  * @typedef RollTypeEnum
  * @property {string} uri - The value that is intended to be persisted within token options
  * @property {string} name - The value that is intended to be displayed to users
  * @property {boolean} proficiency - Whether a roll can be subject to the effects of proficiency
  * @property {boolean} advantage - Whether a roll can be subject to the effects of advantage and disadvantage
  * @property {boolean} critical - Whether a roll can be subject to the effects of critical damage
- */
-
-/**
+ *
  * @typedef DieSizeEnum
  * @property {string} uri - The value that is intended to be persisted within token options
  * @property {string} name - The value that is intended to be displayed to users
- * @property {number} dieSize - The numerical value for the size of the die
- */
-
-/**
+ * @property {number} size - The numerical value for the size of the die
+ *
  * @typedef ProficiencyTypeEnum
  * @property {string} uri - The value that is intended to be persisted within token options.
  * @property {string} name - The value that is intended to be displayed to users.
  * @property {(amt: number) => number} apply - Method used to modify a value based on the proficiency type.
  * @property {number} d20test - The number of dice added or removed from a d20 test.
  */
-
 
 /**
  * Defines the type of behavior that a property on a token utilizies
@@ -51,6 +42,7 @@ export const PropertyType = Object.freeze({
     Toggle: Object.freeze({ uri: 'prop:toggle', name: 'Toggle' }),
     Charges: Object.freeze({ uri: 'prop:charges', name: 'Charges' }),
     Roll: Object.freeze({ uri: 'prop:roll', name: 'Dice Roll' }),
+    Condition: Object.freeze({ uri: 'prop:condition', name: 'Condition' }),
     Proficiency: Object.freeze({ uri: 'prop:proficiency', name: 'Proficiency' }),
     Advantage: Object.freeze({ uri: 'prop:advantage', name: 'Advantage' }),
     Resistance: Object.freeze({ uri: 'prop:resistance', name: 'Resistance' }),
@@ -79,13 +71,14 @@ export const RollType = Object.freeze({
  * @enum {DieSizeEnum}
  */
 export const DiceType = Object.freeze({
-    d4: Object.freeze({ uri: 'd4', name: 'd4', dieSize: 4 }),
-    d6: Object.freeze({ uri: 'd6', name: 'd6', dieSize: 6 }),
-    d8: Object.freeze({ uri: 'd8', name: 'd8', dieSize: 8 }),
-    d10: Object.freeze({ uri: 'd10', name: 'd10', dieSize: 10 }),
-    d12: Object.freeze({ uri: 'd12', name: 'd12', dieSize: 12 }),
-    d20: Object.freeze({ uri: 'd20', name: 'd20', dieSize: 20 }),
-    d100: Object.freeze({ uri: 'd100', name: 'd100', dieSize: 100 })
+    d4: Object.freeze({ uri: 'd2', name: 'd2', size: 2 }), // Coin Flip
+    d4: Object.freeze({ uri: 'd4', name: 'd4', size: 4 }),
+    d6: Object.freeze({ uri: 'd6', name: 'd6', size: 6 }),
+    d8: Object.freeze({ uri: 'd8', name: 'd8', size: 8 }),
+    d10: Object.freeze({ uri: 'd10', name: 'd10', size: 10 }),
+    d12: Object.freeze({ uri: 'd12', name: 'd12', size: 12 }),
+    d20: Object.freeze({ uri: 'd20', name: 'd20', size: 20 }),
+    d100: Object.freeze({ uri: 'd100', name: 'd100', size: 100 })
 });
 
 /**
@@ -104,8 +97,8 @@ export const ProficiencyType = Object.freeze({
 
     // Debuffs
     Flaw: Object.freeze({ uri: 'flaw', name: 'Flawed', apply: (pb) => pb > 0 ? -pb : pb }),
-    HeavyFlaw: Object.freeze({ uri: 'flaw:heavy', name: 'Heavily Flawed', apply: (pb) => (pb > 0 ? -(pb * 2) : pb) }),
-    MinorFlaw: Object.freeze({ uri: 'flaw:minor', name: 'Minorly Flawed', apply: (pb) => (pb > 0 ? -Math.ceil(pb / 2) : pb) })
+    MinorFlaw: Object.freeze({ uri: 'flaw:minor', name: 'Minorly Flawed', apply: (pb) => (pb > 0 ? -Math.ceil(pb / 2) : pb) }),
+    HeavyFlaw: Object.freeze({ uri: 'flaw:heavy', name: 'Heavily Flawed', apply: (pb) => (pb > 0 ? -(pb * 2) : pb) })
 });
 
 /**
@@ -192,22 +185,22 @@ export const DamageResistance = Object.freeze({
  * @enum {PropertyConfiguration}
  */
 export const ConditionType = Object.freeze({
-    Blinded: Object.freeze({ uri: 'blinded', name: 'Blinded', type: PropertyType.Toggle }),
-    Charmed: Object.freeze({ uri: 'charmed', name: 'Charmed', type: PropertyType.Toggle }),
-    Deafened: Object.freeze({ uri: 'deafened', name: 'Deafened', type: PropertyType.Toggle }),
-    Frightened: Object.freeze({ uri: 'frightened', name: 'Frightened', type: PropertyType.Toggle }),
-    Grappled: Object.freeze({ uri: 'grappled', name: 'Grappled', type: PropertyType.Toggle }),
-    Incapacitated: Object.freeze({ uri: 'incapacitated', name: 'Incapacitated', incapacitates: true, type: PropertyType.Toggle }),
-    Invisible: Object.freeze({ uri: 'invisible', name: 'Invisible', type: PropertyType.Toggle }),
-    Paralyzed: Object.freeze({ uri: 'paralyzed', name: 'Paralyzed', incapacitates: true, type: PropertyType.Toggle }),
-    Petrified: Object.freeze({ uri: 'petrified', name: 'Petrified', incapacitates: true, type: PropertyType.Toggle }),
-    Poisoned: Object.freeze({ uri: 'poisoned', name: 'Poisoned', type: PropertyType.Toggle }),
-    Prone: Object.freeze({ uri: 'prone', name: 'Prone', type: PropertyType.Toggle }),
-    Restrained: Object.freeze({ uri: 'restrained', name: 'Restrained', type: PropertyType.Toggle }),
-    Stunned: Object.freeze({ uri: 'stunned', name: 'Stunned', incapacitates: true, type: PropertyType.Toggle }),
-    Unconscious: Object.freeze({ uri: 'unconscious', name: 'Unconscious', incapacitates: true, type: PropertyType.Toggle }),
-    Sleep: Object.freeze({ uri: 'sleep', name: 'Sleep', incapacitates: true, type: PropertyType.Toggle }),
-    Exhaustion: Object.freeze({ uri: 'exhaustion', name: 'Exhaustion', type: PropertyType.Number })
+    Blinded: Object.freeze({ uri: 'blinded', name: 'Blinded', type: PropertyType.Condition, srd: "Blinded" }),
+    Charmed: Object.freeze({ uri: 'charmed', name: 'Charmed', type: PropertyType.Condition, srd: "Charmed" }),
+    Deafened: Object.freeze({ uri: 'deafened', name: 'Deafened', type: PropertyType.Condition, srd: "Deafened" }),
+    Frightened: Object.freeze({ uri: 'frightened', name: 'Frightened', type: PropertyType.Condition, srd: "Frightened" }),
+    Grappled: Object.freeze({ uri: 'grappled', name: 'Grappled', type: PropertyType.Condition, srd: "Grappled" }),
+    Incapacitated: Object.freeze({ uri: 'incapacitated', name: 'Incapacitated', incapacitates: true, type: PropertyType.Condition, srd: "Incapacitated" }),
+    Invisible: Object.freeze({ uri: 'invisible', name: 'Invisible', type: PropertyType.Condition, srd: "Invisible" }),
+    Paralyzed: Object.freeze({ uri: 'paralyzed', name: 'Paralyzed', incapacitates: true, type: PropertyType.Condition, srd: "Paralyzed" }),
+    Petrified: Object.freeze({ uri: 'petrified', name: 'Petrified', incapacitates: true, type: PropertyType.Condition, srd: "Petrified" }),
+    Poisoned: Object.freeze({ uri: 'poisoned', name: 'Poisoned', type: PropertyType.Condition, srd: "Poisoned" }),
+    Prone: Object.freeze({ uri: 'prone', name: 'Prone', type: PropertyType.Condition, srd: "Prone" }),
+    Restrained: Object.freeze({ uri: 'restrained', name: 'Restrained', type: PropertyType.Condition, srd: "Restrained" }),
+    Stunned: Object.freeze({ uri: 'stunned', name: 'Stunned', incapacitates: true, type: PropertyType.Condition, srd: "Stunned" }),
+    Unconscious: Object.freeze({ uri: 'unconscious', name: 'Unconscious', incapacitates: true, type: PropertyType.Condition, srd: "Unconscious" }),
+    Exhaustion: Object.freeze({ uri: 'exhaustion:srd', name: 'Exhaustion', type: PropertyType.Number, min: 0, max: 6, srd: "Exhaustion" }),
+    Exhaustion2014: Object.freeze({ uri: 'exhaustion:2014', name: 'Exhaustion (2014)', type: PropertyType.Number, min: 0, max: 6 })
 });
 
 /**
@@ -282,10 +275,10 @@ export const HitPoint = Object.freeze({
  */
 export const AbilityConstraints = Object.freeze({
     AdvantageLimit: Object.freeze({ uri: 'advantage:limit', name: 'Advantage Limit', type: PropertyType.Number }), // Max number of dice that can be granted for advantage or disadvantage
-    ActionLimit: Object.freeze({ uri: 'action:limit', name: 'Action Limit', type: PropertyType.Charges }),
-    BonusActionLimit: Object.freeze({ uri: 'action:bonus:limit', name: 'Bonus Action Limit', type: PropertyType.Charges }),
-    ReactionLimit: Object.freeze({ uri: 'reaction:limit', name: 'Reaction Limit', type: PropertyType.Charges }),
-    WeaponAttackLimit: Object.freeze({ uri: 'weapon:attack:limit', name: 'Weapon Attack Limit', type: PropertyType.Charges })
+    ActionLimit: Object.freeze({ uri: 'action:limit', name: 'Actions', type: PropertyType.Charges }),
+    BonusActionLimit: Object.freeze({ uri: 'action:bonus:limit', name: 'Bonus Actions', type: PropertyType.Charges }),
+    ReactionLimit: Object.freeze({ uri: 'reaction:limit', name: 'Reactions', type: PropertyType.Charges }),
+    WeaponAttackLimit: Object.freeze({ uri: 'weapon:attack:limit', name: 'Weapon Attacks', type: PropertyType.Charges })
 });
 
 /**

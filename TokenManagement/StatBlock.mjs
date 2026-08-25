@@ -1,7 +1,8 @@
 /** @import { Token, TokenHitPointInfo } from './Token.types.js' */
 
-import { AbilityScore, HitPoint } from './CoreEnums.mjs'
+import { AbilityScore, ConditionType, HitPoint, PropertyType } from './CoreEnums.mjs'
 import HitPointBlock from './HitPointBlock.mjs';
+import ConditionTracker from './ConditionTracker.mjs';
 import NumericStatProperty from './NumericStatProperty.mjs';
 import TokenStatusEffects from './TokenStatusEffects.mjs';
 
@@ -61,10 +62,10 @@ export default class StatBlock {
     #player;
     /** @type {{ [uri: string]: NumericStatProperty}} */
     #numeric;
+    /** @type {{ [uri: string]: ConditionTracker}} */
+    #conditions;
     /** @type {HitPointBlock} */
     #hitPoints;
-    /** @type {TokenHitPointInfo} */
-    #reportedHitPoints
     /** @type {TokenStatusEffects} */
     #effects;
 
@@ -146,14 +147,18 @@ export default class StatBlock {
         return this.#numeric[uri];
     }
 
+    /**
+     * Retrieves the details for how a condition has been applied to the stat block.
+     * @param {string} uri - The identifier of the condition being tracked on the the stat block.
+     * @returns {ConditionTracker}
+     */
+    getCondition(uri) {
+        return this.#conditions[uri];
+    }
+
     /** Details about the current state of the creature's hit points and associated controls. */
     get hp() {
         return this.#hitPoints;
-    }
-
-    /** Details about the hit point netadata that was reported for a player. */
-    get reportedHp() {
-        return this.#reportedHitPoints;
     }
 
     get str() {
@@ -188,10 +193,6 @@ export default class StatBlock {
 
         this.#player = (player != null);
 
-        // Snapshoting the current hit points from the player sheet so that 
-        // we can track when the player isn't updating their sheet properly as the DM
-        this.#reportedHitPoints = player != null ? Object.freeze(HitPointBlock.fix(structuredClone(player?.hitPointInfo ?? {}))) : null;
-
         this.#refreshAbilityScore(AbilityScore.STR, options, player, monster);
         this.#refreshAbilityScore(AbilityScore.DEX, options, player, monster);
         this.#refreshAbilityScore(AbilityScore.CON, options, player, monster);
@@ -204,6 +205,15 @@ export default class StatBlock {
 
         const totalHp = options.hitPointInfo?.maximum ?? player.hitPointInfo?.maximum ?? 0;
         this.#updateNumeric(HitPoint.Maximum.uri, totalHp);
+
+        for(const condition of Object.values(ConditionType)) {
+            if (condition.type === PropertyType.Condition) {
+                this.#refreshAppliedCondition(condition, options, player);
+            } else if (condition.type === PropertyType.Number) {
+                this.#refreshLeveledCondition(condition, player);
+            }
+            
+        }
     }
 
     /** Retrieves the common monster stat block if the token is an instance of one */
@@ -230,10 +240,6 @@ export default class StatBlock {
      * @param {number} value 
      */
     #updateNumeric(uri, value) {
-        if (typeof uri === 'object') {
-            uri = uri.uri;
-        }
-
         if (typeof value === 'string') {
             value = parseInt(value);
         }
@@ -259,7 +265,7 @@ export default class StatBlock {
     /**
      * Determines the best ability score value to use for the stat block.
      * @param {AbilityScore} score - The ability score to update.
-     * @param {Object} options - The options values from the token.
+     * @param {TokenOptions} options - The options values from the token.
      * @param {Object} player - The player sheet information from D&D Beyond.
      * @param {Object} monster - The common monster stat block when available.
      */
@@ -270,6 +276,38 @@ export default class StatBlock {
             10;
 
         this.#updateNumeric(score.uri, value);
+    }
+
+    /**
+     * Determines whether a condition is applied to the stat block.
+     * @param {ConditionType} condition - The condition to update.
+     * @param {TokenOptions} options - The options values from the token.
+     * @param {Object} player - The player sheet information from D&D Beyond.
+     */
+    #refreshAppliedCondition(condition, options, player) {
+        const srd = (typeof condition.srd === 'string');
+        const fromToken = (srd && options.conditions.includes(condition.srd));
+        const fromPlayer = (srd && (player?.conditions?.findIndex((entry) => entry?.name === condition.srd) ?? -1) >= 0);
+
+        let property = this.#conditions[condition.uri];
+        if (property == null) {
+            property = new ConditionTracker(this, uri, fromToken, fromPlayer);
+            this.#conditions[condition.uri] = property;
+        }
+
+        property.setBaseValue(fromToken, fromPlayer);
+    }
+
+    /**
+     * Determines whether a condition is applied to the stat block at a specified level.
+     * @param {ConditionType} condition - The condition to update.
+     * @param {Object} player - The player sheet information from D&D Beyond.
+     */
+    #refreshLeveledCondition(condition, player) {
+        const srd = (typeof condition.srd === 'string');
+        const fromPlayer = srd ? (player?.conditions?.find((entry) => entry?.name === condition.srd) ?? -1)?.level : null;
+
+        this.#updateNumeric(condition.uri, fromPlayer ?? 0);
     }
 }
 
