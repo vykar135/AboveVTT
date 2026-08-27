@@ -224,6 +224,24 @@ export default class HitPointBlock {
         return this.total;
     }
 
+    /** Verifies that the current hit point value does not exceed the maximum. */
+    checkMaximum() {
+        const info = this.#getCurrent();
+        const max = this.maximum;
+
+        if (info.current <= max) {
+            return;
+        }
+
+        info.current = max;
+
+        const snapshot = this.#getSnapshot();
+        if (snapshot != null) {
+            snapshot.current = max;
+            this.#statBlock.hasPendingChanges(true);
+        }
+    }
+
     /**
      * Requests a number of temporary hit points to be assigned; if this value is less than the current amount it is ignored.
      * @param {number} amount - The requested amount of temporary hit points to assign

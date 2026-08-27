@@ -13,6 +13,8 @@ export default class TokenStatusEffects {
     #pendingSceneTokens;
     /** @type {{ [key: string]: Token}} */
     #pendingCampaignTokens;
+    /** @type {number} */
+    #version;
 
     /**
      * Manages the status effects associated with the provided Token
@@ -22,6 +24,7 @@ export default class TokenStatusEffects {
         this.#stats = stats;
         this.#pendingSceneTokens = {};
         this.#pendingCampaignTokens = {};
+        this.#version = Date.now();
     }
 
     /** Requests a token update message to be dispatched only if there are pending changes that have been observed by this instance */
@@ -79,6 +82,11 @@ export default class TokenStatusEffects {
     /** @returns {string} The identifier of the token being managed */
     get id() {
         return this.#stats.token.options.id;
+    }
+
+    /** @returns {number} The current version of the status effects */
+    get version() {
+        return this.#version;
     }
 
     /**
@@ -208,6 +216,16 @@ export default class TokenStatusEffects {
     /** The amount of status effects that the token is allowed to concentrate on */
     get concentrationLimit() {
         return this.#getContainer().concentration?.limit ?? 1;
+    }
+
+    /**
+     * Applies all of the active status effects to the stat block and 
+     * requests a recalculation of all properties after the changes are applied
+     */
+    reapply() {
+        this.#version = Date.now();
+
+        this.#stats.recalculate();
     }
 
     /**

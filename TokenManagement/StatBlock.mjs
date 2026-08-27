@@ -148,12 +148,44 @@ export default class StatBlock {
     }
 
     /**
+     * Retrieves a property from the stat block that implements a numeric value or adds it if it doesn't exist.
+     * @param {string} uri - The identifier of the property on the stat block that implements a numeric value.
+     * @param {(stats: StatBlock, uri: string) => NumericStatProperty} init - Callback used to initialize the condition if it doesn't already exist.
+     * @returns {NumericStatProperty}
+     */
+    getOrAddNumeric(uri, init) {
+        let property = this.#numeric[uri];
+        if (property == null && typeof init === 'function') {
+            property = init(this, uri);
+            this.#numeric[uri] = condition;
+        }
+
+        return property;
+    }
+
+    /**
      * Retrieves the details for how a condition has been applied to the stat block.
      * @param {string} uri - The identifier of the condition being tracked on the the stat block.
      * @returns {ConditionTracker}
      */
     getCondition(uri) {
         return this.#conditions[uri];
+    }
+
+    /**
+     * Retrieves the details for how a condition has been applied to the stat block or adds it if it doesn't exist.
+     * @param {string} uri - The identifier of the condition being tracked on the the stat block.
+     * @param {(stats: StatBlock, uri: string) => ConditionTracker} init - Callback used to initialize the condition if it doesn't already exist.
+     * @returns {ConditionTracker}
+     */
+    getOrAddCondition(uri, init) {
+        let condition = this.#conditions[uri];
+        if (condition == null && typeof init === 'function') {
+            condition = init(this, uri);
+            this.#conditions[uri] = condition;
+        }
+
+        return condition;
     }
 
     /** Details about the current state of the creature's hit points and associated controls. */
@@ -212,8 +244,22 @@ export default class StatBlock {
             } else if (condition.type === PropertyType.Number) {
                 this.#refreshLeveledCondition(condition, player);
             }
-            
         }
+
+        this.recalculate();
+    }
+
+    /** Recalculates the values for the properties within the stat block after changes have been applied. */
+    recalculate() {
+        for (const condition of Object.values(this.#conditions)) {
+            condition.recalculate();
+        }
+
+        for (const numeric of Object.values(this.#numeric)) {
+            numeric.recalculate();
+        }
+
+        this.#hitPoints.checkMaximum();
     }
 
     /** Retrieves the common monster stat block if the token is an instance of one */
@@ -307,7 +353,7 @@ export default class StatBlock {
         const srd = (typeof condition.srd === 'string');
         const fromPlayer = srd ? (player?.conditions?.find((entry) => entry?.name === condition.srd) ?? -1)?.level : null;
 
-        this.#updateNumeric(condition.uri, fromPlayer ?? 0);
+        this.#updateNumeric(condition.uri, (fromPlayer ?? 0) * 2);
     }
 }
 

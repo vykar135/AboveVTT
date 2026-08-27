@@ -1,3 +1,5 @@
+/** @import { ConditionType, PropertyConfiguration } from './CoreEnums.mjs*/
+
 import StatBlock from './StatBlock.mjs'
 import { AdvantageType, DamageType, DiceType, ProficiencyType, ResistanceType, RollType } from './CoreEnums.mjs';
 import { ResolutionTrigger, ResolutionAction, EffectImpact, EffectDuration, ImpactTrigger } from "./StatusEffectEnums.mjs";
@@ -7,7 +9,7 @@ import { ResolutionTrigger, ResolutionAction, EffectImpact, EffectDuration, Impa
  * @property {string} uri - The system identifier for these status effect behavior rules
  * @property {string} name - The name of the status effect
  * @property {boolean?} resilient - Whether the effect persists even when the token is incapacitated; defaults to true
- * @property {boolean?} concentration - Whether the effect requires concentration; defaults to false and overrides resilient
+ * @property {boolean?} concentration - Whether the effect requires concentration; defaults to false and overrides resilient when true
  * @property {EffectDurationInfo} duration - The duration of the effect
  * @property {EffectResolutionRule[]} resolution - The points when the target of the status effect can attempt to fully resolve the effect
  * @property {EffectImpactRule[]} impacts - The rules that define how the effect is applied to the stat block
@@ -27,7 +29,7 @@ import { ResolutionTrigger, ResolutionAction, EffectImpact, EffectDuration, Impa
  * @property {ImpactTrigger[]?} triggers - The points when the impact will be applied to the stat block
  * @property {EffectImpact} type - The type of change that is applied
  * @property {EffectDurationInfo} duration - The duration of the effect
- * @property {string?} modifies - The property on the stat block that is being modified
+ * @property {PropertyConfiguration?} modifies - The property on the stat block that is being modified
  * @property {EffectResolutionRule[]} resolution - The points when the target of the status effect can attempt to fully resolve the impact
  * @property {string[]?} tags - Any tags that can be used to modify the outcome of the effect
  * @property {number?} amount - The fixed amount that is applied by the effect when it is triggered
@@ -37,6 +39,7 @@ import { ResolutionTrigger, ResolutionAction, EffectImpact, EffectDuration, Impa
  * @property {AdvantageType?} advantage - The style of advantage being used or applied by the effect
  * @property {DamageType?} damageType - The type of damage being used or applied by the effect
  * @property {AbilityScore?} ability - The type of ability score used or applied by the effect
+ * @property {ConditionType?} condition - The type of condition applied by the effect
  * 
  * @typedef {Object} EffectDurationInfo
  * @property {EffectDuration} type - The type of duration that an effect is using; defaults to indefinite
@@ -54,6 +57,8 @@ import { ResolutionTrigger, ResolutionAction, EffectImpact, EffectDuration, Impa
  * 
  * @typedef {Object} EffectImpactContext 
  * @property {StatBlock} stats - The stat block that is being modified
+ * @property {EffectBehaviorInfo} behavior - The behavior that the effect impact originated from
+ * @property {string} tracking - The tracking identifier within the instance of the behavior for the effect impact
  * @property {EffectImpactRuleSettings} impact - Configuration settings that define how the impact of the effect should be applied to the stat block
  * @property {EffectInitiativeSnapshot} initiative - Details of the initiative order that the effect was first applied at
  * @property {EffectImpactRuleSettings} overrides - User specified overrides for the impact settings
