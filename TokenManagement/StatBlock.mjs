@@ -8,8 +8,8 @@ import TokenStatusEffects from './TokenStatusEffects.mjs';
 
 /**
  * Performs a case-insensitive string comparison of a pair of property URIs.
- * @param {string} a - The URI being tested
- * @param {string} b - The expected value of the URI
+ * @param {string} value - The URI being tested
+ * @param {string} expected - The expected value of the URI
  * @returns {boolean}
  */
 export function uriEquals(value, expected) {
@@ -76,6 +76,7 @@ export default class StatBlock {
         this.#token = token;
         this.#pendingChanges = false;
         this.#numeric = {};
+        this.#conditions = {}
         this.#hitPoints = new HitPointBlock(this);
         this.#effects = new TokenStatusEffects(this);
 
@@ -223,7 +224,7 @@ export default class StatBlock {
         const player = this.getPlayerSheet();
         const monster = this.getMonsterOptions();
 
-        this.#player = (player != null);
+        this.#player = (player != null || (options.id ?? '').includes('/'));
 
         this.#refreshAbilityScore(AbilityScore.STR, options, player, monster);
         this.#refreshAbilityScore(AbilityScore.DEX, options, player, monster);
