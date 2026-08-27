@@ -236,7 +236,7 @@ export default class StatBlock {
         const ac = options.armorClass ?? player?.armorClass ?? monster?.armorClass ?? 10;
         this.#updateNumeric(AbilityScore.ArmorClass.uri, ac);
 
-        const totalHp = options.hitPointInfo?.maximum ?? player.hitPointInfo?.maximum ?? 0;
+        const totalHp = options.hitPointInfo?.maximum ?? player?.hitPointInfo?.maximum ?? 0;
         this.#updateNumeric(HitPoint.Maximum.uri, totalHp);
 
         for(const condition of Object.values(ConditionType)) {
@@ -395,7 +395,7 @@ export default class StatBlock {
      */
     #refreshLeveledCondition(condition, player) {
         const srd = (typeof condition.srd === 'string');
-        const fromPlayer = srd ? (player?.conditions?.find((entry) => entry?.name === condition.srd) ?? -1)?.level : null;
+        const fromPlayer = srd ? player?.conditions?.find((entry) => entry?.name === condition.srd)?.level : null;
 
         this.#updateNumeric(condition.uri, (fromPlayer ?? 0) * 2);
     }
