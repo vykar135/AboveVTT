@@ -50,6 +50,7 @@ export default class TokenStatusEffects {
         this.#pendingSceneTokens = {};
         this.#pendingCampaignTokens = {};
 
+        this.reapply();
         if (callback(this.#stats) === true) {
             const target = this.id;
             delete scene[target];
@@ -61,10 +62,12 @@ export default class TokenStatusEffects {
         }
 
         for (const target of Object.values(scene)) {
+            target.stats.statusEffects.reapply();
             callback(target.stats);
         }
 
         for (const target of Object.values(campaign)) {
+            target.stats.statusEffects.reapply();
             callback(target.stats);
         }
     }
@@ -282,7 +285,12 @@ export default class TokenStatusEffects {
         this.reviewConcentration();
     }
 
-    /** Clones and appends the effect to the provided collection, then notifies the target that a change was made to it. */
+    /**
+     * Clones and appends the effect to the provided collection, then notifies the target that a change was made to it.
+     * @param {GlobalStatusEffectConfig} target 
+     * @param {StatusEffect[]} collection 
+     * @param {StatusEffect} effect 
+     * */
     static #applyEffect(target, collection, effect) {
         const cloned = structuredClone(effect);
         collection.push(cloned);
@@ -575,6 +583,7 @@ export default class TokenStatusEffects {
             if (removed) {
                 removedAnywhere = true;
                 changes[key] = value;
+                value.stats.statusEffects.reapply();
             }
         }
 

@@ -145,6 +145,10 @@ export default class StatBlock {
      * @returns {NumericStatProperty}
      */
     getNumeric(uri) {
+        if (typeof uri === 'object' && 'uri' in uri) {
+            uri = uri.uri;
+        }
+
         return this.#numeric[uri];
     }
 
@@ -155,6 +159,10 @@ export default class StatBlock {
      * @returns {NumericStatProperty}
      */
     getOrAddNumeric(uri, init) {
+        if (typeof uri === 'object' && 'uri' in uri) {
+            uri = uri.uri;
+        }
+
         let property = this.#numeric[uri];
         if (property == null && typeof init === 'function') {
             property = init(this, uri);
@@ -170,6 +178,10 @@ export default class StatBlock {
      * @returns {ConditionTracker}
      */
     getCondition(uri) {
+        if (typeof uri === 'object' && 'uri' in uri) {
+            uri = uri.uri;
+        }
+
         return this.#conditions[uri];
     }
 
@@ -180,6 +192,10 @@ export default class StatBlock {
      * @returns {ConditionTracker}
      */
     getOrAddCondition(uri, init) {
+        if (typeof uri === 'object' && 'uri' in uri) {
+            uri = uri.uri;
+        }
+
         let condition = this.#conditions[uri];
         if (condition == null && typeof init === 'function') {
             condition = init(this, uri);
