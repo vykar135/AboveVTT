@@ -1,3 +1,4 @@
+/** @import { EffectRevalidationCallback } from './EffectDefinition.types.js' */
 import StatBlock from "./StatBlock.mjs";
 
 /**
@@ -12,8 +13,12 @@ export default class NumericStatProperty {
     #base;
     /** @type {number | undefined} */
     #snapshot;
+    /** @type {{ [instance: string]: { amount: number, version: number }} */
+    #sources;
     /** @type {number} */
     #calculated;
+    /** @type {EffectRevalidationCallback} */
+    #recaluateCallback
 
     /**
      * @param {StatBlock} stats - The stat block that this property is for.
@@ -24,8 +29,10 @@ export default class NumericStatProperty {
         this.#uri = uri;
         this.#stats = stats;
         this.#base = value;
+        this.#sources = {};
         this.#calculated = 0;
         this.#snapshot = undefined;
+        this.#recaluateCallback = this.recalculate.bind(this);
     }
 
     /** The base value of the property. */
@@ -81,6 +88,18 @@ export default class NumericStatProperty {
      * @returns {number} The updated value for the property
     */
     recalculate() {
+        let calculated = 0;
+        const version = this.#stats.statusEffects.version;
+
+        for (const [key, applied] of this.#sources) {
+            if (applied.version === version) {
+                calculated += applied.amount;
+            } else {
+                delete this.#sources[key];
+            }
+        }
+
+        this.#calculated = calculated;
         return this.current;
     }
 
@@ -130,5 +149,41 @@ export default class NumericStatProperty {
         }
         
         this.#stats.hasPendingChanges(true);
+    }
+
+    /**
+     * Appends an instance of a modification being applied to the stat block.
+     * @param {string} instance - The tracking identifier within the instance of the behavior for the effect impact
+     * @param {number} value - The value assigned to the instance of modification effect.
+     */
+    addInstance(instance, value) {
+        if (typeof instance !== 'string') {
+            console.warn(`Attempting to append an instance of condition ${this.#uri} without a valid instance identifier`);
+            return;
+        }
+
+        instance = instance.toLocaleLowerCase();
+        this.#sources[instance] = { amount: value, version: this.#stats.statusEffects.version };
+    }
+
+    /**
+     * Removes an instance of a modification being applied to the stat block.
+     * @param {string} instance - The tracking identifier within the instance of the behavior for the effect impact
+     */
+    removeInstance(instance) {
+        if (typeof instance !== 'string') {
+            console.warn(`Attempting to remove a modification from numeric stat ${this.#uri} without a valid instance identifier`);
+            return;
+        }
+
+        instance = instance.toLocaleLowerCase();
+        delete this.#sources[instance];
+    }
+
+    /**
+     * Removes all modification instances
+     */
+    clearInstances() {
+        this.#sources = {};
     }
 }

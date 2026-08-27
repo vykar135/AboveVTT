@@ -1,3 +1,4 @@
+/** @import { EffectRevalidationCallback } from './EffectDefinition.types.js' */
 import StatBlock from "./StatBlock.mjs";
 
 /**
@@ -14,6 +15,10 @@ export default class ConditionTracker {
     #playerActive;
     /** @type {boolean} */
     #effectActive;
+    /** @type {{ [instance: string]: number}} */
+    #sources;
+    /** @type {EffectRevalidationCallback} */
+    #recaluateCallback
 
     /**
      * @param {StatBlock} stats - The stat block that this property is for.
@@ -26,6 +31,13 @@ export default class ConditionTracker {
         this.#uri = uri;
         this.#tokenActive = (fromToken === true);
         this.#playerActive = (fromPlayer === true);
+        this.#sources = [];
+        this.#recaluateCallback = this.recalculate.bind(this);
+    }
+
+    /** The URI of the condition being tracked */
+    get uri() {
+        return this.#uri;
     }
 
     /** The base value of the property. */
@@ -72,6 +84,53 @@ export default class ConditionTracker {
      * @returns {boolean} Whether the condition is currently active
     */
     recalculate() {
+        const version = this.#stats.statusEffects.version;
+        let active = false;
+
+        for (const [key, applied] of this.#sources) {
+            if (applied === version) {
+                active = true;
+            } else {
+                delete this.#sources[key];
+            }
+        }
+
+        this.#effectActive = active;
         return this.isActive;
+    }
+
+    /**
+     * Appends an instance of the condition being applied to the stat block.
+     * @param {string} instance - The tracking identifier within the instance of the behavior for the effect impact
+     */
+    addInstance(instance) {
+        if (typeof instance !== 'string') {
+            console.warn(`Attempting to append an instance of condition ${this.#uri} without a valid instance identifier`);
+            return;
+        }
+
+        instance = instance.toLocaleLowerCase();
+        this.#sources[instance] = this.#stats.statusEffects.version;
+    }
+
+    /**
+     * Removes an instance of the condition being applied to the stat block.
+     * @param {string} instance - The tracking identifier within the instance of the behavior for the effect impact
+     */
+    removeInstance(instance) {
+        if (typeof instance !== 'string') {
+            console.warn(`Attempting to remove an instance of condition ${this.#uri} without a valid instance identifier`);
+            return;
+        }
+
+        instance = instance.toLocaleLowerCase();
+        delete this.#sources[instance];
+    }
+
+    /**
+     * Removes all instances of the condition
+     */
+    clearInstances() {
+        this.#sources = {};
     }
 }

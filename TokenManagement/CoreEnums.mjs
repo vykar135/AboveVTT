@@ -1,5 +1,6 @@
 /**
  * @typedef PropertyConfiguration
+ * @property {PropertyTypeEnum} type - The type of property being defined
  * @property {string} uri - The value that is intended to be persisted within token options
  * @property {string} name - The value that is intended to be displayed to users
  * @property {string} short - An abbreviated value that is intended to be displayed to users
@@ -30,6 +31,14 @@
  * @property {string} name - The value that is intended to be displayed to users.
  * @property {(amt: number) => number} apply - Method used to modify a value based on the proficiency type.
  * @property {number} d20test - The number of dice added or removed from a d20 test.
+ * 
+ * @typedef ConditionTypeEnum
+ * @property {string} uri - The value that is intended to be persisted within token options.
+ * @property {string} name - The value that is intended to be displayed to users.
+ * @property {PropertyTypeEnum} type - The type of property being defined
+ * @property {string?} srd - The identifier of the condition within the SRD.
+ * @property {number} min - The minimum level for the condition when applicable.
+ * @property {number} max - The maximum level for the condition when applicable.
  */
 
 /**
@@ -182,7 +191,7 @@ export const DamageResistance = Object.freeze({
  * The types of conditions and whether they cause the token to be incapacitated 
  * for the purposes of maintained effect removal
  * @readonly
- * @enum {PropertyConfiguration}
+ * @enum {ConditionTypeEnum}
  */
 export const ConditionType = Object.freeze({
     Blinded: Object.freeze({ uri: 'blinded', name: 'Blinded', type: PropertyType.Condition, srd: "Blinded" }),
@@ -199,8 +208,7 @@ export const ConditionType = Object.freeze({
     Restrained: Object.freeze({ uri: 'restrained', name: 'Restrained', type: PropertyType.Condition, srd: "Restrained" }),
     Stunned: Object.freeze({ uri: 'stunned', name: 'Stunned', incapacitates: true, type: PropertyType.Condition, srd: "Stunned" }),
     Unconscious: Object.freeze({ uri: 'unconscious', name: 'Unconscious', incapacitates: true, type: PropertyType.Condition, srd: "Unconscious" }),
-    Exhaustion: Object.freeze({ uri: 'exhaustion:srd', name: 'Exhaustion', type: PropertyType.Number, min: 0, max: 6, srd: "Exhaustion" }),
-    Exhaustion2014: Object.freeze({ uri: 'exhaustion:2014', name: 'Exhaustion (2014)', type: PropertyType.Number, min: 0, max: 6 })
+    Exhaustion: Object.freeze({ uri: 'exhaustion:srd', name: 'Exhaustion', type: PropertyType.Number, min: 0, max: 12, srd: "Exhaustion" })
 });
 
 /**
