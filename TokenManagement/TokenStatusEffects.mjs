@@ -104,10 +104,7 @@ export default class TokenStatusEffects {
      */
     static #initContainer(forToken) {
         if (forToken.options.status_effects == null) {
-            forToken.options.status_effects = {
-                incapacitated: false,
-                concentrating: false
-            };
+            forToken.options.status_effects = {};
         }
 
         return forToken.options.status_effects;
@@ -235,7 +232,7 @@ export default class TokenStatusEffects {
     isIncapacitated(affected) {
         const callback = (target) => {
             const settings = target.settings;
-            const previous = settings.incapacitated;
+            const previous = (settings.incapacitated ?? false);
             settings.incapacitated = (affected ?? false);
             target.hasChanges(settings.incapacitated !== previous);
         }
@@ -256,10 +253,7 @@ export default class TokenStatusEffects {
      */
     static #initConcentration(container) {
         if (container.concentration == null) {
-            container.concentration = {
-                allowed: true,
-                limit: 1
-            };
+            container.concentration = { };
         }
 
         return container.concentration;
@@ -273,11 +267,11 @@ export default class TokenStatusEffects {
     canConcentrate(allowed, limit) {
         const callback = (target) => {
             const settings = TokenStatusEffects.#initConcentration(target.settings);
-            const wasAllowed = settings.allowed;
-            const previousLimit = settings.limit;
+            const wasAllowed = (settings.allowed ?? true);
+            const previousLimit = (settings.limit ?? 1);
 
-            settings.allowed = allowed ?? true;
-            settings.limit = limit ?? 1;
+            settings.allowed = (allowed ?? true);
+            settings.limit = (limit ?? 1);
 
             target.hasChanges(settings.allowed !== wasAllowed || settings.limit !== previousLimit);
         }
@@ -449,7 +443,7 @@ export default class TokenStatusEffects {
 
     /** Removes the concentration flag from the target */
     static #dropConcentrationCallback(target) {
-        if (target.settings.concentrating !== false) {
+        if ((target.settings.concentrating ?? false) !== false) {
             target.settings.concentrating = false;
             target.hasChanges(true);
         }
@@ -595,7 +589,7 @@ export default class TokenStatusEffects {
         const settings = this.#getContainer();
         const concentration = TokenStatusEffects.#initConcentration(settings);
 
-        if (settings.incapacitated === true || concentration.allowed === false) {
+        if ((settings.incapacitated ?? false) === true || (concentration.allowed ?? true) === false) {
             this.dropConcentration();
             return 0;
         }
@@ -603,7 +597,7 @@ export default class TokenStatusEffects {
         const maintaining = TokenStatusEffects.#initMaintaining(settings);
         const current = maintaining.filter(item => this.requiresConcentration(item));
         if (current.length === 0) {
-            if (settings.concentrating !== false) {
+            if ((settings.concentrating ?? false) !== false) {
                 this.dropConcentration();
             }
 
