@@ -262,6 +262,49 @@ export default class StatBlock {
         this.#hitPoints.checkMaximum();
     }
 
+    /** @returns {{ round: number, token?: Token, initiative?: number }} A snapshot of the current initiative order in the combat tracker */
+    getCurrentInitiative() {
+        return StatBlock.getTokenInitiative(this.#token);
+    }
+
+    /** @returns {{ round: number, token?: Token, initiative?: number }} A snapshot of the current initiative order in the combat tracker */
+    static getActiveInitiative() {
+        for (const token of Object.values(window.all_token_objects)) {
+            if (token.options.current === true && (token.options.ct_show === true || (window.DM && token.options.ct_show !== undefined))) {
+                return StatBlock.getTokenInitiative(token);
+            }
+        }
+
+        let round = window.ROUND_NUMBER ?? 1;
+        if (typeof round === 'string') {
+            round = parseFloat(round);
+        }
+
+        return { token: undefined, round: round, initiative: undefined };
+    }
+
+    /**
+     * @param {Token} token - The details of the token to retrieve the current initiative for.
+     * @returns {{ round: number, token?: Token, initiative?: number }} A snapshot of the current initiative order for the token in the combat tracker
+     */
+    static getTokenInitiative(token) {
+        let round = window.ROUND_NUMBER ?? 1;
+        if (typeof round === 'string') {
+            round = parseInt(round);
+        }
+
+        if (token.options.ct_show !== true) {
+            return { token: token, round: round, initiative: undefined };
+        }
+
+        let initiative = token.options.init ?? 0;
+        if (typeof initiative === 'string') {
+            initiative = parseFloat(initiative);
+        }
+
+        return { token: token, round: round, initiative: initiative };
+    }
+
     /** Retrieves the common monster stat block if the token is an instance of one */
     getMonsterOptions() {
         if (this.#token.options?.monster == null){
