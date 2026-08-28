@@ -17,8 +17,6 @@ export default class NumericStatProperty {
     #sources;
     /** @type {number} */
     #calculated;
-    /** @type {EffectRevalidationCallback} */
-    #recaluateCallback
 
     /**
      * @param {StatBlock} stats - The stat block that this property is for.
@@ -32,7 +30,6 @@ export default class NumericStatProperty {
         this.#sources = {};
         this.#calculated = 0;
         this.#snapshot = undefined;
-        this.#recaluateCallback = this.recalculate.bind(this);
     }
 
     /** The base value of the property. */
@@ -91,7 +88,7 @@ export default class NumericStatProperty {
         let calculated = 0;
         const version = this.#stats.statusEffects.version;
 
-        for (const [key, applied] of this.#sources) {
+        for (const [key, applied] of Object.entries(this.#sources)) {
             if (applied.version === version) {
                 calculated += applied.amount;
             } else {

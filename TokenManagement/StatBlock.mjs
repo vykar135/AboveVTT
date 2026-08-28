@@ -145,10 +145,11 @@ export default class StatBlock {
      * @returns {NumericStatProperty}
      */
     getNumeric(uri) {
-        if (typeof uri === 'object' && 'uri' in uri) {
+        if (uri && typeof uri === 'object' && 'uri' in uri) {
             uri = uri.uri;
         }
 
+        uri = uri.toLowerCase();
         return this.#numeric[uri];
     }
 
@@ -159,10 +160,11 @@ export default class StatBlock {
      * @returns {NumericStatProperty}
      */
     getOrAddNumeric(uri, init) {
-        if (typeof uri === 'object' && 'uri' in uri) {
+        if (uri && typeof uri === 'object' && 'uri' in uri) {
             uri = uri.uri;
         }
 
+        uri = uri.toLowerCase();
         let property = this.#numeric[uri];
         if (property == null && typeof init === 'function') {
             property = init(this, uri);
@@ -178,10 +180,11 @@ export default class StatBlock {
      * @returns {ConditionTracker}
      */
     getCondition(uri) {
-        if (typeof uri === 'object' && 'uri' in uri) {
+        if (uri && typeof uri === 'object' && 'uri' in uri) {
             uri = uri.uri;
         }
 
+        uri = uri.toLowerCase();
         return this.#conditions[uri];
     }
 
@@ -192,10 +195,11 @@ export default class StatBlock {
      * @returns {ConditionTracker}
      */
     getOrAddCondition(uri, init) {
-        if (typeof uri === 'object' && 'uri' in uri) {
+        if (uri && typeof uri === 'object' && 'uri' in uri) {
             uri = uri.uri;
         }
 
+        uri = uri.toLowerCase();
         let condition = this.#conditions[uri];
         if (condition == null && typeof init === 'function') {
             condition = init(this, uri);
@@ -397,7 +401,7 @@ export default class StatBlock {
 
         let property = this.#conditions[condition.uri];
         if (property == null) {
-            property = new ConditionTracker(this, uri, fromToken, fromPlayer);
+            property = new ConditionTracker(this, condition.uri, fromToken, fromPlayer);
             this.#conditions[condition.uri] = property;
         }
 

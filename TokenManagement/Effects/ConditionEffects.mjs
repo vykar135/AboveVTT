@@ -1,12 +1,12 @@
  /** @import { EffectImpactContext } from '../EffectDefinition.types.js' */
 
-import { PropertyType } from '../CoreEnums.mjs';
+import { ConditionType, PropertyType } from '../CoreEnums.mjs';
 import ConditionTracker from '../ConditionTracker.mjs';
 import NumericStatProperty from '../NumericStatProperty.mjs';
 
  /** @param {EffectImpactContext} context */
  export function applyCondition(context) {
-    const definition = context.overrides.condition ?? context.impact.condition ?? null;
+    const definition = ConditionType.getByUri(context.overrides.condition ?? context.impact.condition ?? null);
     if (typeof definition !== 'object') {
         console.warn(`Attempted to apply effects of a condition that does not specify the condition to add`);
         return;
@@ -31,3 +31,5 @@ import NumericStatProperty from '../NumericStatProperty.mjs';
         condition.addInstance(context.tracking, levels);
     }
  }
+
+ 
