@@ -13,7 +13,6 @@ export default class HitPointBlock {
      */
     constructor(stats){
         this.#statBlock = stats;
-        this.resetExpected();
     }
 
     /** @returns {TokenHitPointInfo} The hit point information that is stored on the token */
@@ -136,7 +135,7 @@ export default class HitPointBlock {
         outcome.temp = (reported.temp !== expected.temp);
 
         if (!outcome.maximum && !outcome.remaining && !outcome.temp) {
-            this.resetExpected();
+            this.resetSnapshot();
         }
 
         return outcome;

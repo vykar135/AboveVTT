@@ -27,7 +27,7 @@ import { ResolutionTrigger, ResolutionAction, EffectImpact, EffectDuration, Impa
  * @typedef {Object} EffectImpactRuleSettings
  * @property {boolean} immediate - Whether the impact is immediately applied to the stat block; defaults to true if no triggers are defined
  * @property {ImpactTrigger[]?} triggers - The points when the impact will be applied to the stat block
- * @property {EffectImpact} type - The type of change that is applied
+ * @property {string} type - The type of change that is applied
  * @property {EffectDurationInfo} duration - The duration of the effect
  * @property {PropertyConfiguration?} modifies - The property on the stat block that is being modified
  * @property {EffectResolutionRule[]} resolution - The points when the target of the status effect can attempt to fully resolve the impact
@@ -39,10 +39,10 @@ import { ResolutionTrigger, ResolutionAction, EffectImpact, EffectDuration, Impa
  * @property {AdvantageType?} advantage - The style of advantage being used or applied by the effect
  * @property {DamageType?} damageType - The type of damage being used or applied by the effect
  * @property {AbilityScore?} ability - The type of ability score used or applied by the effect
- * @property {ConditionType?} condition - The type of condition applied by the effect
+ * @property {string?} condition - The type of condition applied by the effect
  * 
  * @typedef {Object} EffectDurationInfo
- * @property {EffectDuration} type - The type of duration that an effect is using; defaults to indefinite
+ * @property {string} type - The type of duration that an effect is using; defaults to indefinite
  * @property {number} length - The number used to determine the full length of an effect based on the duration
  * 
  * @typedef EffectInitiativeSnapshot

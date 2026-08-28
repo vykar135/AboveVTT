@@ -98,6 +98,7 @@
 			"TokenManagement/StatusEffectEnums.mjs",
 			"TokenManagement/HitPointBlock.mjs",
 			"TokenManagement/NumericStatProperty.mjs",
+			"TokenManagement/ConditionTracker.mjs",
 			"TokenManagement/StatBlock.mjs",
 			"TokenManagement/TokenStatusEffects.mjs",
 			"MessageBroker.js",
