@@ -1,5 +1,5 @@
 
-/** @import { EffectImpactRuleSettings } from '../EffectDefinition.types.js' */
+/** @import { EffectImpactRuleSettings } from './EffectDefinition.types.js' */
 
 export class EffectOverrideDesigner {
     constructor() {

@@ -21,15 +21,14 @@ import { ResolutionTrigger, ResolutionAction, EffectImpact, EffectDuration, Impa
  * @typedef {EffectImpactRuleProcessor & EffectImpactRuleSettings} EffectImpactRule
  * 
  * @typedef EffectImpactRuleProcessor
- * @property {ApplyEffectImpact} apply - Callback used to apply the impact of the affect to the stat block
+ * @property {string} type - The type of change that is being applied to the stat block
  * @property {boolean} sealed - Whether the impact rule allows for overrides to the default settings.
  * 
  * @typedef {Object} EffectImpactRuleSettings
  * @property {boolean} immediate - Whether the impact is immediately applied to the stat block; defaults to true if no triggers are defined
  * @property {ImpactTrigger[]?} triggers - The points when the impact will be applied to the stat block
- * @property {string} type - The type of change that is applied
  * @property {EffectDurationInfo} duration - The duration of the effect
- * @property {PropertyConfiguration?} modifies - The property on the stat block that is being modified
+ * @property {string?} modifies - The property on the stat block that is being modified
  * @property {EffectResolutionRule[]} resolution - The points when the target of the status effect can attempt to fully resolve the impact
  * @property {string[]?} tags - Any tags that can be used to modify the outcome of the effect
  * @property {number?} amount - The fixed amount that is applied by the effect when it is triggered
