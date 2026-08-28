@@ -5,8 +5,9 @@
  * @property {string} name - The value that is intended to be displayed to users
  * 
  * @typedef { ConfigurationSettings & { size: number } } DiceConfigurationSettings
- * @typedef { ConfigurationSettings & { type: KnownConfigurationSettings, srd: string, min?: number, max?: number } } ConditionSettings
- * @typedef { ConfigurationSettings & { type: KnownConfigurationSettings, diceTags: string[] } } DiceModifierSettings
+ * @typedef { ConfigurationSettings & { type: KnownConfigurationSettings } } TypedConfigurationSettings
+ * @typedef { TypedConfigurationSettings & { srd: string, min?: number, max?: number } } ConditionSettings
+ * @typedef { TypedConfigurationSettings & { diceTags: string[] } } DiceModifierSettings
  * @typedef { DiceModifierSettings & { rollType: KnownConfigurationSettings } } DiceRollSettings
  * @typedef { DiceModifierSettings & { ability: KnownConfigurationSettings } } SkillCheckSettings
  */
@@ -539,7 +540,7 @@ export const SaveProficiency = new Configuration({
 }, { type: PropertyType.Proficiency });
 
 /**
- * Defines how saving throws can acquire resistance (advantage), vulnerability (disadvantage), and immunity
+ * Defines how saving throws can acquire advantage
  * @type {Configuration & {
  *   Any: DiceModifierSettings,
  *   STR: DiceModifierSettings,
@@ -551,7 +552,7 @@ export const SaveProficiency = new Configuration({
  *   Death: DiceModifierSettings
  * }}
  */
-export const SaveResistance = new Configuration({
+export const SaveAdvantage = new Configuration({
     Any: { uri: 'resistance:save', name: 'Any Save Resistance', diceTags: SavingThrow.Any.diceTags },
     STR: { uri: 'resistance:save:str', name: 'Strength Save Resistance', diceTags: SavingThrow.STR.diceTags },
     DEX: { uri: 'resistance:save:dex', name: 'Dexterity Save Resistance', diceTags: SavingThrow.DEX.diceTags },
@@ -741,3 +742,32 @@ export const SkillAdvantage = new Configuration({
     Stealth: { uri: 'advantage:skill:stealth', name: 'Stealth Advantage', diceTags: SkillCheck.Stealth.diceTags },
     Survival: { uri: 'advantage:skill:survival', name: 'Survival Advantage', diceTags: SkillCheck.Survival.diceTags }
 }, { type: PropertyType.Advantage });
+
+/** @returns {{ [uri: string] : TypedConfigurationSettings }} */
+function buildPropertyIndex() {
+    /** @type {Configuration[]} */
+    const review = [
+        DamageResistance, ConditionType, ConditionResistance,
+        AbilityScore, AbilityModifier, AbilityCheck,
+        HitPoint, SpellTracking, AbilityConstraints, 
+        SavingThrow, SaveProficiency, SaveAdvantage,
+        SkillCheck, SkillProficiency, SkillAdvantage
+    ];
+
+    const index = {};
+    for (const config of review) {
+        for (const entry of config.list()) {
+            if (entry.uri in index) {
+                console.error(`Duplicate property definition encountered for ${entry.uri}`);
+            }
+
+            index[entry.uri] = entry;
+        }
+    }
+
+    Object.freeze(index);
+    return index;
+}
+
+/** Full index of all available configuration settings. */
+export const PropertyIndex = buildPropertyIndex();
