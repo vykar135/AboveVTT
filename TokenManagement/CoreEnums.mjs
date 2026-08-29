@@ -4,6 +4,7 @@
  * @property {string} uri - The value that is intended to be persisted within token options
  * @property {string} name - The value that is intended to be displayed to users
  * 
+ * @typedef { ConfigurationSettings & { apply: (pb: number) => number } } ProficiencySettings
  * @typedef { ConfigurationSettings & { size: number } } DiceConfigurationSettings
  * @typedef { ConfigurationSettings & { type: KnownConfigurationSettings } } TypedConfigurationSettings
  * @typedef { TypedConfigurationSettings & { srd: string, min?: number, max?: number } } ConditionSettings
@@ -150,14 +151,14 @@ export const DiceType = new Configuration({
 /**
  * Defines the types of proficiency that can be granted to a property of a token
  * @type {Configuration & {
- *   None: ConfigurationSettings,
- *   Standard: ConfigurationSettings,
- *   Expert: ConfigurationSettings,
- *   HalfDown: ConfigurationSettings,
- *   HalfUp: ConfigurationSettings,
- *   Flaw: ConfigurationSettings,
- *   MinorFlaw: ConfigurationSettings,
- *   HeavyFlaw: ConfigurationSettings
+ *   None: ProficiencySettings,
+ *   Standard: ProficiencySettings,
+ *   Expert: ProficiencySettings,
+ *   HalfDown: ProficiencySettings,
+ *   HalfUp: ProficiencySettings,
+ *   Flaw: ProficiencySettings,
+ *   MinorFlaw: ProficiencySettings,
+ *   HeavyFlaw: ProficiencySettings
  * }}
  */
 export const ProficiencyType = new Configuration({
@@ -185,10 +186,10 @@ export const ProficiencyType = new Configuration({
  * }}
  */
 export const ResistanceType = new Configuration({
-    None: { uri: 'resist:none', name: 'None', apply: (amt) => amt },
-    Resistance: { uri: 'resist', name: 'Resistance', apply: (amt) => (amt !== 0 ? Math.floor(amt / 2) : amt) },
-    Immunity: { uri: 'immune', name: 'Immunity', apply: () => 0 },
-    Vulnerability: { uri: 'vulnerable', name: 'Vulnerability', apply: (amt) => (amt * 2) }
+    None: { uri: 'resist:none', name: 'None', apply: (amt) => amt, d20test: 0 },
+    Resistance: { uri: 'resist', name: 'Resistance', apply: (amt) => (amt !== 0 ? Math.floor(amt / 2) : amt), d20test: 1 },
+    Immunity: { uri: 'immune', name: 'Immunity', apply: () => 0, d20test: Infinity },
+    Vulnerability: { uri: 'vulnerable', name: 'Vulnerability', apply: (amt) => (amt * 2), d20test: -1 }
 });
 
 /**
@@ -323,7 +324,7 @@ export const ConditionType = new Configuration({
     Restrained: { uri: 'restrained', name: 'Restrained', type: PropertyType.Condition, srd: "Restrained" },
     Stunned: { uri: 'stunned', name: 'Stunned', incapacitates: true, type: PropertyType.Condition, srd: "Stunned" },
     Unconscious: { uri: 'unconscious', name: 'Unconscious', incapacitates: true, type: PropertyType.Condition, srd: "Unconscious" },
-    Exhaustion: { uri: 'exhaustion:srd', name: 'Exhaustion', type: PropertyType.Number, min: 0, max: 12, srd: "Exhaustion" }
+    Exhaustion: { uri: 'exhaustion:srd', name: 'Exhaustion', type: PropertyType.Number, min: 0, max: 11, srd: "Exhaustion" }
 });
 
 /**
@@ -376,14 +377,14 @@ export const ConditionResistance = new Configuration({
  * }}
  */
 export const AbilityScore = new Configuration({
-    STR: { uri: 'str', name: 'Strength Score', short: 'Strength', dndBeyond: 1 },
-    DEX: { uri: 'dex', name: 'Dexterity Score', short: 'Dexterity', dndBeyond: 2 },
-    CON: { uri: 'con', name: 'Constitution Score', short: 'Constitution', dndBeyond: 3 },
-    INT: { uri: 'int', name: 'Intelligence Score', short: 'Intelligence', dndBeyond: 4 },
-    WIS: { uri: 'wis', name: 'Wisdom Score', short: 'Wisdom', dndBeyond: 5 },
-    CHA: { uri: 'cha', name: 'Charisma Score', short: 'Charisma', dndBeyond: 6 },
-    ArmorClass: { uri: 'ac', name: 'Armor Class' },
-    ProficiencyBonus: { uri: 'pb', name: 'Proficiency Bonus' }
+    STR: { uri: 'str', name: 'Strength Score', short: 'Strength', dndBeyond: 1, open5e: 'strength' },
+    DEX: { uri: 'dex', name: 'Dexterity Score', short: 'Dexterity', dndBeyond: 2, open5e: 'dexterity' },
+    CON: { uri: 'con', name: 'Constitution Score', short: 'Constitution', dndBeyond: 3, open5e: 'constitution' },
+    INT: { uri: 'int', name: 'Intelligence Score', short: 'Intelligence', dndBeyond: 4, open5e: 'intelligence' },
+    WIS: { uri: 'wis', name: 'Wisdom Score', short: 'Wisdom', dndBeyond: 5, open5e: 'wisdom' },
+    CHA: { uri: 'cha', name: 'Charisma Score', short: 'Charisma', dndBeyond: 6, open5e: 'charisma' },
+    ArmorClass: { uri: 'ac', name: 'Armor Class', open5e: 'armor_class' },
+    ProficiencyBonus: { uri: 'pb', name: 'Proficiency Bonus', open5e: 'proficiency_bonus' }
 }, { type: PropertyType.Number });
 
 /**
@@ -404,7 +405,7 @@ export const AbilityModifier = new Configuration({
     INT: { uri: 'modifier:int', name: 'Intelligence Modifier' },
     WIS: { uri: 'modifier:wis', name: 'Wisdom Modifier' },
     CHA: { uri: 'modifier:cha', name: 'Charisma Modifier' },
-    CHA: { uri: 'modifier:initiative', name: 'Initiative' }
+    Initiative: { uri: 'modifier:initiative', name: 'Initiative' }
 }, { type: PropertyType.Number });
 
 /**
@@ -562,6 +563,30 @@ export const SaveAdvantage = new Configuration({
     CHA: { uri: 'resistance:save:cha', name: 'Charisma Save Resistance', diceTags: SavingThrow.CHA.diceTags },
     Death: { uri: 'resistance:save:death', name: 'Death Save Resistance', diceTags: SavingThrow.Death.diceTags }
 }, { type: PropertyType.Advantage });
+
+/**
+ * Defines how flat bonuses for saving throws can be applied
+ * @type {Configuration & {
+ *   Any: DiceModifierSettings,
+ *   STR: DiceModifierSettings,
+ *   DEX: DiceModifierSettings,
+ *   CON: DiceModifierSettings,
+ *   INT: DiceModifierSettings,
+ *   WIS: DiceModifierSettings,
+ *   CHA: DiceModifierSettings,
+ *   Death: DiceModifierSettings
+ * }}
+ */
+export const SaveBonus = new Configuration({
+    Any: { uri: 'bonus:save', name: 'Any Save Bonus', diceTags: SavingThrow.Any.diceTags },
+    STR: { uri: 'bonus:save:str', name: 'Strength Save Bonus', diceTags: SavingThrow.STR.diceTags },
+    DEX: { uri: 'bonus:save:dex', name: 'Dexterity Save Bonus', diceTags: SavingThrow.DEX.diceTags },
+    CON: { uri: 'bonus:save:con', name: 'Constitution Save Bonus', diceTags: SavingThrow.CON.diceTags },
+    INT: { uri: 'bonus:save:int', name: 'Intelligence Save Bonus', diceTags: SavingThrow.INT.diceTags },
+    WIS: { uri: 'bonus:save:wis', name: 'Wisdom Save Bonus', diceTags: SavingThrow.WIS.diceTags },
+    CHA: { uri: 'bonus:save:cha', name: 'Charisma Save Bonus', diceTags: SavingThrow.CHA.diceTags },
+    Death: { uri: 'bonus:save:death', name: 'Death Save Bonus', diceTags: SavingThrow.Death.diceTags }
+}, { type: PropertyType.Number });
 
 /**
  * Proficiency and critical are omitted from this configuration because skill checks follow the default which is true.
@@ -743,15 +768,37 @@ export const SkillAdvantage = new Configuration({
     Survival: { uri: 'advantage:skill:survival', name: 'Survival Advantage', diceTags: SkillCheck.Survival.diceTags }
 }, { type: PropertyType.Advantage });
 
+/**
+ * @type {Configuration & {
+ *     Walk: ConfigurationSettings,
+ *     Fly: ConfigurationSettings,
+ *     Climb: ConfigurationSettings,
+ *     Swim: ConfigurationSettings,
+ *     Burrow: ConfigurationSettings,
+ *     Hover: ConfigurationSettings
+ * }}
+ */
+export const Speed = new Configuration({
+    Walk: { uri: 'speed:walk', name: 'Walk', type: PropertyType.Number, open5e: 'walk' },
+    Fly: { uri: 'speed:fly', name: 'Fly', type: PropertyType.Number, open5e: 'fly' },
+    Climb: { uri: 'speed:climb', name: 'Climb', type: PropertyType.Number, open5e: 'climb' },
+    Swim: { uri: 'speed:swim', name: 'Swim', type: PropertyType.Number, open5e: 'swim' },
+    Burrow: { uri: 'speed:burrow', name: 'Burrow', type: PropertyType.Number, open5e: 'burrow' },
+    Hover: { uri: 'speed:hover', name: 'Hover', type: PropertyType.Toggle, open5e: 'hover' }
+});
+
 /** @returns {{ [uri: string] : TypedConfigurationSettings }} */
 function buildPropertyIndex() {
     /** @type {Configuration[]} */
     const review = [
+        PropertyType, RollType, DiceType, ProficiencyType,
+        ResistanceType, DamageType, AdvantageType,
         DamageResistance, ConditionType, ConditionResistance,
         AbilityScore, AbilityModifier, AbilityCheck,
         HitPoint, SpellTracking, AbilityConstraints, 
-        SavingThrow, SaveProficiency, SaveAdvantage,
-        SkillCheck, SkillProficiency, SkillAdvantage
+        SavingThrow, SaveProficiency, SaveAdvantage, SaveBonus,
+        SkillCheck, SkillProficiency, SkillAdvantage,
+        Speed
     ];
 
     const index = {};
@@ -770,4 +817,4 @@ function buildPropertyIndex() {
 }
 
 /** Full index of all available configuration settings. */
-export const PropertyIndex = buildPropertyIndex();
+export const ConfigurationIndex = buildPropertyIndex();

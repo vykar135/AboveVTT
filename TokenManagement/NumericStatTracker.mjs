@@ -1,10 +1,9 @@
-/** @import { EffectRevalidationCallback } from './EffectDefinition.types.js' */
 import StatBlock from "./StatBlock.mjs";
 
 /**
  * Manages a numberic property value that can have status effects applied to it.
  */
-export default class NumericStatProperty {
+export default class NumericStatTracker {
     /** @type {StatBlock} */
     #stats
     /** @type {string} */
@@ -155,7 +154,7 @@ export default class NumericStatProperty {
      */
     addInstance(instance, value) {
         if (typeof instance !== 'string') {
-            console.warn(`Attempting to append an instance of condition ${this.#uri} without a valid instance identifier`);
+            console.warn(`Attempting to append an instance of numeric stat ${this.#uri} without a valid instance identifier`);
             return;
         }
 
