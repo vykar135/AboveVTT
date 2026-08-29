@@ -1,5 +1,5 @@
 
-/** @import { EffectImpactRuleSettings } from './EffectDefinition.types.js' */
+/** @import { EffectImpact } from './EffectDefinition.types.js' */
 
 export class EffectOverrideDesigner {
     constructor() {
@@ -10,7 +10,7 @@ export class EffectOverrideDesigner {
 
     /**
      * Applies the changes from the designer onto the provided overrides instance.
-     * @param {EffectImpactRuleSettings} overrides - The overrides to modify with the content from the designer.
+     * @param {EffectImpact} overrides - The overrides to modify with the content from the designer.
      */
     applyTo(overrides){
         throw new Error("The 'applyTo' method must be overriden by the subclass");
@@ -18,7 +18,7 @@ export class EffectOverrideDesigner {
 
     /**
      * Generates the interface that can override the requested setting.
-     * @param {EffectImpactRuleSettings} defaults - The default values for the effect being override.
+     * @param {EffectImpact} defaults - The default values for the effect being override.
      * @returns {Node} The node to append to the editor interface
      */
     build(defaults){
@@ -41,7 +41,7 @@ export class DurationOverrideDesigner extends EffectOverrideDesigner {
 
     /**
      * Applies the changes from the designer onto the provided overrides instance.
-     * @param {EffectImpactRuleSettings} overrides - The overrides to modify with the content from the designer.
+     * @param {EffectImpact} overrides - The overrides to modify with the content from the designer.
      */
     applyTo(overrides){
         if (this.#type === undefined && this.#length === undefined) {
@@ -56,7 +56,7 @@ export class DurationOverrideDesigner extends EffectOverrideDesigner {
 
     /**
      * Generates the interface that can override the requested setting.
-     * @param {EffectImpactRuleSettings} defaults - The default values for the effect being override.
+     * @param {EffectImpact} defaults - The default values for the effect being override.
      * @returns {Node} The node to append to the editor interface
      */
     build(defaults){

@@ -1,4 +1,3 @@
-/** @import { EffectRevalidationCallback } from './EffectDefinition.types.js' */
 import StatBlock from "./StatBlock.mjs";
 
 /**
@@ -17,8 +16,6 @@ export default class ConditionTracker {
     #effectActive;
     /** @type {{ [instance: string]: number}} */
     #sources;
-    /** @type {EffectRevalidationCallback} */
-    #recaluateCallback
 
     /**
      * @param {StatBlock} stats - The stat block that this property is for.
@@ -32,7 +29,6 @@ export default class ConditionTracker {
         this.#tokenActive = (fromToken === true);
         this.#playerActive = (fromPlayer === true);
         this.#sources = [];
-        this.#recaluateCallback = this.recalculate.bind(this);
     }
 
     /** The URI of the condition being tracked */

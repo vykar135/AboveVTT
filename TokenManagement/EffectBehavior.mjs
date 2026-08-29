@@ -1,13 +1,13 @@
  /** @import { TypedConfigurationSettings } from './CoreEnums.mjs' */
  /** @import { EffectImpactContext } from './EffectDefinition.types.js' */
 
-import { PropertyIndex, PropertyType } from './CoreEnums.mjs';
+import { ConfigurationIndex, PropertyType } from './CoreEnums.mjs';
 import ConditionTracker from './ConditionTracker.mjs';
-import NumericStatProperty from './NumericStatProperty.mjs';
+import NumericStatTracker from './NumericStatTracker.mjs';
 import { EffectImpact } from './StatusEffectEnums.mjs';
 
 /** @param {EffectImpactContext} context */
-export function applyImpact(context) {
+export function applyEffectImpact(context) {
     const uri = (context.impact.type ?? '').toLowerCase();
     if (uri === EffectImpact.Modify.uri) {
         return applyModification(context);   
@@ -21,7 +21,7 @@ function applyModification(context) {
     const uri = context.overrides.modifies ?? context.impact.modifies ?? null;
 
     /** @type {TypedConfigurationSettings} */
-    const definition = PropertyIndex[uri];
+    const definition = ConfigurationIndex[uri];
     if (definition == null || typeof definition !== 'object') {
         console.warn(`Attempted to apply any effect that modifies a property of '${uri}' that does not exist`);
         return;
@@ -61,7 +61,7 @@ function applyNumeric(definition, context) {
         return;
     }
 
-    const condition = context.stats.getOrAddNumeric(definition.uri, (s, u) => new NumericStatProperty(s, u, 0));
+    const condition = context.stats.getOrAddNumeric(definition.uri, (s, u) => new NumericStatTracker(s, u, 0));
     condition.addInstance(context.tracking, amount);
 }
 
