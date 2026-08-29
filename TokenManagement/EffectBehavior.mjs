@@ -51,18 +51,28 @@ function applyCondition(definition, context) {
  * @param {EffectImpactContext} context
  */
 function applyNumeric(definition, context) {
-    const amount = context.overrides.amount ?? context.impact.amount ?? 1;
-    if (typeof amount !== 'number') {
-        console.warn(`Attempted to apply an effect that modifies numeric property ${definition.uri} that does not specify the amount to add`);
+    const settings = {
+        amount: context.overrides.amount ?? context.impact.amount,
+        imports: context.overrides.imports ?? context.impact.imports,
+        importPenalty: context.overrides.importPenalty ?? context.impact.importPenalty
+    };
+
+    if (settings.amount != null && typeof settings.amount !== 'number') {
+        console.warn(`Attempted to apply an effect that modifies numeric property ${definition.uri} that has an invalid amount`);
         return;
     }
 
-    if (amount === 0) {
+    if (settings.imports != null && typeof settings.imports !== 'string') {
+        console.warn(`Attempted to apply an effect that modifies numeric property ${definition.uri} that has an invalid import reference`);
         return;
     }
 
-    const condition = context.stats.getOrAddNumeric(definition.uri, (s, u) => new NumericStatTracker(s, u, 0));
-    condition.addInstance(context.tracking, amount);
+    if (settings.amount === 0 && (settings.imports ?? '') == '') {
+        return;
+    }
+
+    const property = context.stats.getOrAddNumeric(definition.uri, (s, u) => new NumericStatTracker(s, u, 0));
+    property.addInstance(context.tracking, settings);
 }
 
  
