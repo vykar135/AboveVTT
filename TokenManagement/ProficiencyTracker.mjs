@@ -55,7 +55,7 @@ export default class ProficiencyTracker {
     recalculate() {
         const version = this.#stats.statusEffects.version;
 
-        for (let i = this.#sources.length; i >= 0; i--) {
+        for (let i = this.#sources.length - 1; i >= 0; i--) {
             if (this.#sources[i].version !== version) {
                 this.#sources.splice(i, 1);
             }

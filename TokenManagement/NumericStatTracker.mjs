@@ -1,6 +1,14 @@
 import StatBlock from "./StatBlock.mjs";
 
 /**
+ * @typedef {Object} NumericStatImpact
+ * @property {number} version - The version of the status effect collect at the time the impact was applied.
+ * @property {number} amount - The fixed amount to change the property by
+ * @property {string} imports - The URI of the numeric property to import the current value for and apply to the requesting property.
+ * @property {boolean} importPenalty - Whether the imported value is treated as a penalty against the requesting property.
+ */
+
+/**
  * Manages a numberic property value that can have status effects applied to it.
  */
 export default class NumericStatTracker {
@@ -12,7 +20,7 @@ export default class NumericStatTracker {
     #base;
     /** @type {number | undefined} */
     #snapshot;
-    /** @type {{ [instance: string]: { amount: number, version: number }} */
+    /** @type {{ [instance: string]: NumericStatImpact }} */
     #sources;
     /** @type {number} */
     #calculated;
@@ -36,13 +44,18 @@ export default class NumericStatTracker {
         return this.#base;
     }
 
-    /** The current value of the property adjusted for a snapshot at the time an effect was applied. */
-    get current() {
+    /** The effective base value of the property adjusted for a snapshot at the time an effect was applied. */
+    get baseEffective() {
         if (this.#stats.isPlayer) {
-            return (this.#snapshot ?? this.#base) + this.#calculated;
+            return (this.#snapshot ?? this.#base);
         }
 
-        return this.#base + this.#calculated;
+        return this.#base;
+    }
+
+    /** The current value of the property adjusted for a snapshot at the time an effect was applied. */
+    get current() {
+        return this.baseEffective + this.#calculated;
     }
 
     /** The reported value of the property based on the token's current state. */
@@ -84,19 +97,51 @@ export default class NumericStatTracker {
      * @returns {number} The updated value for the property
     */
     recalculate() {
-        let calculated = 0;
         const version = this.#stats.statusEffects.version;
+        
+        // We leave the visited property undefined here so that it will create it for each individual effect
+        this.#calculated = this.#recalculateGraph(version, undefined);
+        return this.current;
+    }
+
+    /**
+     * Recalculates the current value of the property after effects are applied.
+     * @param {number} version - The version of the status effects being applied.
+     * @param {Set} visited - The collection of properties that have already been imported within a given effect.
+     * @returns {number} The calculated value for the property
+    */
+    #recalculateGraph(version, visited) {
+        let calculated = 0;
 
         for (const [key, applied] of Object.entries(this.#sources)) {
-            if (applied.version === version) {
-                calculated += applied.amount;
-            } else {
+            if (applied.version !== version) {
                 delete this.#sources[key];
+                continue;
+            }
+
+            calculated += (applied.amount ?? 0);
+
+            if (applied.imports == null || typeof applied.imports !== 'string' || visited?.has(this.#uri) === true) {
+                continue;
+            }
+
+            // Are we at the entry point of the recalculation process?
+            if (visited == null) {
+                visited = new Set();
+            }
+
+            visited.add(this.#uri);
+
+            const importing = this.#stats.getNumeric(applied.imports);
+            const imported = importing.baseEffective + importing.#recalculateGraph(version, visited);
+            if (applied.importPenalty === true && imported > 0) {
+                calculated -= imported;
+            } else {
+                calculated += imported;
             }
         }
 
-        this.#calculated = calculated;
-        return this.current;
+        return calculated;
     }
 
     /** Snapshots the current base value for the property */
@@ -150,16 +195,22 @@ export default class NumericStatTracker {
     /**
      * Appends an instance of a modification being applied to the stat block.
      * @param {string} instance - The tracking identifier within the instance of the behavior for the effect impact
-     * @param {number} value - The value assigned to the instance of modification effect.
+     * @param {NumericStatImpact} impact - The changes to apply to the property.
      */
-    addInstance(instance, value) {
+    addInstance(instance, impact) {
         if (typeof instance !== 'string') {
-            console.warn(`Attempting to append an instance of numeric stat ${this.#uri} without a valid instance identifier`);
+            console.warn(`Attempting to append an effect impact to numeric stat ${this.#uri} without a valid instance identifier`);
+            return;
+        }
+
+        if (typeof impact !== 'object') {
+            console.warn(`Attempting to append an effect impact to numeric stat ${this.#uri} without a valid configuration`);
             return;
         }
 
         instance = instance.toLocaleLowerCase();
-        this.#sources[instance] = { amount: value, version: this.#stats.statusEffects.version };
+        impact.version = this.#stats.statusEffects.version;
+        this.#sources[instance] = impact;
     }
 
     /**
