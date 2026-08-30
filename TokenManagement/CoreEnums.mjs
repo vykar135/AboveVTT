@@ -373,7 +373,8 @@ export const ConditionResistance = new Configuration({
  *   WIS: ConfigurationSettings,
  *   CHA: ConfigurationSettings,
  *   ArmorClass: ConfigurationSettings,
- *   ProficiencyBonus: ConfigurationSettings
+ *   ProficiencyBonus: ConfigurationSettings,
+ *   Level: ConfigurationSettings
  * }}
  */
 export const AbilityScore = new Configuration({
@@ -384,7 +385,8 @@ export const AbilityScore = new Configuration({
     WIS: { uri: 'wis', name: 'Wisdom Score', short: 'Wisdom', dndBeyond: 5, open5e: 'wisdom' },
     CHA: { uri: 'cha', name: 'Charisma Score', short: 'Charisma', dndBeyond: 6, open5e: 'charisma' },
     ArmorClass: { uri: 'ac', name: 'Armor Class', open5e: 'armor_class' },
-    ProficiencyBonus: { uri: 'pb', name: 'Proficiency Bonus', open5e: 'proficiency_bonus' }
+    ProficiencyBonus: { uri: 'pb', name: 'Proficiency Bonus', open5e: 'proficiency_bonus' },
+    Level: { uri: 'level', name: 'Level', open5e: 'challenge_rating' }
 }, { type: PropertyType.Number });
 
 /**
@@ -531,12 +533,12 @@ export const SavingThrow = new Configuration({
  */
 export const SaveProficiency = new Configuration({
     Any: { uri: 'proficiency:save', name: 'Any Save Proficiency', diceTags: SavingThrow.Any.diceTags },
-    STR: { uri: 'proficiency:save:str', name: 'Strength Save Proficiency', diceTags: SavingThrow.STR.diceTags },
-    DEX: { uri: 'proficiency:save:dex', name: 'Dexterity Save Proficiency', diceTags: SavingThrow.DEX.diceTags },
-    CON: { uri: 'proficiency:save:con', name: 'Constitution Save Proficiency', diceTags: SavingThrow.CON.diceTags },
-    INT: { uri: 'proficiency:save:int', name: 'Intelligence Save Proficiency', diceTags: SavingThrow.INT.diceTags },
-    WIS: { uri: 'proficiency:save:wis', name: 'Wisdom Save Proficiency', diceTags: SavingThrow.WIS.diceTags },
-    CHA: { uri: 'proficiency:save:cha', name: 'Charisma Save Proficiency', diceTags: SavingThrow.CHA.diceTags },
+    STR: { uri: 'proficiency:save:str', name: 'Strength Save Proficiency', diceTags: SavingThrow.STR.diceTags, playerExt: 'strength-saving-throws' },
+    DEX: { uri: 'proficiency:save:dex', name: 'Dexterity Save Proficiency', diceTags: SavingThrow.DEX.diceTags, playerExt: 'dexterity-saving-throws' },
+    CON: { uri: 'proficiency:save:con', name: 'Constitution Save Proficiency', diceTags: SavingThrow.CON.diceTags, playerExt: 'constitution-saving-throws' },
+    INT: { uri: 'proficiency:save:int', name: 'Intelligence Save Proficiency', diceTags: SavingThrow.INT.diceTags, playerExt: 'intelligence-saving-throws' },
+    WIS: { uri: 'proficiency:save:wis', name: 'Wisdom Save Proficiency', diceTags: SavingThrow.WIS.diceTags, playerExt: 'wisdom-saving-throws' },
+    CHA: { uri: 'proficiency:save:cha', name: 'Charisma Save Proficiency', diceTags: SavingThrow.CHA.diceTags, playerExt: 'charisma-saving-throws' },
     Death: { uri: 'proficiency:save:death', name: 'Death Save Proficiency', diceTags: SavingThrow.Death.diceTags }
 }, { type: PropertyType.Proficiency });
 
@@ -555,12 +557,12 @@ export const SaveProficiency = new Configuration({
  */
 export const SaveAdvantage = new Configuration({
     Any: { uri: 'resistance:save', name: 'Any Save Resistance', diceTags: SavingThrow.Any.diceTags },
-    STR: { uri: 'resistance:save:str', name: 'Strength Save Resistance', diceTags: SavingThrow.STR.diceTags },
-    DEX: { uri: 'resistance:save:dex', name: 'Dexterity Save Resistance', diceTags: SavingThrow.DEX.diceTags },
-    CON: { uri: 'resistance:save:con', name: 'Constitution Save Resistance', diceTags: SavingThrow.CON.diceTags },
-    INT: { uri: 'resistance:save:int', name: 'Intelligence Save Resistance', diceTags: SavingThrow.INT.diceTags },
-    WIS: { uri: 'resistance:save:wis', name: 'Wisdom Save Resistance', diceTags: SavingThrow.WIS.diceTags },
-    CHA: { uri: 'resistance:save:cha', name: 'Charisma Save Resistance', diceTags: SavingThrow.CHA.diceTags },
+    STR: { uri: 'resistance:save:str', name: 'Strength Save Resistance', diceTags: SavingThrow.STR.diceTags, playerExt: 'strength-saving-throws' },
+    DEX: { uri: 'resistance:save:dex', name: 'Dexterity Save Resistance', diceTags: SavingThrow.DEX.diceTags, playerExt: 'dexterity-saving-throws' },
+    CON: { uri: 'resistance:save:con', name: 'Constitution Save Resistance', diceTags: SavingThrow.CON.diceTags, playerExt: 'constitution-saving-throws' },
+    INT: { uri: 'resistance:save:int', name: 'Intelligence Save Resistance', diceTags: SavingThrow.INT.diceTags, playerExt: 'intelligence-saving-throws' },
+    WIS: { uri: 'resistance:save:wis', name: 'Wisdom Save Resistance', diceTags: SavingThrow.WIS.diceTags, playerExt: 'wisdom-saving-throws' },
+    CHA: { uri: 'resistance:save:cha', name: 'Charisma Save Resistance', diceTags: SavingThrow.CHA.diceTags, playerExt: 'charisma-saving-throws' },
     Death: { uri: 'resistance:save:death', name: 'Death Save Resistance', diceTags: SavingThrow.Death.diceTags }
 }, { type: PropertyType.Advantage });
 
@@ -579,12 +581,12 @@ export const SaveAdvantage = new Configuration({
  */
 export const SaveBonus = new Configuration({
     Any: { uri: 'bonus:save', name: 'Any Save Bonus', diceTags: SavingThrow.Any.diceTags },
-    STR: { uri: 'bonus:save:str', name: 'Strength Save Bonus', diceTags: SavingThrow.STR.diceTags },
-    DEX: { uri: 'bonus:save:dex', name: 'Dexterity Save Bonus', diceTags: SavingThrow.DEX.diceTags },
-    CON: { uri: 'bonus:save:con', name: 'Constitution Save Bonus', diceTags: SavingThrow.CON.diceTags },
-    INT: { uri: 'bonus:save:int', name: 'Intelligence Save Bonus', diceTags: SavingThrow.INT.diceTags },
-    WIS: { uri: 'bonus:save:wis', name: 'Wisdom Save Bonus', diceTags: SavingThrow.WIS.diceTags },
-    CHA: { uri: 'bonus:save:cha', name: 'Charisma Save Bonus', diceTags: SavingThrow.CHA.diceTags },
+    STR: { uri: 'bonus:save:str', name: 'Strength Save Bonus', diceTags: SavingThrow.STR.diceTags, playerExt: 'strength-saving-throws' },
+    DEX: { uri: 'bonus:save:dex', name: 'Dexterity Save Bonus', diceTags: SavingThrow.DEX.diceTags, playerExt: 'dexterity-saving-throws' },
+    CON: { uri: 'bonus:save:con', name: 'Constitution Save Bonus', diceTags: SavingThrow.CON.diceTags, playerExt: 'constitution-saving-throws' },
+    INT: { uri: 'bonus:save:int', name: 'Intelligence Save Bonus', diceTags: SavingThrow.INT.diceTags, playerExt: 'intellegence-saving-throws' },
+    WIS: { uri: 'bonus:save:wis', name: 'Wisdom Save Bonus', diceTags: SavingThrow.WIS.diceTags, playerExt: 'wisdom-saving-throws' },
+    CHA: { uri: 'bonus:save:cha', name: 'Charisma Save Bonus', diceTags: SavingThrow.CHA.diceTags, playerExt: 'charisma-saving-throws' },
     Death: { uri: 'bonus:save:death', name: 'Death Save Bonus', diceTags: SavingThrow.Death.diceTags }
 }, { type: PropertyType.Number });
 

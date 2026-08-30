@@ -8,256 +8,6 @@ import TokenStatusEffects from './TokenStatusEffects.mjs';
 import ProficiencyTracker from './ProficiencyTracker.mjs';
 
 /**
- * Performs a case-insensitive string comparison of a pair of property URIs.
- * @param {string} value - The URI being tested without case modification
- * @param {string} expected - The expected value of the URI; should already be in lower case
- * @returns {boolean}
- */
-export function uriEquals(value, expected) {
-    return (value != null && expected != null && value.toLowerCase() === expected)
-}
-
-/** Forces any tokens from all global token stores for the specified identifier to rebuild */
-export function refreshStatBlock(id) {
-    if (id == null) {
-        return;
-    }
-
-    console.log(`Refreshing calculated stat blocks for ${id}.`);
-    refreshGlobalStatBlock(window.TOKEN_OBJECTS, id);
-    refreshGlobalStatBlock(window.all_token_objects, id);
-}
-
-/** Forces any tokens for the specified identifier to rebuild */
-function refreshGlobalStatBlock(tokens, id) {
-    for (const token of Object.values(tokens)) {
-        if (token.options.id === id) {
-            token.stats.rebuild();
-        }
-    }
-}
-
-/** Forces any tokens from all global token stores that implement the specified player character sheet to rebuild */
-export function refreshPlayerSheets(player) {
-    if (player == null) {
-        return;
-    }
-
-    console.log(`Refreshing calculated stat blocks for player ${player}.`);
-    refreshGlobalPlayerSheets(window.TOKEN_OBJECTS, player);
-    refreshGlobalPlayerSheets(window.all_token_objects, player);
-}
-
-/** Forces any tokens that implement the specified player character sheet to rebuild */
-function refreshGlobalPlayerSheets(tokens, player) {
-    for (const token of Object.values(tokens)) {
-        if (token.options.sheet === player) {
-            token.stats.rebuild();
-        }
-    }
-}
-
-/** Forces any tokens from all global token stores that implement the specified D&D Beyond monster stat block to rebuild */
-export function refreshMonsterStatBlocks(monster) {
-    if (monster == null) {
-        return;
-    }
-
-    console.log(`Refreshing calculated stat blocks for D&D Beyond monster ${monster}.`);
-    refreshGlobalMonsterStats(window.TOKEN_OBJECTS, monster);
-    refreshGlobalMonsterStats(window.all_token_objects, monster);
-}
-
-/** Forces any tokens that implement the specified Beyond monster stat block to rebuild */
-function refreshGlobalMonsterStats(tokens, monster) {
-    for (const token of Object.values(tokens)) {
-        if (token.options.monster === monster) {
-            token.stats.rebuild();
-        }
-    }
-}
-
-/** Forces any tokens from all global token stores that implement the specified D&D Beyond monster stat block to rebuild */
-export function refreshOpen5eStatBlocks(monster) {
-    if (monster == null) {
-        return;
-    }
-    
-    monster = monster.toLowerCase();
-    console.log(`Refreshing calculated stat blocks for Open 5E ${monster}.`);
-    refreshOpen5eMonsterStats(window.TOKEN_OBJECTS, monster);
-    refreshOpen5eMonsterStats(window.all_token_objects, monster);
-}
-
-/** Forces any tokens that implement the specified Beyond monster stat block to rebuild */
-function refreshOpen5eMonsterStats(tokens, monster) {
-    for (const token of Object.values(tokens)) {
-        if (uriEquals(token.options.itemType, 'open5e') && uriEquals(token.options.itemId, monster)) {
-            token.stats.rebuild();
-        }
-    }
-}
-
-const open5eCreatures = {};
-
-/** Loads the cache of Open 5E creature stat blocks for the provided key */
-export function fetchOpen5eSheet(key) {
-    key = key?.toLowerCase();
-    if (key == null) {
-        return undefined;
-    }
-
-    if (key in open5eCreatures) {
-        return open5eCreatures[key].sheet;
-    }
-
-    const loader = { loading: true, failed: false, sheet: undefined };
-    open5eCreatures[key] = loader;
-
-    // We are doing single lookups here because any fragility with the API calls
-    // should not prevent entire batches from loading and this is only reacting
-    // to tokens within the campaign
-    let url = `https://api.open5e.com/v2/creatures/?key__in=${key}&limit=1`
-    fetch(url).then((response) => {
-        if (!response.ok) {
-            throw new Error(`Failed to load Open5e creature stat block ${key} with status code ${response.status}`);
-        }
-
-        return response.json();
-    }).then((payload) => {
-        loader.sheet = payload?.results?.find(entry => uriEquals(entry.key, key));
-        refreshOpen5eStatBlocks(key);
-    }).catch((error) => {
-        loader.failed = true;
-        console.error(`Failed to load Open5e creature stat block ${key}`, error);
-    }).finally(() => loader.loading = false);
-
-    return undefined;
-}
-
-const beyondCreatures = {
-    sheets: {},
-    pending: new Set(),
-    timer: undefined,
-    delay: 5000 // Initial wait delay while the VTT loads
-};
-
-/**
- * Loads the cache of D&D Beyond creature stat blocks for the provided token
- * @param {Token} token - The token to retrieve the monster stat block for.
- */
-export function fetchBeyondSheetForToken(token) {
-    const itemType = token?.options?.itemType?.toLowerCase();
-    if (itemType !== 'monster') {
-        return undefined;
-    }
-
-    const monster = token.options.monster ?? token.options.itemId;
-    if (monster == null){
-        return undefined;
-    }
-
-    return fetchBeyondSheet(monster);
-}
-
-/**
- * Loads the cache of D&D Beyond creature stat blocks for the provided identifier
- * @param {number | undefined} monster - The identifier of the monster to retrieve.
- */
-export function fetchBeyondSheet(monster) {
-    if (monster == null) {
-        return undefined;
-    }
-
-    if (monster in beyondCreatures.sheets) {
-        const requested = beyondCreatures.sheets[monster];
-        if (requested.sheet !== undefined) {
-            return requested.sheet;
-        }
-
-        const fromCache = cached_monster_items[monster]?.monsterData;
-        if (fromCache !== undefined) {
-            beyondCreatures.pending.delete(monster);
-            if (beyondCreatures.pending.size === 0 && beyondCreatures.timer !== undefined) {
-                window.clearTimeout(beyondCreatures.timer);
-                beyondCreatures.timer = undefined;
-            }
-
-            requested.sheet = fromCache;
-            requested.loading = false;
-            requested.failed = false;
-        }
-
-        return requested.sheet;
-    }
-
-    const fromCache = cached_monster_items[monster]?.monsterData;
-    const loader = { loading: true, failed: false, sheet: fromCache };
-    beyondCreatures.sheets[monster] = loader;
-
-    if (fromCache != null) {
-        return fromCache;
-    }
-
-    appendPendingBeyondMonster(monster);
-    return undefined;
-}
-
-/** Adds a monster to the pending queue and starts the wait timer to give the existing caches time if needed */
-function appendPendingBeyondMonster(monster) {
-    beyondCreatures.pending.add(monster);
-
-    if (beyondCreatures.timer === undefined) {
-        beyondCreatures.timer = window.setTimeout(fetchPendingBeyondSheets, beyondCreatures.delay);
-    }
-}
-
-/** Loads the cache of D&D Beyond creature stat blocks for any currently pending keys */
-function fetchPendingBeyondSheets() {
-    const reviewing = new Set(beyondCreatures.pending.values());
-    beyondCreatures.pending.clear();
-    beyondCreatures.delay = 500; // Speed this process up after initial load of VTT
-    beyondCreatures.timer = undefined;
-
-    const updating = [];
-    for (const key of reviewing.values()) {
-        const requested = beyondCreatures.sheets[key];
-        if (requested.sheet !== undefined) {
-            continue;
-        }
-
-        const fromCache = cached_monster_items[key]?.monsterData;
-        if (fromCache !== undefined) {
-            requested.sheet = fromCache;
-            requested.loading = false;
-            requested.failed = false;
-            continue;
-        }
-
-        updating.push(key);
-    }
-
-    if (updating.length === 0) {
-        return;
-    }
-
-    // The batch fetch appears to be fragile as a single invalid ID will cause the entire thing to fail
-    // Due to this, we will implement individual lookups.
-    for (const monster of updating) {
-        const target = beyondCreatures.sheets[monster];
-
-        DDBApi.fetchMonsters([monster]).then((response) => {
-            target.sheet = response?.find(entry => entry.id === monster);
-            target.failed = false;
-            refreshMonsterStatBlocks(monster);
-        }).catch((error) => {
-            target.failed = true;
-            console.error(`Failed to load D&D Beyond creature stat block ${monster}`, error);
-        }).finally(() => target.loading = false);
-    }
-}
-
-/**
  * Manages a normalized stat block for the provided token
  */
 export default class StatBlock {
@@ -491,59 +241,6 @@ export default class StatBlock {
         return this.getNumeric(AbilityScore.CHA.uri);
     }
 
-    /** Rebuilds the stat block for the token */
-    rebuild() {
-        const options = this.#token.options;
-        const player = this.getPlayerSheet();
-
-        this.#player = (player != null || (options.id ?? '').includes('/'));
-
-        const sheets = { options, player };
-        sheets.open5e = this.getOpen5e();
-        sheets.monster = this.getBeyondMonster();
-
-        this.#refreshAbility(AbilityScore.STR, AbilityModifier.STR, SaveProficiency.STR, SaveBonus.STR, sheets);
-        this.#refreshAbility(AbilityScore.DEX, AbilityModifier.DEX, SaveProficiency.DEX, SaveBonus.DEX, sheets);
-        this.#refreshAbility(AbilityScore.CON, AbilityModifier.CON, SaveProficiency.CON, SaveBonus.CON, sheets);
-        this.#refreshAbility(AbilityScore.WIS, AbilityModifier.WIS, SaveProficiency.WIS, SaveBonus.WIS, sheets);
-        this.#refreshAbility(AbilityScore.INT, AbilityModifier.INT, SaveProficiency.INT, SaveBonus.INT, sheets);
-        this.#refreshAbility(AbilityScore.CHA, AbilityModifier.CHA, SaveProficiency.CHA, SaveBonus.CHA, sheets);
-
-        const ac = options.armorClass ?? player?.armorClass ?? monster?.armorClass ?? 
-            open5e?.armor_class ?? open5e?.armorClass ?? 10;
-        this.#updateNumeric(AbilityScore.ArmorClass.uri, ac);
-
-        const totalHp = options.hitPointInfo?.maximum ?? player?.hitPointInfo?.maximum ?? 0;
-        this.#updateNumeric(HitPoint.Maximum.uri, totalHp);
-
-        for(const condition of Object.values(ConditionType)) {
-            if (condition.type === PropertyType.Condition) {
-                this.#refreshAppliedCondition(condition, sheets);
-            } else if (condition.type === PropertyType.Number) {
-                this.#refreshLeveledCondition(condition, sheets);
-            }
-        }
-
-        this.recalculate();
-    }
-
-    /** Recalculates the values for the properties within the stat block after changes have been applied. */
-    recalculate() {
-        for (const condition of Object.values(this.#conditions)) {
-            condition.recalculate();
-        }
-
-        for (const numeric of Object.values(this.#numeric)) {
-            numeric.recalculate();
-        }
-
-        this.#hitPoints.checkMaximum();
-
-        for (const proficiency of Object.values(this.#proficiencies)) {
-            proficiency.recalculate();
-        }
-    }
-
     /** @returns {{ round: number, token?: Token, initiative?: number }} A snapshot of the current initiative order in the combat tracker */
     getCurrentInitiative() {
         return StatBlock.getTokenInitiative(this.#token);
@@ -587,6 +284,67 @@ export default class StatBlock {
         return { token: token, round: round, initiative: initiative };
     }
 
+    /** Rebuilds the stat block for the token */
+    rebuild() {
+        const options = this.#token.options;
+        const player = this.getPlayerSheet();
+
+        this.#player = (player != null || (options.id ?? '').includes('/'));
+
+        const sheets = { options, player };
+
+        if (this.#player) {
+            sheets.playerExt = this.getPlayerExtended();
+        } else {
+            sheets.open5e = this.getOpen5e();
+            sheets.monster = this.getBeyondMonster();
+        }
+
+        sheets.pb = this.#refreshLevel(sheets);
+
+        this.#refreshAbility(AbilityScore.STR, AbilityModifier.STR, SaveProficiency.STR, SaveBonus.STR, sheets);
+        this.#refreshAbility(AbilityScore.DEX, AbilityModifier.DEX, SaveProficiency.DEX, SaveBonus.DEX, sheets);
+        this.#refreshAbility(AbilityScore.CON, AbilityModifier.CON, SaveProficiency.CON, SaveBonus.CON, sheets);
+        this.#refreshAbility(AbilityScore.WIS, AbilityModifier.WIS, SaveProficiency.WIS, SaveBonus.WIS, sheets);
+        this.#refreshAbility(AbilityScore.INT, AbilityModifier.INT, SaveProficiency.INT, SaveBonus.INT, sheets);
+        this.#refreshAbility(AbilityScore.CHA, AbilityModifier.CHA, SaveProficiency.CHA, SaveBonus.CHA, sheets);
+
+        const ac = options.armorClass ?? player?.armorClass ?? monster?.armorClass ?? 
+            open5e?.armor_class ?? open5e?.armorClass ?? 10;
+        this.#updateNumeric(AbilityScore.ArmorClass.uri, ac);
+
+        const totalHp = options.hitPointInfo?.maximum ?? player?.hitPointInfo?.maximum ?? 0;
+        this.#updateNumeric(HitPoint.Maximum.uri, totalHp);
+
+        for(const condition of Object.values(ConditionType)) {
+            if (condition.type === PropertyType.Condition) {
+                this.#refreshAppliedCondition(condition, sheets);
+            } else if (condition.type === PropertyType.Number) {
+                this.#refreshLeveledCondition(condition, sheets);
+            }
+        }
+
+        this.recalculate();
+        this.sync();
+    }
+
+    /** Recalculates the values for the properties within the stat block after changes have been applied. */
+    recalculate() {
+        for (const condition of Object.values(this.#conditions)) {
+            condition.recalculate();
+        }
+
+        for (const numeric of Object.values(this.#numeric)) {
+            numeric.recalculate();
+        }
+
+        this.#hitPoints.checkMaximum();
+
+        for (const proficiency of Object.values(this.#proficiencies)) {
+            proficiency.recalculate();
+        }
+    }
+
     /** Retrieves the character sheet information from D&D Beyond */
     getPlayerSheet() {
         if (this.#token.options.sheet == null) {
@@ -597,6 +355,11 @@ export default class StatBlock {
         return window.pcs.find((entry) => uriEquals(entry.sheet, expected));
     }
 
+    /** Retrieves the extended player character sheet information from D&D Beyond */
+    getPlayerExtended() {
+        return fetchPlayerExtendedSheet(this.#token.options.characterId);
+    }
+
     /** Retrieves the common D&D Beyond monster stat block if the token is an instance of one */
     getBeyondMonster() {
         return fetchBeyondSheetForToken(this.#token);
@@ -604,12 +367,7 @@ export default class StatBlock {
 
     /** Retrieves the common Open 5E stat block if the token is an instance of one */
     getOpen5e() {
-        if (!uriEquals(this.#token.options?.itemType, 'open5e') || this.#token.options?.itemId == null){
-            return null;
-        }
-
-        const expected = this.#token.options.itemId;
-        return fetchOpen5eSheet(expected);
+        return fetchOpen5eSheetForToken(this.#token);
     }
 
     /**
@@ -659,6 +417,51 @@ export default class StatBlock {
         property.setBaseValue(config);
 
         return property;
+    }
+
+    /**
+     * Retrieves either the level or challenge rating from the appropriate sheet for the token
+     * @param {Object} sheets - The sheet information for the token.
+     * @returns {number} The proficiency bonus for the token
+    */
+    #refreshLevel(sheets) {
+        if (sheets.player) {
+            const pb = sheets.player.proficiencyBonus ?? 2;
+            this.#updateNumeric(AbilityScore.Level.uri, sheets.player.level ?? 1);
+            this.#updateNumeric(AbilityScore.ProficiencyBonus.uri, pb);
+            return pb;
+        }
+
+        if (sheets.monster) {
+            const cr = sheets.monster.challengeRatingId ?? 0;
+            this.#updateNumeric(AbilityScore.Level.uri, cr);
+
+            const ratings = window.ddbConfigJson?.["challengeRatings"] ?? []
+            let pb = (cr >= 0 && cr < ratings.length) ? ratings[cr]?.proficiencyBonus : undefined;
+            if (pb == null) {
+                cr -= 4; // CR 1 starts at index 5 currently so lets push it down for the purposes of the calculation
+                pb = 1 + Math.ceil((cr > 0 ? cr : 1) / 4);
+            }
+
+            this.#updateNumeric(AbilityScore.ProficiencyBonus.uri, pb ?? 2);
+            return pb;
+        }
+
+        if (sheets.open5e) {
+            const cr = sheets.open5e.challenge_rating ?? 0;
+            let pb = sheets.open5e.proficiency_bonus;
+            if (pb == null) {
+                pb = 1 + Math.ceil((cr > 0 ? cr : 1) / 4);
+            }
+
+            this.#updateNumeric(AbilityScore.Level.uri, cr);
+            this.#updateNumeric(AbilityScore.ProficiencyBonus.uri, pb ?? 2);
+            return pb;
+        }
+
+        this.#updateNumeric(AbilityScore.Level.uri, 0);
+        this.#updateNumeric(AbilityScore.ProficiencyBonus.uri, 2);
+        return 2;
     }
 
     /**
@@ -721,10 +524,6 @@ export default class StatBlock {
      * @param {Object} sheets - The sheet information for the token.
      */
     #refreshSaveModifiers(score, save, saveBonus, abilityMod, sheets) {
-        const expected = score.uri.toLowerCase();
-        let value = sheets.options.abilities?.find((entry) => uriEquals(entry?.name, expected))?.save ??
-            sheets.player?.abilities?.find((entry) => uriEquals(entry?.name, expected))?.save;
-
         if (sheets.monster) {
             const beyondProf = sheets.monster.savingThrows?.find((entry) => (entry.statId === score.dndBeyond));
             this.#updateProficiency(save.uri, beyondProf != null ? ProficiencyType.Standard : ProficiencyType.None);
@@ -739,9 +538,60 @@ export default class StatBlock {
             return;
         }
 
-        value ??= abilityMod;
+        const proficient = this.#reviewPlayerSaveProficiency(save, sheets);
 
-        return this.#updateNumeric(saveBonus.uri, value);
+        const expected = score.uri.toLowerCase();
+        let bonus = sheets.player?.abilities?.find((entry) => uriEquals(entry?.name, expected))?.save ??
+            sheets.options.abilities?.find((entry) => uriEquals(entry?.name, expected))?.save ??
+            abilityMod;
+
+        // Tear down the full save value to get to the total bonus
+        bonus -= abilityMod;
+        if (proficient) {
+            bonus -= sheets.pb;
+        }
+
+        this.#updateProficiency(save.uri, proficient ? ProficiencyType.Standard : ProficiencyType.None);
+        this.#updateNumeric(saveBonus.uri, bonus);
+
+        return;
+    }
+
+    #reviewPlayerSaveProficiency(save, sheets) {
+        if (save.playerExt == null) {
+            return false;
+        }
+
+        if (sheets.playerExt == null) {
+            return sheets.options.proficiency_ext?.[save.uri] === true;
+        }
+
+        let proficient = false;
+        for (const group of Object.values(sheets.playerExt.modifiers ?? {})) {
+            for (const entry of group) {
+                if (entry.type?.toLowerCase() === 'proficiency' && entry.subType?.toLowerCase() === save.playerExt) {
+                    proficient = true;
+                    break;
+                }
+            }
+        }
+
+        const current = sheets.options.proficiency_ext?.[save.uri] ?? false;
+        if (current !== proficient) {
+            if (sheets.options.proficiency_ext == null) {
+                sheets.options.proficiency_ext = {};
+            }
+
+            if (proficient === true) {
+                sheets.options.proficiency_ext[save.uri] = true;
+            } else {
+                delete sheets.options.proficiency_ext[save.uri];
+            }
+
+            this.hasPendingChanges(true);
+        }
+
+        return proficient;
     }
 
     /**
@@ -751,7 +601,9 @@ export default class StatBlock {
      */
     #refreshAppliedCondition(condition, sheets) {
         const srd = (typeof condition.srd === 'string');
-        const fromToken = (srd && sheets.options.conditions.includes(condition.srd));
+
+        const findUri = (condition.srd ?? '').toLowerCase();
+        const fromToken = (srd && (sheets.options.conditions?.findIndex(entry => entry?.name?.toLowerCase() === findUri) ?? -1) >= 0);
         const fromPlayer = (srd && (sheets.player?.conditions?.findIndex((entry) => entry?.name === condition.srd) ?? -1) >= 0);
 
         let property = this.#conditions[condition.uri];
@@ -775,6 +627,333 @@ export default class StatBlock {
         this.#updateNumeric(condition.uri, (fromPlayer ?? 0) * 2);
     }
 }
+
+/**
+ * Performs a case-insensitive string comparison of a pair of property URIs.
+ * @param {string} value - The URI being tested without case modification
+ * @param {string} expected - The expected value of the URI; should already be in lower case
+ * @returns {boolean}
+ */
+export function uriEquals(value, expected) {
+    return (value != null && expected != null && value.toLowerCase() === expected)
+}
+
+/** Forces any tokens from all global token stores for the specified identifier to rebuild */
+export function refreshStatBlock(id) {
+    if (id == null) {
+        return;
+    }
+
+    console.log(`Refreshing calculated stat blocks for ${id}.`);
+    refreshGlobalStatBlock(window.TOKEN_OBJECTS, id);
+    refreshGlobalStatBlock(window.all_token_objects, id);
+}
+
+/** Forces any tokens for the specified identifier to rebuild */
+function refreshGlobalStatBlock(tokens, id) {
+    for (const token of Object.values(tokens)) {
+        if (token.options.id === id) {
+            token.stats.rebuild();
+        }
+    }
+}
+
+// #region Player Character Sheets
+
+/** Forces any tokens from all global token stores that implement the specified player character sheet to rebuild */
+export function refreshPlayerSheets(player) {
+    if (player == null) {
+        return;
+    }
+
+    console.log(`Refreshing calculated stat blocks for player ${player}.`);
+    refreshGlobalPlayerSheets(window.TOKEN_OBJECTS, player);
+    refreshGlobalPlayerSheets(window.all_token_objects, player);
+}
+
+/** Forces any tokens that implement the specified player character sheet to rebuild */
+function refreshGlobalPlayerSheets(tokens, player) {
+    for (const token of Object.values(tokens)) {
+        if (token.options.sheet === player) {
+            token.stats.rebuild();
+        }
+    }
+}
+
+/** Forces any tokens from all global token stores that implement the specified extended player character sheet to rebuild */
+export function refreshPlayerExtended(player) {
+    if (player == null) {
+        return;
+    }
+
+    const asNumber = (typeof player === 'number') ? player : parseInt(player);
+    const asString = player.toString();
+
+    console.log(`Refreshing calculated stat blocks for player ${player} from extended stat block.`);
+    refreshGlobalPlayerExtended(window.TOKEN_OBJECTS, asNumber, asString);
+    refreshGlobalPlayerExtended(window.all_token_objects, asNumber, asString);
+}
+
+/** Forces any tokens that implement the specified extended player character sheet to rebuild */
+function refreshGlobalPlayerExtended(tokens, asNumber, asString) {
+    for (const token of Object.values(tokens)) {
+        if (token.options.characterId === asNumber || token.options.characterId === asString) {
+            token.stats.rebuild();
+        }
+    }
+}
+
+/** Cache of v5 character sheets */
+const playerSheetsExt = {};
+
+/** Loads the cache of extended player character sheets for the provided identifier */
+export function fetchPlayerExtendedSheet(id) {
+    if (typeof id === 'number') {
+        id = id.toString();
+    }
+
+    if (!window.DM || id == null || typeof id !== 'string' || id.trim().length <= 1) {
+        return undefined;
+    }
+
+    if (id in playerSheetsExt) {
+        return playerSheetsExt[id].sheet;
+    }
+
+    const loader = { loading: true, failed: false, sheet: undefined };
+    playerSheetsExt[id] = loader;
+
+    DDBApi.fetchCharacter(id).then((payload) => {
+        loader.sheet = payload;
+        refreshPlayerExtended(id);
+    }).catch((error) => {
+        loader.failed = true;
+        console.error(`Failed to load extended player character sheet ${id}`, error);
+    }).finally(() => {
+        loader.loading = false
+    });
+
+    return undefined;
+}
+
+// #endregion
+
+// #region Open 5e
+
+/** Forces any tokens from all global token stores that implement the specified D&D Beyond monster stat block to rebuild */
+export function refreshOpen5eStatBlocks(monster) {
+    if (monster == null) {
+        return;
+    }
+    
+    monster = monster.toLowerCase();
+    console.log(`Refreshing calculated stat blocks for Open 5E ${monster}.`);
+    refreshOpen5eMonsterStats(window.TOKEN_OBJECTS, monster);
+    refreshOpen5eMonsterStats(window.all_token_objects, monster);
+}
+
+/** Forces any tokens that implement the specified Beyond monster stat block to rebuild */
+function refreshOpen5eMonsterStats(tokens, monster) {
+    for (const token of Object.values(tokens)) {
+        if (uriEquals(token.options.itemType, 'open5e') && uriEquals(token.options.itemId, monster)) {
+            token.stats.rebuild();
+        }
+    }
+}
+
+const open5eCreatures = {};
+
+/** Retrieves the common Open 5E stat block if the token is an instance of one */
+export function fetchOpen5eSheetForToken(token) {
+    if (!uriEquals(token.options?.itemType, 'open5e') || token.options?.itemId == null){
+        return null;
+    }
+
+    return fetchOpen5eSheet(token.options.itemId);
+}
+
+/** Loads the cache of Open 5E creature stat blocks for the provided key */
+export function fetchOpen5eSheet(key) {
+    key = key?.toLowerCase();
+    if (key == null) {
+        return undefined;
+    }
+
+    if (key in open5eCreatures) {
+        return open5eCreatures[key].sheet;
+    }
+
+    const loader = { loading: true, failed: false, sheet: undefined };
+    open5eCreatures[key] = loader;
+
+    // We are doing single lookups here because any fragility with the API calls
+    // should not prevent entire batches from loading and this is only reacting
+    // to tokens within the campaign
+    let url = `https://api.open5e.com/v2/creatures/?key__in=${key}&limit=1`
+    fetch(url).then((response) => {
+        if (!response.ok) {
+            throw new Error(`Failed to load Open5e creature stat block ${key} with status code ${response.status}`);
+        }
+
+        return response.json();
+    }).then((payload) => {
+        loader.sheet = payload?.results?.find(entry => uriEquals(entry.key, key));
+        refreshOpen5eStatBlocks(key);
+    }).catch((error) => {
+        loader.failed = true;
+        console.error(`Failed to load Open5e creature stat block ${key}`, error);
+    }).finally(() => loader.loading = false);
+
+    return undefined;
+}
+
+// #endregion
+
+// #region D&D Beyond Monsters
+
+const beyondCreatures = {
+    sheets: {},
+    pending: new Set(),
+    timer: undefined,
+    delay: 10000 // Initial wait delay while the VTT loads
+};
+
+/** Forces any tokens from all global token stores that implement the specified D&D Beyond monster stat block to rebuild */
+export function refreshMonsterStatBlocks(monster) {
+    if (monster == null) {
+        return;
+    }
+
+    console.log(`Refreshing calculated stat blocks for D&D Beyond monster ${monster}.`);
+    refreshGlobalMonsterStats(window.TOKEN_OBJECTS, monster);
+    refreshGlobalMonsterStats(window.all_token_objects, monster);
+}
+
+/** Forces any tokens that implement the specified Beyond monster stat block to rebuild */
+function refreshGlobalMonsterStats(tokens, monster) {
+    for (const token of Object.values(tokens)) {
+        if (token.options.monster === monster) {
+            token.stats.rebuild();
+        }
+    }
+}
+
+/**
+ * Loads the cache of D&D Beyond creature stat blocks for the provided token
+ * @param {Token} token - The token to retrieve the monster stat block for.
+ */
+export function fetchBeyondSheetForToken(token) {
+    const itemType = token?.options?.itemType?.toLowerCase();
+    if (itemType !== 'monster') {
+        return undefined;
+    }
+
+    const monster = token.options.monster ?? token.options.itemId;
+    if (monster == null){
+        return undefined;
+    }
+
+    return fetchBeyondSheet(monster);
+}
+
+/**
+ * Loads the cache of D&D Beyond creature stat blocks for the provided identifier
+ * @param {number | undefined} monster - The identifier of the monster to retrieve.
+ */
+export function fetchBeyondSheet(monster) {
+    if (monster == null) {
+        return undefined;
+    }
+
+    if (monster in beyondCreatures.sheets) {
+        const requested = beyondCreatures.sheets[monster];
+        if (requested.sheet !== undefined) {
+            return requested.sheet;
+        }
+
+        const fromCache = cached_monster_items[monster]?.monsterData;
+        if (fromCache !== undefined) {
+            beyondCreatures.pending.delete(monster);
+            if (beyondCreatures.pending.size === 0 && beyondCreatures.timer !== undefined) {
+                window.clearTimeout(beyondCreatures.timer);
+                beyondCreatures.timer = undefined;
+            }
+
+            requested.sheet = fromCache;
+            requested.loading = false;
+            requested.failed = false;
+        }
+
+        return requested.sheet;
+    }
+
+    const fromCache = cached_monster_items[monster]?.monsterData;
+    const loader = { loading: true, failed: false, sheet: fromCache };
+    beyondCreatures.sheets[monster] = loader;
+
+    if (fromCache != null) {
+        return fromCache;
+    }
+
+    appendPendingBeyondMonster(monster);
+    return undefined;
+}
+
+/** Adds a monster to the pending queue and starts the wait timer to give the existing caches time if needed */
+function appendPendingBeyondMonster(monster) {
+    beyondCreatures.pending.add(monster);
+
+    if (beyondCreatures.timer === undefined) {
+        beyondCreatures.timer = window.setTimeout(fetchPendingBeyondSheets, beyondCreatures.delay);
+    }
+}
+
+/** Loads the cache of D&D Beyond creature stat blocks for any currently pending keys */
+function fetchPendingBeyondSheets() {
+    const reviewing = new Set(beyondCreatures.pending.values());
+    beyondCreatures.pending.clear();
+    beyondCreatures.delay = 500; // Speed this process up after initial load of VTT
+    beyondCreatures.timer = undefined;
+
+    const updating = [];
+    for (const key of reviewing.values()) {
+        const requested = beyondCreatures.sheets[key];
+        if (requested.sheet !== undefined) {
+            continue;
+        }
+
+        const fromCache = cached_monster_items[key]?.monsterData;
+        if (fromCache !== undefined) {
+            requested.sheet = fromCache;
+            requested.loading = false;
+            requested.failed = false;
+            continue;
+        }
+
+        updating.push(key);
+    }
+
+    if (updating.length === 0) {
+        return;
+    }
+
+    // The batch fetch appears to be fragile as a single invalid ID will cause the entire thing to fail
+    // Due to this, we will implement individual lookups.
+    for (const monster of updating) {
+        const target = beyondCreatures.sheets[monster];
+
+        DDBApi.fetchMonsters([monster]).then((response) => {
+            target.sheet = response?.find(entry => entry.id === monster);
+            target.failed = false;
+            refreshMonsterStatBlocks(monster);
+        }).catch((error) => {
+            target.failed = true;
+            console.error(`Failed to load D&D Beyond creature stat block ${monster}`, error);
+        }).finally(() => target.loading = false);
+    }
+}
+
+// #endregion
 
 // Addressing compatibility issues
 window.initStatBlock = (token) => new StatBlock(token);
