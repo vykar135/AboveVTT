@@ -3,7 +3,9 @@ import StatBlock from "./StatBlock.mjs";
 /**
  * @typedef {Object} NumericStatImpact
  * @property {number} version - The version of the status effect collect at the time the impact was applied.
- * @property {number} amount - The fixed amount to change the property by
+ * @property {number} setTo - The fixed amount to set the value of the property to.
+ * @property {number} amount - The fixed amount to change the property by.
+ * @property {number} multiplier - The multiplier to apply to the value of the property.
  * @property {string} imports - The URI of the numeric property to import the current value for and apply to the requesting property.
  * @property {boolean} importPenalty - Whether the imported value is treated as a penalty against the requesting property.
  */
@@ -18,6 +20,10 @@ export default class NumericStatTracker {
     #uri;
     /** @type {number} */
     #base;
+    /** @type {number} */
+    #baseOverride;
+    /** @type {number} */
+    #multiplier;
     /** @type {number | undefined} */
     #snapshot;
     /** @type {{ [instance: string]: NumericStatImpact }} */
@@ -36,6 +42,8 @@ export default class NumericStatTracker {
         this.#base = value;
         this.#sources = {};
         this.#calculated = 0;
+        this.#multiplier = 1;
+        this.#baseOverride = undefined;
         this.#snapshot = undefined;
     }
 
@@ -47,20 +55,15 @@ export default class NumericStatTracker {
     /** The effective base value of the property adjusted for a snapshot at the time an effect was applied. */
     get baseEffective() {
         if (this.#stats.isPlayer) {
-            return (this.#snapshot ?? this.#base);
+            return (this.#baseOverride ?? this.#snapshot ?? this.#base);
         }
 
-        return this.#base;
+        return this.#baseOverride ?? this.#base;
     }
 
     /** The current value of the property adjusted for a snapshot at the time an effect was applied. */
     get current() {
-        return this.baseEffective + this.#calculated;
-    }
-
-    /** The reported value of the property based on the token's current state. */
-    get reported() {
-        return this.#base + this.#calculated;
+        return (this.baseEffective + this.#calculated) * this.#multiplier;
     }
 
     /** @returns {number | undefined} The snapshot of the value taken before effects were applied. */
@@ -73,15 +76,18 @@ export default class NumericStatTracker {
         return this.#calculated;
     }
 
+    /** @returns {number} The multiplier on the base + calculated amount on the effects that are applied to the stat block. */
+    get multiplier() {
+        return this.#multiplier ?? 1;
+    }
+
     /** @returns {boolean} Whether the player's character sheet is not synced with the campaign. */
     isNotSynced() {
         if (!this.#stats.isPlayer || this.#snapshot === undefined) {
             return false;
         }
 
-        const expected = this.#snapshot + this.#calculated;
-        const adjusted = this.#base - this.#calculated;
-        return (expected !== adjusted);
+        return (this.#snapshot !== this.#base);
     }
 
     /**
@@ -100,7 +106,12 @@ export default class NumericStatTracker {
         const version = this.#stats.statusEffects.version;
         
         // We leave the visited property undefined here so that it will create it for each individual effect
-        this.#calculated = this.#recalculateGraph(version, undefined);
+        const [base, calculated, multipler] = this.#recalculateGraph(version, undefined);
+
+        this.#baseOverride = ((this.#snapshot ?? this.#base) !== base) ? base : undefined;
+        this.#calculated = calculated;
+        this.#multiplier = multipler;
+
         return this.current;
     }
 
@@ -111,6 +122,8 @@ export default class NumericStatTracker {
      * @returns {number} The calculated value for the property
     */
     #recalculateGraph(version, visited) {
+        let base = undefined;
+        let multipler = undefined;
         let calculated = 0;
 
         for (const [key, applied] of Object.entries(this.#sources)) {
@@ -119,8 +132,16 @@ export default class NumericStatTracker {
                 continue;
             }
 
-            calculated += (applied.amount ?? 0);
+            if (applied.setTo != null) {
+                base = applied.setTo;
+            }
 
+            if (applied.multiplier != null) {
+                multipler = (multipler ?? 0) + Math.abs(applied.multiplier);
+            }
+
+            calculated += (applied.amount ?? 0);
+            
             if (applied.imports == null || typeof applied.imports !== 'string' || visited?.has(this.#uri) === true) {
                 continue;
             }
@@ -133,7 +154,8 @@ export default class NumericStatTracker {
             visited.add(this.#uri);
 
             const importing = this.#stats.getNumeric(applied.imports);
-            const imported = importing.baseEffective + importing.#recalculateGraph(version, visited);
+            const [importBase, importAmount, importMulti] = importing.#recalculateGraph(version, visited);
+            const imported = (importBase + importAmount) * importMulti;
             if (applied.importPenalty === true && imported > 0) {
                 calculated -= imported;
             } else {
@@ -141,7 +163,7 @@ export default class NumericStatTracker {
             }
         }
 
-        return calculated;
+        return [(base ?? this.#snapshot ?? this.#base), calculated, (multipler ?? 1)];
     }
 
     /** Snapshots the current base value for the property */

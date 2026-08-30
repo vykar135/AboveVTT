@@ -52,22 +52,30 @@ function applyCondition(definition, context) {
  */
 function applyNumeric(definition, context) {
     const settings = {
+        setTo: context.overrides.setTo ?? context.impact.setTo,
         amount: context.overrides.amount ?? context.impact.amount,
+        multiplier: context.overrides.multiplier ?? context.impact.multiplier,
         imports: context.overrides.imports ?? context.impact.imports,
         importPenalty: context.overrides.importPenalty ?? context.impact.importPenalty
     };
 
+    if (settings.setTo != null && typeof settings.setTo !== 'number') {
+        console.warn(`Attempted to apply an effect that modifies numeric property ${definition.uri} with an invalid setTo`);
+        return;
+    }
+
     if (settings.amount != null && typeof settings.amount !== 'number') {
-        console.warn(`Attempted to apply an effect that modifies numeric property ${definition.uri} that has an invalid amount`);
+        console.warn(`Attempted to apply an effect that modifies numeric property ${definition.uri} with an invalid amount`);
+        return;
+    }
+
+    if (settings.multiplier != null && typeof settings.multiplier !== 'number') {
+        console.warn(`Attempted to apply an effect that modifies numeric property ${definition.uri} with an invalid multiplier`);
         return;
     }
 
     if (settings.imports != null && typeof settings.imports !== 'string') {
         console.warn(`Attempted to apply an effect that modifies numeric property ${definition.uri} that has an invalid import reference`);
-        return;
-    }
-
-    if (settings.amount === 0 && (settings.imports ?? '') === '') {
         return;
     }
 
