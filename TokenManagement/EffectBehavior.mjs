@@ -67,7 +67,7 @@ function applyNumeric(definition, context) {
         return;
     }
 
-    if (settings.amount === 0 && (settings.imports ?? '') == '') {
+    if (settings.amount === 0 && (settings.imports ?? '') === '') {
         return;
     }
 

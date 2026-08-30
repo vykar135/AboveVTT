@@ -170,6 +170,10 @@ class Token {
 
 	/** @return {StatBlock} The normalized stat block for the token */
 	get stats() {
+		if (this.#stats == null) {
+			this.#stats = window.initStatBlock(this);
+		}
+
 		return this.#stats;
 	}
 
