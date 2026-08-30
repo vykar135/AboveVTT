@@ -99,6 +99,64 @@ export default class StatBlock {
         return this.#player;
     }
 
+    /** Details about the current state of the creature's hit points and associated controls. */
+    get hp() {
+        return this.#hitPoints;
+    }
+
+    /** Details about the current armor class for the creature. Providing a quick accessor for this since it is shown all over the place. */
+    get ac() {
+        return this.getNumeric(AbilityScore.ArmorClass.uri)?.current ?? 10;
+    }
+
+    /** Generates a snapshot of the creature stat block using the current calculated values. */
+    getNormalizedSheet() {
+        const pb = this.getNumeric(AbilityScore.ProficiencyBonus)?.current ?? 2;
+
+        const getSave = (modifier, proficiency, bonus) => {
+            let bonusAmount = (this.getNumeric(bonus)?.current ?? 0);
+            let total = modifier + bonusAmount;
+            let profAmount = 0;
+
+            const apply = this.getProficiency(proficiency)?.current?.apply;
+            if (typeof apply === 'function') {
+                profAmount = apply(pb);
+                total += apply(pb);
+            }
+            return { total, proficiency: profAmount, bonus: bonusAmount };
+        };
+
+        const getScore = (score, modifier, proficiency, bonus) => {
+            const modValue = this.getNumeric(modifier)?.current ?? 0
+
+            return {
+                score: this.getNumeric(score)?.current ?? 10,
+                modifier: modValue,
+                save: getSave(modValue, proficiency, bonus)
+            };
+        };
+
+        return {
+            proficiencyBonus: pb,
+            level: this.getNumeric(AbilityScore.Level)?.current ?? 1,
+            ac: this.getNumeric(AbilityScore.ArmorClass)?.current ?? 10,
+            hp: {
+                maximum: this.#hitPoints.maximum,
+                remaining: this.#hitPoints.remaining,
+                temp: this.#hitPoints.temp,
+                total: this.#hitPoints.total
+            },
+            scores: {
+                str: getScore(AbilityScore.STR, AbilityModifier.STR, SaveProficiency.STR, SaveBonus.STR),
+                dex: getScore(AbilityScore.DEX, AbilityModifier.DEX, SaveProficiency.DEX, SaveBonus.DEX),
+                con: getScore(AbilityScore.CON, AbilityModifier.CON, SaveProficiency.CON, SaveBonus.CON),
+                wis: getScore(AbilityScore.WIS, AbilityModifier.WIS, SaveProficiency.WIS, SaveBonus.WIS),
+                int: getScore(AbilityScore.INT, AbilityModifier.INT, SaveProficiency.INT, SaveBonus.INT),
+                cha: getScore(AbilityScore.CHA, AbilityModifier.CHA, SaveProficiency.CHA, SaveBonus.CHA)
+            }
+        };
+    }
+
     /**
      * Retrieves a property from the stat block that implements a numeric value.
      * @param {string} uri - The identifier of the property on the stat block that implements a numeric value.
@@ -204,43 +262,6 @@ export default class StatBlock {
         return proficiency;
     }
 
-    /** Details about the current state of the creature's hit points and associated controls. */
-    get hp() {
-        return this.#hitPoints;
-    }
-
-    get ac() {
-        return this.getNumeric(AbilityScore.ArmorClass.uri);
-    }
-
-    get proficiencyBonus() {
-        return this.getNumeric(AbilityScore.ProficiencyBonus.uri);
-    }
-
-    get str() {
-        return this.getNumeric(AbilityScore.STR.uri);
-    }
-
-    get dex() {
-        return this.getNumeric(AbilityScore.DEX.uri);
-    }
-
-    get con() {
-        return this.getNumeric(AbilityScore.CON.uri);
-    }
-
-    get wis() {
-        return this.getNumeric(AbilityScore.WIS.uri);
-    }
-
-    get int() {
-        return this.getNumeric(AbilityScore.INT.uri);
-    }
-
-    get cha() {
-        return this.getNumeric(AbilityScore.CHA.uri);
-    }
-
     /** @returns {{ round: number, token?: Token, initiative?: number }} A snapshot of the current initiative order in the combat tracker */
     getCurrentInitiative() {
         return StatBlock.getTokenInitiative(this.#token);
@@ -342,7 +363,7 @@ export default class StatBlock {
         for (const proficiency of Object.values(this.#proficiencies)) {
             proficiency.recalculate();
         }
-        
+
         this.sync();
     }
 
@@ -434,16 +455,22 @@ export default class StatBlock {
         }
 
         if (sheets.monster) {
-            const cr = sheets.monster.challengeRatingId ?? 0;
-            this.#updateNumeric(AbilityScore.Level.uri, cr);
+            let id = sheets.monster.challengeRatingId ?? 0;
+            let cr = id;
+            let pb = 2;
 
             const ratings = window.ddbConfigJson?.["challengeRatings"] ?? []
-            let pb = (cr >= 0 && cr < ratings.length) ? ratings[cr]?.proficiencyBonus : undefined;
+            if (cr >= 0 && cr < ratings.length) {
+                cr = ratings[cr].value;
+                pb = ratings[cr].proficiencyBonus;
+            }
+
             if (pb == null) {
-                cr -= 4; // CR 1 starts at index 5 currently so lets push it down for the purposes of the calculation
+                cr = (id - 4); // CR 1 starts at index 5 currently so lets push it down for the purposes of the calculation
                 pb = 1 + Math.ceil((cr > 0 ? cr : 1) / 4);
             }
 
+            this.#updateNumeric(AbilityScore.Level.uri, cr);
             this.#updateNumeric(AbilityScore.ProficiencyBonus.uri, pb ?? 2);
             return pb;
         }
