@@ -325,7 +325,6 @@ export default class StatBlock {
         }
 
         this.recalculate();
-        this.sync();
     }
 
     /** Recalculates the values for the properties within the stat block after changes have been applied. */
@@ -343,6 +342,8 @@ export default class StatBlock {
         for (const proficiency of Object.values(this.#proficiencies)) {
             proficiency.recalculate();
         }
+        
+        this.sync();
     }
 
     /** Retrieves the character sheet information from D&D Beyond */

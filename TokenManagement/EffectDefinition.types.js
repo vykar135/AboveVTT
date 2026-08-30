@@ -36,6 +36,8 @@ import StatBlock from './StatBlock.mjs'
  * @property {EffectResolutionRule[]} resolution - The points when the target of the status effect can attempt to fully resolve the impact
  * @property {string[]?} tags - Any tags that can be used to modify the outcome of the effect
  * @property {number?} amount - The fixed amount that is applied by the effect when it is triggered
+ * @property {number?} setTo - The fixed amount the effect sets the value to when it is triggered
+ * @property {number?} multiplier - The multiplier that is applied by the effect when it is triggered
  * @property {string?} imports - The URI of the numeric property to import the current value for and apply to the requesting property.
  * @property {boolean?} importPenalty - Whether the imported value is treated as a penalty against the requesting property.
  * @property {EffectImpactRoll[]?} rolls - Defines any rolls that are associated with the impact being applied
