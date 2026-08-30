@@ -27,6 +27,8 @@ export default class StatBlock {
     #hitPoints;
     /** @type {TokenStatusEffects} */
     #effects;
+    /** @type {Object} Components within the stat block that failed to complete successuflly */
+    #warnings;
 
     /**
      * @param {Token} token - The token to normalize the stat block for.
@@ -34,13 +36,12 @@ export default class StatBlock {
     constructor(token){
         this.#token = token;
         this.#pendingChanges = false;
+        this.#warnings = {};
         this.#numeric = {};
         this.#conditions = {}
         this.#proficiencies = {};
         this.#hitPoints = new HitPointBlock(this);
         this.#effects = new TokenStatusEffects(this);
-
-        /* this.#dndBeyond = window.ddbConfigJson; */
 
         this.rebuild();
     }
@@ -52,7 +53,14 @@ export default class StatBlock {
     sync() {
         if (this.#pendingChanges === true) {
             this.#pendingChanges = false;
-            this.#token.sync();
+
+            try {
+                this.#token.sync();
+                delete this.#warnings['sync'];
+            } catch (error) {
+                this.reportFailure('sync', `Failed to sync options data`, error);
+            }
+
             return true;
         }
 
@@ -67,11 +75,39 @@ export default class StatBlock {
     update_and_sync() {
         if (this.#pendingChanges === true) {
             this.#pendingChanges = false;
-            this.#token.update_and_sync();
+
+            try {
+                this.#token.update_and_sync();
+                delete this.#warnings['update_and_sync'];
+            } catch (error) {
+                this.reportFailure('update_and_sync', `Failed to sync options data`, error);
+            }
+
             return true;
         }
 
         return false;
+    }
+
+    /**
+     * Sends the appropriate notification event to the user and mark the stat block with a failure state.
+     * @param {str} eventType - The type of event that failed to complete successfully.
+     * @param {string} message - The message to report to the user
+     * @param {Error} error - The error that was encountered
+     */
+    reportFailure(eventType, message, error) {
+        message = `${message ?? 'Unknown exception encountered'} for ${this.#token?.options?.name ?? 'Unnamed Token'} => ${this.#token?.options?.id ?? ''}`;
+
+        this.#warnings[eventType] = {
+            message: message,
+            error: error
+        };
+
+        if (error != null) {
+            console.error(message, error);
+        } else {
+            console.warn(message);
+        }
     }
 
     /**
@@ -87,6 +123,11 @@ export default class StatBlock {
     /** @returns {Token} The token that is being managed */
     get token() {
         return this.#token;
+    }
+
+    /** Whether the stat block has active rebuild warnings */
+    get hasWarning() {
+        return (Object.keys(this.#warnings ?? {}).length > 0);
     }
 
     /** @returns {TokenStatusEffects} The manager for active, passive, and maintained token status effects. */
@@ -307,42 +348,48 @@ export default class StatBlock {
 
     /** Rebuilds the stat block for the token */
     rebuild() {
-        const options = this.#token.options;
-        const player = this.getPlayerSheet();
+        try {
+            const options = this.#token.options;
+            const player = this.getPlayerSheet();
 
-        this.#player = (player != null || (options.id ?? '').includes('/'));
+            this.#player = (player != null || (options.id ?? '').includes('/'));
 
-        const sheets = { options, player };
+            const sheets = { options, player };
 
-        if (this.#player) {
-            sheets.playerExt = this.getPlayerExtended();
-        } else {
-            sheets.open5e = this.getOpen5e();
-            sheets.monster = this.getBeyondMonster();
-        }
-
-        sheets.pb = this.#refreshLevel(sheets);
-
-        this.#refreshAbility(AbilityScore.STR, AbilityModifier.STR, SaveProficiency.STR, SaveBonus.STR, sheets);
-        this.#refreshAbility(AbilityScore.DEX, AbilityModifier.DEX, SaveProficiency.DEX, SaveBonus.DEX, sheets);
-        this.#refreshAbility(AbilityScore.CON, AbilityModifier.CON, SaveProficiency.CON, SaveBonus.CON, sheets);
-        this.#refreshAbility(AbilityScore.WIS, AbilityModifier.WIS, SaveProficiency.WIS, SaveBonus.WIS, sheets);
-        this.#refreshAbility(AbilityScore.INT, AbilityModifier.INT, SaveProficiency.INT, SaveBonus.INT, sheets);
-        this.#refreshAbility(AbilityScore.CHA, AbilityModifier.CHA, SaveProficiency.CHA, SaveBonus.CHA, sheets);
-
-        const ac = options.armorClass ?? player?.armorClass ?? monster?.armorClass ?? 
-            open5e?.armor_class ?? open5e?.armorClass ?? 10;
-        this.#updateNumeric(AbilityScore.ArmorClass.uri, ac);
-
-        const totalHp = options.hitPointInfo?.maximum ?? player?.hitPointInfo?.maximum ?? 0;
-        this.#updateNumeric(HitPoint.Maximum.uri, totalHp);
-
-        for(const condition of Object.values(ConditionType)) {
-            if (condition.type === PropertyType.Condition) {
-                this.#refreshAppliedCondition(condition, sheets);
-            } else if (condition.type === PropertyType.Number) {
-                this.#refreshLeveledCondition(condition, sheets);
+            if (this.#player) {
+                sheets.playerExt = this.getPlayerExtended();
+            } else {
+                sheets.open5e = this.getOpen5e();
+                sheets.monster = this.getBeyondMonster();
             }
+
+            sheets.pb = this.#refreshLevel(sheets);
+
+            this.#refreshAbility(AbilityScore.STR, AbilityModifier.STR, SaveProficiency.STR, SaveBonus.STR, sheets);
+            this.#refreshAbility(AbilityScore.DEX, AbilityModifier.DEX, SaveProficiency.DEX, SaveBonus.DEX, sheets);
+            this.#refreshAbility(AbilityScore.CON, AbilityModifier.CON, SaveProficiency.CON, SaveBonus.CON, sheets);
+            this.#refreshAbility(AbilityScore.WIS, AbilityModifier.WIS, SaveProficiency.WIS, SaveBonus.WIS, sheets);
+            this.#refreshAbility(AbilityScore.INT, AbilityModifier.INT, SaveProficiency.INT, SaveBonus.INT, sheets);
+            this.#refreshAbility(AbilityScore.CHA, AbilityModifier.CHA, SaveProficiency.CHA, SaveBonus.CHA, sheets);
+
+            const ac = options.armorClass ?? player?.armorClass ?? monster?.armorClass ?? 
+                open5e?.armor_class ?? open5e?.armorClass ?? 10;
+            this.#updateNumeric(AbilityScore.ArmorClass.uri, ac);
+
+            const totalHp = options.hitPointInfo?.maximum ?? player?.hitPointInfo?.maximum ?? 0;
+            this.#updateNumeric(HitPoint.Maximum.uri, totalHp);
+
+            for(const condition of Object.values(ConditionType)) {
+                if (condition.type === PropertyType.Condition) {
+                    this.#refreshAppliedCondition(condition, sheets);
+                } else if (condition.type === PropertyType.Number) {
+                    this.#refreshLeveledCondition(condition, sheets);
+                }
+            }
+
+            delete this.#warnings['rebuild'];
+        } catch (error) {
+            this.reportFailure('rebuild', `Failed to rebuild character sheet`, error);
         }
 
         this.recalculate();
@@ -350,18 +397,24 @@ export default class StatBlock {
 
     /** Recalculates the values for the properties within the stat block after changes have been applied. */
     recalculate() {
-        for (const condition of Object.values(this.#conditions)) {
-            condition.recalculate();
-        }
+        try {
+            for (const condition of Object.values(this.#conditions)) {
+                condition.recalculate();
+            }
 
-        for (const numeric of Object.values(this.#numeric)) {
-            numeric.recalculate();
-        }
+            for (const numeric of Object.values(this.#numeric)) {
+                numeric.recalculate();
+            }
 
-        this.#hitPoints.checkMaximum();
+            this.#hitPoints.checkMaximum();
 
-        for (const proficiency of Object.values(this.#proficiencies)) {
-            proficiency.recalculate();
+            for (const proficiency of Object.values(this.#proficiencies)) {
+                proficiency.recalculate();
+            }
+
+            delete this.#warnings['recalculate'];
+        } catch (error) {
+            this.reportFailure('recalculate', `Failed to recalculate status efforts`, error);
         }
 
         this.sync();
@@ -461,8 +514,8 @@ export default class StatBlock {
 
             const ratings = window.ddbConfigJson?.["challengeRatings"] ?? []
             if (cr >= 0 && cr < ratings.length) {
-                cr = ratings[cr].value;
                 pb = ratings[cr].proficiencyBonus;
+                cr = ratings[cr].value;
             }
 
             if (pb == null) {
@@ -740,7 +793,8 @@ export function fetchPlayerExtendedSheet(id) {
         id = id.toString();
     }
 
-    if (!window.DM || id == null || typeof id !== 'string' || id.trim().length <= 1) {
+    const owner = (window.DM || window.characterData?.id?.toString() === (id ?? ''));
+    if (!owner || id == null || typeof id !== 'string' || id.trim().length <= 1) {
         return undefined;
     }
 
@@ -750,6 +804,11 @@ export function fetchPlayerExtendedSheet(id) {
 
     const loader = { loading: true, failed: false, sheet: undefined };
     playerSheetsExt[id] = loader;
+
+    if (window.characterData?.id?.toString() == id) {
+        loader.sheet = window.characterData;
+        return loader.sheet;
+    }
 
     DDBApi.fetchCharacter(id).then((payload) => {
         loader.sheet = payload;
@@ -761,7 +820,7 @@ export function fetchPlayerExtendedSheet(id) {
         loader.loading = false
     });
 
-    return undefined;
+    return loader.sheet;
 }
 
 // #endregion
@@ -929,6 +988,10 @@ export function fetchBeyondSheet(monster) {
 
 /** Adds a monster to the pending queue and starts the wait timer to give the existing caches time if needed */
 function appendPendingBeyondMonster(monster) {
+    if (window.characterData != null && beyondCreatures.delay > 500) {
+        beyondCreatures.delay = 500;
+    }
+
     beyondCreatures.pending.add(monster);
 
     if (beyondCreatures.timer === undefined) {
