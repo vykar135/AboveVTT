@@ -126,7 +126,7 @@ export default class StatBlock {
     }
 
     /** Whether the stat block has active rebuild warnings */
-    get hasWarning() {
+    get hasWarnings() {
         return (Object.keys(this.#warnings ?? {}).length > 0);
     }
 
@@ -513,9 +513,10 @@ export default class StatBlock {
             let pb = 2;
 
             const ratings = window.ddbConfigJson?.["challengeRatings"] ?? []
-            if (cr >= 0 && cr < ratings.length) {
-                pb = ratings[cr].proficiencyBonus;
-                cr = ratings[cr].value;
+            if (id >= 0 && id < ratings.length) {
+                const rating = ratings[id];
+                cr = rating.value;
+                pb = rating.proficiencyBonus;
             }
 
             if (pb == null) {
@@ -988,8 +989,8 @@ export function fetchBeyondSheet(monster) {
 
 /** Adds a monster to the pending queue and starts the wait timer to give the existing caches time if needed */
 function appendPendingBeyondMonster(monster) {
-    if (window.characterData != null && beyondCreatures.delay > 500) {
-        beyondCreatures.delay = 500;
+    if (window.characterData != null && beyondCreatures.delay > 1000) {
+        beyondCreatures.delay = 1000;
     }
 
     beyondCreatures.pending.add(monster);
@@ -1003,7 +1004,7 @@ function appendPendingBeyondMonster(monster) {
 function fetchPendingBeyondSheets() {
     const reviewing = new Set(beyondCreatures.pending.values());
     beyondCreatures.pending.clear();
-    beyondCreatures.delay = 500; // Speed this process up after initial load of VTT
+    beyondCreatures.delay = 1000; // Speed this process up after initial load of VTT
     beyondCreatures.timer = undefined;
 
     const updating = [];
@@ -1028,20 +1029,34 @@ function fetchPendingBeyondSheets() {
         return;
     }
 
-    // The batch fetch appears to be fragile as a single invalid ID will cause the entire thing to fail
-    // Due to this, we will implement individual lookups.
-    for (const monster of updating) {
-        const target = beyondCreatures.sheets[monster];
+    const individual = () => {
+        for (const monster of updating) {
+            const target = beyondCreatures.sheets[monster];
 
-        DDBApi.fetchMonsters([monster]).then((response) => {
+            DDBApi.fetchMonsters([monster]).then((response) => {
+                target.sheet = response?.find(entry => entry.id === monster);
+                target.failed = false;
+                refreshMonsterStatBlocks(monster);
+            }).catch((error) => {
+                target.failed = true;
+                console.error(`Failed to load D&D Beyond creature stat block ${monster}`, error);
+            }).finally(() => target.loading = false);
+        }
+    }
+
+    // Attempt a batch fetch first but if it fails roll over to the indivual fetch
+    DDBApi.fetchMonsters(updating).then((response) => {
+        for (const monster of updating) {
+            const target = beyondCreatures.sheets[monster];
             target.sheet = response?.find(entry => entry.id === monster);
             target.failed = false;
+            target.loading = false
             refreshMonsterStatBlocks(monster);
-        }).catch((error) => {
-            target.failed = true;
-            console.error(`Failed to load D&D Beyond creature stat block ${monster}`, error);
-        }).finally(() => target.loading = false);
-    }
+        }
+    }).catch((error) => {
+        console.error('Batch retrieval of D&D Beyond monster sheet failed; rolling over to individual lookups', error);
+        individual();
+    });
 }
 
 // #endregion
