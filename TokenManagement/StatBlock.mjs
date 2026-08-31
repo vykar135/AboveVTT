@@ -726,7 +726,6 @@ export function refreshStatBlock(id) {
         return;
     }
 
-    console.log(`Refreshing calculated stat blocks for ${id}.`);
     refreshGlobalStatBlock(window.TOKEN_OBJECTS, id);
     refreshGlobalStatBlock(window.all_token_objects, id);
 }
@@ -748,7 +747,6 @@ export function refreshPlayerSheets(player) {
         return;
     }
 
-    console.log(`Refreshing calculated stat blocks for player ${player}.`);
     refreshGlobalPlayerSheets(window.TOKEN_OBJECTS, player);
     refreshGlobalPlayerSheets(window.all_token_objects, player);
 }
@@ -771,7 +769,6 @@ export function refreshPlayerExtended(player) {
     const asNumber = (typeof player === 'number') ? player : parseInt(player);
     const asString = player.toString();
 
-    console.log(`Refreshing calculated stat blocks for player ${player} from extended stat block.`);
     refreshGlobalPlayerExtended(window.TOKEN_OBJECTS, asNumber, asString);
     refreshGlobalPlayerExtended(window.all_token_objects, asNumber, asString);
 }
@@ -835,7 +832,6 @@ export function refreshOpen5eStatBlocks(monster) {
     }
     
     monster = monster.toLowerCase();
-    console.log(`Refreshing calculated stat blocks for Open 5E ${monster}.`);
     refreshOpen5eMonsterStats(window.TOKEN_OBJECTS, monster);
     refreshOpen5eMonsterStats(window.all_token_objects, monster);
 }
@@ -903,7 +899,7 @@ const beyondCreatures = {
     sheets: {},
     pending: new Set(),
     timer: undefined,
-    delay: 10000 // Initial wait delay while the VTT loads
+    delay: 2000 // Initial wait delay while the VTT loads
 };
 
 /** Forces any tokens from all global token stores that implement the specified D&D Beyond monster stat block to rebuild */
@@ -912,7 +908,6 @@ export function refreshMonsterStatBlocks(monster) {
         return;
     }
 
-    console.log(`Refreshing calculated stat blocks for D&D Beyond monster ${monster}.`);
     refreshGlobalMonsterStats(window.TOKEN_OBJECTS, monster);
     refreshGlobalMonsterStats(window.all_token_objects, monster);
 }
@@ -989,10 +984,6 @@ export function fetchBeyondSheet(monster) {
 
 /** Adds a monster to the pending queue and starts the wait timer to give the existing caches time if needed */
 function appendPendingBeyondMonster(monster) {
-    if (window.characterData != null && beyondCreatures.delay > 1000) {
-        beyondCreatures.delay = 1000;
-    }
-
     beyondCreatures.pending.add(monster);
 
     if (beyondCreatures.timer === undefined) {
@@ -1002,9 +993,13 @@ function appendPendingBeyondMonster(monster) {
 
 /** Loads the cache of D&D Beyond creature stat blocks for any currently pending keys */
 function fetchPendingBeyondSheets() {
+    if (window.LOADING === true) {
+        beyondCreatures.timer = window.setTimeout(fetchPendingBeyondSheets, beyondCreatures.delay);
+        return;
+    }
+
     const reviewing = new Set(beyondCreatures.pending.values());
     beyondCreatures.pending.clear();
-    beyondCreatures.delay = 1000; // Speed this process up after initial load of VTT
     beyondCreatures.timer = undefined;
 
     const updating = [];
@@ -1043,6 +1038,9 @@ function fetchPendingBeyondSheets() {
             }).finally(() => target.loading = false);
         }
     }
+
+    console.log('Fetching monsters');
+    console.log(updating);
 
     // Attempt a batch fetch first but if it fails roll over to the indivual fetch
     DDBApi.fetchMonsters(updating).then((response) => {
