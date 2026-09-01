@@ -1711,13 +1711,15 @@ function token_context_menu_expanded(tokenIds, e, crossScenePortalData) {
 
 	body.append(conditionsRow);
 
-	let statusEffectsMenuItem = $(`<div class="token-image-modal-footer-select-wrapper flyout-from-menu-item"><div class="token-image-modal-footer-title">Status Effects</div></div>`);
-	statusEffectsMenuItem.hover(function (hoverEvent) {
-		context_menu_flyout("conditions-flyout", hoverEvent, function(flyout) {
-			flyout.append(build_status_effects_flyout_menu(tokens));
-		})
-	});
-	body.append(statusEffectsMenuItem);
+	if (tokens.length === 1 && tokens[0].stats.isContributor === true) {
+		let statusEffectsMenuItem = $(`<div class="token-image-modal-footer-select-wrapper flyout-from-menu-item"><div class="token-image-modal-footer-title">Status Effects</div></div>`);
+		statusEffectsMenuItem.hover(function (hoverEvent) {
+			context_menu_flyout("conditions-flyout", hoverEvent, function(flyout) {
+				flyout.append(build_status_effects_flyout_menu(tokens));
+			})
+		});
+		body.append(statusEffectsMenuItem);
+	}
 
 
 	// Auras (torch, lantern, etc)
