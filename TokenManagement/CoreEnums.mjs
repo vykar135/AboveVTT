@@ -28,8 +28,8 @@ export class Configuration {
         for (let [friendly, value] of Object.entries(map)) {
             if (common != null) {
                 value = {
-                    ...value,
-                    ...common
+                    ...common,
+                    ...value
                 }
             }
 
@@ -308,22 +308,22 @@ export const DamageResistance = new Configuration({
  * }}
  */
 export const ConditionType = new Configuration({
-    Blinded: { uri: 'blinded', name: 'Blinded', type: PropertyType.Condition, srd: "Blinded" },
-    Charmed: { uri: 'charmed', name: 'Charmed', type: PropertyType.Condition, srd: "Charmed" },
-    Deafened: { uri: 'deafened', name: 'Deafened', type: PropertyType.Condition, srd: "Deafened" },
-    Frightened: { uri: 'frightened', name: 'Frightened', type: PropertyType.Condition, srd: "Frightened" },
-    Grappled: { uri: 'grappled', name: 'Grappled', type: PropertyType.Condition, srd: "Grappled" },
-    Incapacitated: { uri: 'incapacitated', name: 'Incapacitated', incapacitates: true, type: PropertyType.Condition, srd: "Incapacitated" },
-    Invisible: { uri: 'invisible', name: 'Invisible', type: PropertyType.Condition, srd: "Invisible" },
-    Paralyzed: { uri: 'paralyzed', name: 'Paralyzed', incapacitates: true, type: PropertyType.Condition, srd: "Paralyzed" },
-    Petrified: { uri: 'petrified', name: 'Petrified', incapacitates: true, type: PropertyType.Condition, srd: "Petrified" },
-    Poisoned: { uri: 'poisoned', name: 'Poisoned', type: PropertyType.Condition, srd: "Poisoned" },
-    Prone: { uri: 'prone', name: 'Prone', type: PropertyType.Condition, srd: "Prone" },
-    Restrained: { uri: 'restrained', name: 'Restrained', type: PropertyType.Condition, srd: "Restrained" },
-    Stunned: { uri: 'stunned', name: 'Stunned', incapacitates: true, type: PropertyType.Condition, srd: "Stunned" },
-    Unconscious: { uri: 'unconscious', name: 'Unconscious', incapacitates: true, type: PropertyType.Condition, srd: "Unconscious" },
+    Blinded: { uri: 'blinded', name: 'Blinded', srd: "Blinded" },
+    Charmed: { uri: 'charmed', name: 'Charmed', srd: "Charmed" },
+    Deafened: { uri: 'deafened', name: 'Deafened', srd: "Deafened" },
+    Frightened: { uri: 'frightened', name: 'Frightened', srd: "Frightened" },
+    Grappled: { uri: 'grappled', name: 'Grappled', srd: "Grappled" },
+    Incapacitated: { uri: 'incapacitated', name: 'Incapacitated', incapacitates: true, srd: "Incapacitated" },
+    Invisible: { uri: 'invisible', name: 'Invisible', srd: "Invisible" },
+    Paralyzed: { uri: 'paralyzed', name: 'Paralyzed', incapacitates: true, srd: "Paralyzed" },
+    Petrified: { uri: 'petrified', name: 'Petrified', incapacitates: true, srd: "Petrified" },
+    Poisoned: { uri: 'poisoned', name: 'Poisoned', srd: "Poisoned" },
+    Prone: { uri: 'prone', name: 'Prone', srd: "Prone" },
+    Restrained: { uri: 'restrained', name: 'Restrained', srd: "Restrained" },
+    Stunned: { uri: 'stunned', name: 'Stunned', incapacitates: true, srd: "Stunned" },
+    Unconscious: { uri: 'unconscious', name: 'Unconscious', incapacitates: true, srd: "Unconscious" },
     Exhaustion: { uri: 'exhaustion:srd', name: 'Exhaustion', type: PropertyType.Number, min: 0, max: 11, srd: "Exhaustion" }
-});
+}, { type: PropertyType.Condition });
 
 /**
  * Defines how saving throws for conditions can acquire resistance (advantage), vulnerability (disadvantage), and immunity
@@ -433,12 +433,11 @@ export const HitPoint = new Configuration({
  * }}
  */
 export const AbilityConstraints = new Configuration({
-    AdvantageLimit: { uri: 'advantage:limit', name: 'Advantage Limit', type: PropertyType.Number }, // Max number of dice that can be granted for advantage or disadvantage
-    ActionLimit: { uri: 'action:limit', name: 'Actions', type: PropertyType.Charges },
-    BonusActionLimit: { uri: 'action:bonus:limit', name: 'Bonus Actions', type: PropertyType.Charges },
-    ReactionLimit: { uri: 'reaction:limit', name: 'Reactions', type: PropertyType.Charges },
-    WeaponAttackLimit: { uri: 'weapon:attack:limit', name: 'Weapon Attacks', type: PropertyType.Charges }
-});
+    ActionLimit: { uri: 'action:limit', name: 'Actions' },
+    BonusActionLimit: { uri: 'action:bonus:limit', name: 'Bonus Actions' },
+    ReactionLimit: { uri: 'reaction:limit', name: 'Reactions' },
+    WeaponAttackLimit: { uri: 'weapon:attack:limit', name: 'Weapon Attacks' }
+}, { type: PropertyType.Charges });
 
 /**
  * Defines constraints that can be applied to a token
@@ -459,16 +458,16 @@ export const AbilityConstraints = new Configuration({
 export const SpellTracking = new Configuration({
     ConcentrationAllowed: { uri: 'concentration', name: 'Can Concentrate', type: PropertyType.Toggle },
     ConcentrationLimit: { uri: 'concentration:limit', name: 'Concentration Limit', type: PropertyType.Number },
-    SpellSlotLevel1: { uri: 'spell:slot:1', name: '1st Level Spell Slots', type: PropertyType.Charges },
-    SpellSlotLevel2: { uri: 'spell:slot:2', name: '2nd Level Spell Slots', type: PropertyType.Charges },
-    SpellSlotLevel3: { uri: 'spell:slot:3', name: '3rd Level Spell Slots', type: PropertyType.Charges },
-    SpellSlotLevel4: { uri: 'spell:slot:4', name: '4th Level Spell Slots', type: PropertyType.Charges },
-    SpellSlotLevel5: { uri: 'spell:slot:5', name: '5th Level Spell Slots', type: PropertyType.Charges },
-    SpellSlotLevel6: { uri: 'spell:slot:6', name: '6th Level Spell Slots', type: PropertyType.Charges },
-    SpellSlotLevel7: { uri: 'spell:slot:7', name: '7th Level Spell Slots', type: PropertyType.Charges },
-    SpellSlotLevel8: { uri: 'spell:slot:8', name: '8th Level Spell Slots', type: PropertyType.Charges },
-    SpellSlotLevel9: { uri: 'spell:slot:9', name: '9th Level Spell Slots', type: PropertyType.Charges }
-});
+    SpellSlotLevel1: { uri: 'spell:slot:1', name: '1st Level Spell Slots' },
+    SpellSlotLevel2: { uri: 'spell:slot:2', name: '2nd Level Spell Slots' },
+    SpellSlotLevel3: { uri: 'spell:slot:3', name: '3rd Level Spell Slots' },
+    SpellSlotLevel4: { uri: 'spell:slot:4', name: '4th Level Spell Slots' },
+    SpellSlotLevel5: { uri: 'spell:slot:5', name: '5th Level Spell Slots' },
+    SpellSlotLevel6: { uri: 'spell:slot:6', name: '6th Level Spell Slots' },
+    SpellSlotLevel7: { uri: 'spell:slot:7', name: '7th Level Spell Slots' },
+    SpellSlotLevel8: { uri: 'spell:slot:8', name: '8th Level Spell Slots' },
+    SpellSlotLevel9: { uri: 'spell:slot:9', name: '9th Level Spell Slots' }
+}, { type: PropertyType.Charges });
 
 /**
  * @type {Configuration & {
@@ -840,13 +839,13 @@ export const SkillBonus = new Configuration({
  * }}
  */
 export const Speed = new Configuration({
-    Walk: { uri: 'speed:walk', name: 'Walk', type: PropertyType.Number, open5e: 'walk' },
-    Fly: { uri: 'speed:fly', name: 'Fly', type: PropertyType.Number, open5e: 'fly' },
-    Climb: { uri: 'speed:climb', name: 'Climb', type: PropertyType.Number, open5e: 'climb' },
-    Swim: { uri: 'speed:swim', name: 'Swim', type: PropertyType.Number, open5e: 'swim' },
-    Burrow: { uri: 'speed:burrow', name: 'Burrow', type: PropertyType.Number, open5e: 'burrow' },
+    Walk: { uri: 'speed:walk', name: 'Walk', open5e: 'walk' },
+    Fly: { uri: 'speed:fly', name: 'Fly', open5e: 'fly' },
+    Climb: { uri: 'speed:climb', name: 'Climb', open5e: 'climb' },
+    Swim: { uri: 'speed:swim', name: 'Swim', open5e: 'swim' },
+    Burrow: { uri: 'speed:burrow', name: 'Burrow', open5e: 'burrow' },
     Hover: { uri: 'speed:hover', name: 'Hover', type: PropertyType.Toggle, open5e: 'hover' }
-});
+}, { type: PropertyType.Number });
 
 /** @returns {{ [uri: string] : TypedConfigurationSettings }} */
 function buildPropertyIndex() {
