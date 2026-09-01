@@ -1,6 +1,6 @@
 /** @import { Token } from './Token.types.js' */
 
-import { AbilityScore, AbilityModifier, ConditionType, HitPoint, PropertyType, SaveProficiency, SaveBonus, ProficiencyType } from './CoreEnums.mjs'
+import { AbilityScore, AbilityModifier, ConditionType, HitPoint, PropertyType, SaveProficiency, SaveBonus, ProficiencyType, SkillProficiency, SkillAdvantage, SkillBonus } from './CoreEnums.mjs'
 import HitPointBlock from './HitPointBlock.mjs';
 import ConditionTracker from './ConditionTracker.mjs';
 import NumericStatTracker from './NumericStatTracker.mjs';
@@ -170,13 +170,22 @@ export default class StatBlock {
         };
 
         const getScore = (score, modifier, proficiency, bonus) => {
-            const modValue = this.getNumeric(modifier)?.current ?? 0
+            const modValue = this.getNumeric(modifier)?.current ?? 0;
 
             return {
                 score: this.getNumeric(score)?.current ?? 10,
                 modifier: modValue,
                 save: getSave(modValue, proficiency, bonus)
             };
+        };
+
+        const getSkill = (defaultModifier, proficiency, advantage, bonus) => {
+            const modValue = this.getNumeric(defaultModifier)?.current ?? 0
+            const bonusAmount = (this.getNumeric(bonus)?.current ?? 0);
+            const profAmount = this.getProficiency(proficiency)?.current ?? 0;
+            const total = modValue + bonusAmount + profAmount;
+
+            return { total, proficiency: profAmount, bonus: bonusAmount, modifier: defaultModifier.score.uri };
         };
 
         return {
@@ -196,6 +205,26 @@ export default class StatBlock {
                 wis: getScore(AbilityScore.WIS, AbilityModifier.WIS, SaveProficiency.WIS, SaveBonus.WIS),
                 int: getScore(AbilityScore.INT, AbilityModifier.INT, SaveProficiency.INT, SaveBonus.INT),
                 cha: getScore(AbilityScore.CHA, AbilityModifier.CHA, SaveProficiency.CHA, SaveBonus.CHA)
+            },
+            skills: {
+                acrobatics: getSkill(AbilityModifier.DEX, SkillProficiency.Acrobatics, SkillAdvantage.Acrobatics, SkillBonus.Acrobatics),
+                animal_handling: getSkill(AbilityModifier.WIS, SkillProficiency.AnimalHandling, SkillAdvantage.AnimalHandling, SkillBonus.AnimalHandling),
+                arcana: getSkill(AbilityModifier.INT, SkillProficiency.Arcana, SkillAdvantage.Arcana, SkillBonus.Arcana),
+                athletics: getSkill(AbilityModifier.STR, SkillProficiency.Athletics, SkillAdvantage.Athletics, SkillBonus.Athletics),
+                deception: getSkill(AbilityModifier.CHA, SkillProficiency.Deception, SkillAdvantage.Deception, SkillBonus.Deception),
+                history: getSkill(AbilityModifier.INT, SkillProficiency.History, SkillAdvantage.History, SkillBonus.History),
+                insight: getSkill(AbilityModifier.WIS, SkillProficiency.Insight, SkillAdvantage.Insight, SkillBonus.Insight),
+                intimidation: getSkill(AbilityModifier.CHA, SkillProficiency.Intimidation, SkillAdvantage.Intimidation, SkillBonus.Intimidation),
+                investigation: getSkill(AbilityModifier.INT, SkillProficiency.Investigation, SkillAdvantage.Investigation, SkillBonus.Investigation),
+                medicine: getSkill(AbilityModifier.WIS, SkillProficiency.Medicine, SkillAdvantage.Medicine, SkillBonus.Medicine),
+                nature: getSkill(AbilityModifier.INT, SkillProficiency.Nature, SkillAdvantage.Nature, SkillBonus.Nature),
+                perception: getSkill(AbilityModifier.WIS, SkillProficiency.Perception, SkillAdvantage.Perception, SkillBonus.Perception),
+                performance: getSkill(AbilityModifier.CHA, SkillProficiency.Performance, SkillAdvantage.Performance, SkillBonus.Performance),
+                persuasion: getSkill(AbilityModifier.CHA, SkillProficiency.Persuasion, SkillAdvantage.Persuasion, SkillBonus.Persuasion),
+                religion: getSkill(AbilityModifier.INT, SkillProficiency.Religion, SkillAdvantage.Religion, SkillBonus.Religion),
+                sleight_of_hand: getSkill(AbilityModifier.DEX, SkillProficiency.SleightOfHand, SkillAdvantage.SleightOfHand, SkillBonus.SleightOfHand),
+                stealth: getSkill(AbilityModifier.DEX, SkillProficiency.Stealth, SkillAdvantage.Stealth, SkillBonus.Stealth),
+                survival: getSkill(AbilityModifier.WIS, SkillProficiency.Survival, SkillAdvantage.Survival, SkillBonus.Survival)
             }
         };
     }
@@ -373,6 +402,13 @@ export default class StatBlock {
 
             sheets.pb = this.#refreshLevel(sheets);
 
+            const ac = options.armorClass ?? player?.armorClass ?? monster?.armorClass ?? 
+                open5e?.armor_class ?? open5e?.armorClass ?? 10;
+            this.#updateNumeric(AbilityScore.ArmorClass.uri, ac);
+
+            const totalHp = options.hitPointInfo?.maximum ?? player?.hitPointInfo?.maximum ?? 0;
+            this.#updateNumeric(HitPoint.Maximum.uri, totalHp);
+
             this.#refreshAbility(AbilityScore.STR, AbilityModifier.STR, SaveProficiency.STR, SaveBonus.STR, sheets);
             this.#refreshAbility(AbilityScore.DEX, AbilityModifier.DEX, SaveProficiency.DEX, SaveBonus.DEX, sheets);
             this.#refreshAbility(AbilityScore.CON, AbilityModifier.CON, SaveProficiency.CON, SaveBonus.CON, sheets);
@@ -380,12 +416,24 @@ export default class StatBlock {
             this.#refreshAbility(AbilityScore.INT, AbilityModifier.INT, SaveProficiency.INT, SaveBonus.INT, sheets);
             this.#refreshAbility(AbilityScore.CHA, AbilityModifier.CHA, SaveProficiency.CHA, SaveBonus.CHA, sheets);
 
-            const ac = options.armorClass ?? player?.armorClass ?? monster?.armorClass ?? 
-                open5e?.armor_class ?? open5e?.armorClass ?? 10;
-            this.#updateNumeric(AbilityScore.ArmorClass.uri, ac);
-
-            const totalHp = options.hitPointInfo?.maximum ?? player?.hitPointInfo?.maximum ?? 0;
-            this.#updateNumeric(HitPoint.Maximum.uri, totalHp);
+            this.#refreshSkill(SkillProficiency.Acrobatics, SkillAdvantage.Acrobatics, SkillBonus.Acrobatics, sheets);
+            this.#refreshSkill(SkillProficiency.AnimalHandling, SkillAdvantage.AnimalHandling, SkillBonus.AnimalHandling, sheets);
+            this.#refreshSkill(SkillProficiency.Arcana, SkillAdvantage.Arcana, SkillBonus.Arcana, sheets);
+            this.#refreshSkill(SkillProficiency.Athletics, SkillAdvantage.Athletics, SkillBonus.Athletics, sheets);
+            this.#refreshSkill(SkillProficiency.Deception, SkillAdvantage.Deception, SkillBonus.Deception, sheets);
+            this.#refreshSkill(SkillProficiency.History, SkillAdvantage.History, SkillBonus.History, sheets);
+            this.#refreshSkill(SkillProficiency.Insight, SkillAdvantage.Insight, SkillBonus.Insight, sheets);
+            this.#refreshSkill(SkillProficiency.Intimidation, SkillAdvantage.Intimidation, SkillBonus.Intimidation, sheets);
+            this.#refreshSkill(SkillProficiency.Investigation, SkillAdvantage.Investigation, SkillBonus.Investigation, sheets);
+            this.#refreshSkill(SkillProficiency.Medicine, SkillAdvantage.Medicine, SkillBonus.Medicine, sheets);
+            this.#refreshSkill(SkillProficiency.Nature, SkillAdvantage.Nature, SkillBonus.Nature, sheets);
+            this.#refreshSkill(SkillProficiency.Perception, SkillAdvantage.Perception, SkillBonus.Perception, sheets);
+            this.#refreshSkill(SkillProficiency.Performance, SkillAdvantage.Performance, SkillBonus.Performance, sheets);
+            this.#refreshSkill(SkillProficiency.Persuasion, SkillAdvantage.Persuasion, SkillBonus.Persuasion, sheets);
+            this.#refreshSkill(SkillProficiency.Religion, SkillAdvantage.Religion, SkillBonus.Religion, sheets);
+            this.#refreshSkill(SkillProficiency.SleightOfHand, SkillAdvantage.SleightOfHand, SkillBonus.SleightOfHand, sheets);
+            this.#refreshSkill(SkillProficiency.Stealth, SkillAdvantage.Stealth, SkillBonus.Stealth, sheets);
+            this.#refreshSkill(SkillProficiency.Survival, SkillAdvantage.Survival, SkillBonus.Survival, sheets);
 
             for(const condition of Object.values(ConditionType)) {
                 if (condition.type === PropertyType.Condition) {
@@ -529,6 +577,10 @@ export default class StatBlock {
 
             if (pb == null) {
                 cr = (id - 4); // CR 1 starts at index 5 currently so lets push it down for the purposes of the calculation
+                if (cr < 0) {
+                    cr = 0;
+                }
+
                 pb = 1 + Math.ceil((cr > 0 ? cr : 1) / 4);
             }
 
@@ -682,6 +734,48 @@ export default class StatBlock {
         }
 
         return proficient;
+    }
+
+    /**
+     * Determines the best skill proficiency value to use for the stat block.
+     * @param {SkillProficiency} skill - The skill proficiency to review.
+     * @param {SkillAdvantage} advantage - Whether the skill has advantage.
+     * @param {SkillBonus} bonus - Whether the skill has a bonus.
+     * @param {Object} sheets - The sheet information for the token.
+     */
+    #refreshSkill(skill, advantage, bonus, sheets) {
+        if (sheets.monster) {
+            const beyondProf = sheets.monster.savingThrows?.find((entry) => (entry.statId === skill.dndBeyond));
+            this.#updateProficiency(skill.uri, beyondProf != null ? ProficiencyType.Proficient : ProficiencyType.None);
+            this.#updateNumeric(bonus.uri, beyondProf?.bonusModifier ?? 0);
+            return;
+        }
+
+        if (sheets.open5e) {
+            const openProf = sheets.open5e.skill_bonuses?.[skill.open5e];
+            this.#updateProficiency(skill.uri, openProf != null ? ProficiencyType.Proficient : ProficiencyType.None);
+            this.#updateNumeric(bonus.uri, 0);
+            return;
+        }
+
+        if (sheets.player == null) {
+            return;
+        }
+
+        const settings = sheets.player.skills?.find(entry => entry.name?.toLowerCase() === skill.player) ?? {};
+        this.#updateNumeric(bonus.uri, 0);
+
+        if (settings.isExpert === true) {
+            this.#updateProficiency(skill.uri, ProficiencyType.Expert);
+        } else if (settings.isProficient === true) {
+            this.#updateProficiency(skill.uri, ProficiencyType.Proficient);
+        } else if (settings.isHalfProficient === true) {
+            this.#updateProficiency(skill.uri, ProficiencyType.Beginner);
+        } else {
+            this.#updateProficiency(skill.uri, ProficiencyType.None);
+        }
+
+        return;
     }
 
     /**
