@@ -4,7 +4,7 @@
  * @property {string} uri - The value that is intended to be persisted within token options
  * @property {string} name - The value that is intended to be displayed to users
  * 
- * @typedef { ConfigurationSettings & { apply: (pb: number) => number } } ProficiencySettings
+ * @typedef { ConfigurationSettings & { multiplier: number } } ProficiencySettings
  * @typedef { ConfigurationSettings & { size: number } } DiceConfigurationSettings
  * @typedef { ConfigurationSettings & { type: KnownConfigurationSettings } } TypedConfigurationSettings
  * @typedef { TypedConfigurationSettings & { srd: string, min?: number, max?: number } } ConditionSettings
@@ -162,18 +162,17 @@ export const DiceType = new Configuration({
  * }}
  */
 export const ProficiencyType = new Configuration({
-    None: { uri: 'proficiency:none', name: 'None', apply: () => 0 },
+    None: { uri: 'proficiency:none', name: 'None', multiplier: 0 },
 
     // Buffs
-    Standard: { uri: 'proficient', name: 'Proficient', apply: (pb) => pb },
-    Expert: { uri: 'expert', name: 'Expert', apply: (pb) => (pb > 0 ? (pb * 2) : pb) },
-    HalfDown: { uri: 'half', name: 'Half-Proficient (Rounded Down)', apply: (pb) => (pb > 0 ? Math.floor(pb / 2) : pb) }, // This is RAW
-    HalfUp: { uri: 'half-up', name: 'Half-Proficient (Rounded Up)', apply: (pb) => (pb > 0 ? Math.ceil(pb / 2) : pb) },
+    Beginner: { uri: 'half', name: 'Beginner', multiplier: 0.5 },
+    Proficient: { uri: 'proficient', name: 'Proficient', multiplier: 1 },
+    Expert: { uri: 'expert', name: 'Expert', multiplier: 2 },
 
     // Debuffs
-    Flaw: { uri: 'flaw', name: 'Flawed', apply: (pb) => pb > 0 ? -pb : pb },
-    MinorFlaw: { uri: 'flaw:minor', name: 'Minorly Flawed', apply: (pb) => (pb > 0 ? -Math.ceil(pb / 2) : pb) },
-    HeavyFlaw: { uri: 'flaw:heavy', name: 'Heavily Flawed', apply: (pb) => (pb > 0 ? -(pb * 2) : pb) }
+    MinorFlaw: { uri: 'flaw:minor', name: 'Minorly Flawed', multiplier: -0.5 },
+    Flaw: { uri: 'flaw', name: 'Flawed', multiplier: -1 },
+    MajorFlaw: { uri: 'flaw:heavy', name: 'Heavily Flawed', multiplier: -2 }
 });
 
 /**
