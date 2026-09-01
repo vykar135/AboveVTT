@@ -162,15 +162,10 @@ export default class StatBlock {
         const pb = this.getNumeric(AbilityScore.ProficiencyBonus)?.current ?? 2;
 
         const getSave = (modifier, proficiency, bonus) => {
-            let bonusAmount = (this.getNumeric(bonus)?.current ?? 0);
-            let total = modifier + bonusAmount;
-            let profAmount = 0;
+            const bonusAmount = (this.getNumeric(bonus)?.current ?? 0);
+            const profAmount = this.getProficiency(proficiency)?.current ?? 0;
+            const total = modifier + bonusAmount + profAmount;
 
-            const apply = this.getProficiency(proficiency)?.current?.apply;
-            if (typeof apply === 'function') {
-                profAmount = apply(pb);
-                total += apply(pb);
-            }
             return { total, proficiency: profAmount, bonus: bonusAmount };
         };
 
@@ -621,14 +616,14 @@ export default class StatBlock {
     #refreshSaveModifiers(score, save, saveBonus, abilityMod, sheets) {
         if (sheets.monster) {
             const beyondProf = sheets.monster.savingThrows?.find((entry) => (entry.statId === score.dndBeyond));
-            this.#updateProficiency(save.uri, beyondProf != null ? ProficiencyType.Standard : ProficiencyType.None);
+            this.#updateProficiency(save.uri, beyondProf != null ? ProficiencyType.Proficient : ProficiencyType.None);
             this.#updateNumeric(saveBonus.uri, beyondProf?.bonusModifier ?? 0);
             return;
         }
 
         if (sheets.open5e) {
             const openProf = sheets.open5e.saving_throws?.[score.open5e];
-            this.#updateProficiency(save.uri, openProf != null ? ProficiencyType.Standard : ProficiencyType.None);
+            this.#updateProficiency(save.uri, openProf != null ? ProficiencyType.Proficient : ProficiencyType.None);
             this.#updateNumeric(saveBonus.uri, 0);
             return;
         }
@@ -646,7 +641,7 @@ export default class StatBlock {
             bonus -= sheets.pb;
         }
 
-        this.#updateProficiency(save.uri, proficient ? ProficiencyType.Standard : ProficiencyType.None);
+        this.#updateProficiency(save.uri, proficient ? ProficiencyType.Proficient : ProficiencyType.None);
         this.#updateNumeric(saveBonus.uri, bonus);
 
         return;
