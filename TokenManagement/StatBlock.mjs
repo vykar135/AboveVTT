@@ -17,6 +17,8 @@ export default class StatBlock {
     #token;
     /** @type {boolean} */
     #player;
+    /** @type {boolean} */
+    #contributor;
     /** @type {{ [uri: string]: NumericStatTracker}} */
     #numeric;
     /** @type {{ [uri: string]: ConditionTracker}} */
@@ -138,6 +140,11 @@ export default class StatBlock {
     /** @returns {boolean} Whether the stat block is for a player */
     get isPlayer() {
         return this.#player;
+    }
+
+    /** @returns {boolean} Whether the user can contribute to the token. */
+    get isContributor() {
+        return (window.DM === true || this.#contributor === true);
     }
 
     /** Details about the current state of the creature's hit points and associated controls. */
@@ -352,15 +359,21 @@ export default class StatBlock {
             const options = this.#token.options;
             const player = this.getPlayerSheet();
 
-            this.#player = (player != null || (options.id ?? '').includes('/'));
+            this.#player = (player != null || (options.characterId != null && options.itemType === 'pc'));
+            this.#contributor = (
+                window.DM === true || options.player_owned === true ||
+                (window.PLAYER_ID != null && options.characterId?.toString() === window.PLAYER_ID.toString())
+            );
 
             const sheets = { options, player };
 
-            if (this.#player) {
-                sheets.playerExt = this.getPlayerExtended();
-            } else {
-                sheets.open5e = this.getOpen5e();
-                sheets.monster = this.getBeyondMonster();
+            if (this.#contributor) {
+                if (this.#player) {
+                    sheets.playerExt = this.getPlayerExtended();
+                } else {
+                    sheets.open5e = this.getOpen5e();
+                    sheets.monster = this.getBeyondMonster();
+                }
             }
 
             sheets.pb = this.#refreshLevel(sheets);
@@ -1038,9 +1051,6 @@ function fetchPendingBeyondSheets() {
             }).finally(() => target.loading = false);
         }
     }
-
-    console.log('Fetching monsters');
-    console.log(updating);
 
     // Attempt a batch fetch first but if it fails roll over to the indivual fetch
     DDBApi.fetchMonsters(updating).then((response) => {
