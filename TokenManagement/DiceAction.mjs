@@ -25,7 +25,6 @@
  * @property {-1 | 0 | 1} advantage - Defines whether keep-high or keep-low is active for d20 tests; will negate advantage if both a positive and negative value are present in the eligible modifiers list. The magnitude of this value is ignored.
  * @property {number} advantageSize - Defines the total number of additional dice to use if advantage is present and matches the sign defined by advantage; process is LIFO but signs are tracked independently.
  * @property {number} proficiency - The multiplier for the proficiency bonus to apply to the roll and rounded down; process will track the maximum limit seen but permit debuffs to hit in full.
- * @property {number | FixedValueModifier} fixed - The fixed amount to include in the roll.
  * @property {DiceRoll[]} die - The additional dice to include.
  * @property {DiceRollModifier[]} dieRules - Collection of additional rules that must be applied to any queued dice rolls.
  * 
@@ -33,6 +32,7 @@
  * @property {string[]} tags - The set of tags used to discover additional modifiers to the dice roll and effects on the target in the final outcome.
  * @property {number} count - The number of dice to include in the roll.
  * @property {number} sides - The number of sides on the die to roll.
+ * @property {number | FixedValueModifier} fixed - The fixed amount to include in the roll.
  * @property {boolean} critical - Whether the roll is subject to critical hit rules when applicable.
  * @property {boolean} penalty - Whether the result of the roll is considered a penalty against the final result.
  * 
