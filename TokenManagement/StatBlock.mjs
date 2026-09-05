@@ -1,60 +1,91 @@
 /** @import { Token } from './Token.types.js' */
 
-import { AbilityScore, AbilityModifier, ConditionType, HitPoint, PropertyType, SaveProficiency, SaveBonus, ProficiencyType, SkillProficiency, SkillAdvantage, SkillBonus } from './CoreEnums.mjs'
+import { fetchBeyondSheetForToken, fetchOpen5eSheetForToken, fetchPlayerExtendedSheet } from './StatBlockSources.mjs';
+import { AbilityScore, ConditionType, PropertyType, ProficiencyType, SkillCheck, uriEquals } from './CoreEnums.mjs'
 import HitPointBlock from './HitPointBlock.mjs';
 import ConditionTracker from './ConditionTracker.mjs';
 import NumericStatTracker from './NumericStatTracker.mjs';
 import TokenStatusEffects from './TokenStatusEffects.mjs';
-import ProficiencyTracker from './ProficiencyTracker.mjs';
+import { DiceAction, DiceActionContext } from './DiceAction.mjs';
 
 /**
  * Manages a normalized stat block for the provided token
  */
 export default class StatBlock {
-    /** @type {boolean} */
-    #pendingChanges;
-    /** @type {Token} */
     #token;
-    /** @type {boolean} */
-    #player;
-    /** @type {boolean} */
-    #contributor;
+    #proficiency;
+    #ac;
+    #scores;
+    #modifiers;
+    #initiative;
+    #saves;
+    #skills;
+    #hitPoints;
+    #diceContext;
+    #effects;
+    #wellKnownNumerics;
+
     /** @type {{ [uri: string]: NumericStatTracker}} */
     #numeric;
     /** @type {{ [uri: string]: ConditionTracker}} */
     #conditions;
-    /** @type {{ [uri: string]: ProficiencyTracker}} */
-    #proficiencies;
-    /** @type {HitPointBlock} */
-    #hitPoints;
-    /** @type {TokenStatusEffects} */
-    #effects;
-    /** @type {Object} Components within the stat block that failed to complete successuflly */
+    /** @type {{ [uri: string]: string}} Components within the stat block that failed to complete successuflly */
     #warnings;
 
-    /**
-     * @param {Token} token - The token to normalize the stat block for.
-     */
+    /** Collection of internal properties that are still writable after freezing the instance. */
+    #internals;
+
+    /** @param {Token} token - The token to normalize the stat block for. */
     constructor(token){
         this.#token = token;
-        this.#pendingChanges = false;
+
+        this.#proficiency = new NumericStatTracker(this, 'pb', 2);
+        this.#diceContext = new BlockDiceContext(this);
+
+        this.#ac = new NumericStatTracker(this, 'ac', 10);
+        this.#scores = new BlockAbilityScores(this);
+        this.#modifiers = new BlockAbilityModifiers(this);
+        this.#saves = new BlockSavingThrows(this);
+        this.#skills = new BlockSkillChecks(this);
+        this.#hitPoints = new HitPointBlock(this);
+        this.#effects = new TokenStatusEffects(this);
+
+        this.#initiative = new DiceAction(this.diceContext, 'initiative', 'Initiative', true, 'dex', true);
+        this.#initiative.tags.addRange(['initiative', 'dex']);
+        this.#initiative.tagFreeze();
+
+        const score = this.#scores;
+        const modifiers = this.#modifiers;
+        this.#wellKnownNumerics = [
+            score.str, score.dex, score.con, score.wis, score.int, score.cha,
+            modifiers.str.value, modifiers.dex.value, modifiers.con.value, modifiers.wis.value, modifiers.int.value, modifiers.cha.value,
+            this.#hitPoints.maximumChanges
+        ];
+        
         this.#warnings = {};
         this.#numeric = {};
         this.#conditions = {}
-        this.#proficiencies = {};
-        this.#hitPoints = new HitPointBlock(this);
-        this.#effects = new TokenStatusEffects(this);
+
+        this.#internals = {
+            level: 0,
+            pendingChanges: false,
+            player: false,
+            contributor: false
+        };
+
+        Object.seal(this.#internals);
+        Object.freeze(this);
 
         this.rebuild();
     }
 
     /**
      * Requests a token update message to be dispatched only if there are pending changes that have been observed by this instance
-     * @returns {boolean} Whether the stat block requested to be synced.
+     * @returns Whether the stat block requested to be synced.
     */
     sync() {
-        if (this.#pendingChanges === true) {
-            this.#pendingChanges = false;
+        if (this.#internals.pendingChanges === true) {
+            this.#internals.pendingChanges = false;
 
             try {
                 this.#token.sync();
@@ -72,11 +103,11 @@ export default class StatBlock {
     /**
      * Requests a token update message to be dispatched and updates any related interface components 
      * only if there are pending changes that have been observed by this instance
-     * @returns {boolean} Whether the stat block requested to be synced.
+     * @returns Whether the stat block requested to be synced.
      */
     update_and_sync() {
-        if (this.#pendingChanges === true) {
-            this.#pendingChanges = false;
+        if (this.#internals.pendingChanges === true) {
+            this.#internals.pendingChanges = false;
 
             try {
                 this.#token.update_and_sync();
@@ -118,80 +149,94 @@ export default class StatBlock {
      */
     hasPendingChanges(modified) {
         if (modified === true) {
-            this.#pendingChanges = true;
+            this.#internals.pendingChanges = true;
         }
     }
 
-    /** @returns {Token} The token that is being managed */
-    get token() {
-        return this.#token;
-    }
-
     /** Whether the stat block has active rebuild warnings */
-    get hasWarnings() {
-        return (Object.keys(this.#warnings ?? {}).length > 0);
-    }
+    get hasWarnings() { return (Object.keys(this.#warnings ?? {}).length > 0); }
 
-    /** @returns {TokenStatusEffects} The manager for active, passive, and maintained token status effects. */
-    get statusEffects() {
-        return this.#effects;
-    }
+    /** The token that is being managed */
+    get token() { return this.#token; }
 
-    /** @returns {boolean} Whether the stat block is for a player */
-    get isPlayer() {
-        return this.#player;
-    }
+    /** Whether the stat block is for a player */
+    get isPlayer() { return this.#internals.player; }
 
-    /** @returns {boolean} Whether the user can contribute to the token. */
-    get isContributor() {
-        return (window.DM === true || this.#contributor === true);
-    }
+    /** Whether the user can contribute to the token. */
+    get isContributor() { return (window.DM === true || this.#internals.contributor === true); }
+
+    /** The context used for any dice actions performed from this stat block. */
+    get diceContext() { return this.#diceContext; }
+
+    /** Gets the name of the token */
+    get name() { return this.#token.options.name ?? 'Unknown Token'; }
 
     /** Details about the current state of the creature's hit points and associated controls. */
-    get hp() {
-        return this.#hitPoints;
-    }
+    get hp() { return this.#hitPoints; }
 
-    /** Details about the current armor class for the creature. Providing a quick accessor for this since it is shown all over the place. */
-    get ac() {
-        return this.getNumeric(AbilityScore.ArmorClass.uri)?.current ?? 10;
-    }
+    /** Details about the current armor class for the creature.*/
+    get ac() { return this.#ac.current ?? 10; }
+
+    /** The character level or creature challenge rating for the stat block. */
+    get level() { return this.#internals.level; }
+
+    /** The proficiency bonus for the stat block. */
+    get proficiencyBonus() { return this.#proficiency; }
+
+    /** Details about the initiative for the creature. */
+    get initiative() { return this.#initiative; }
+
+    /** The ability scores for the stat block. */
+    get scores() { return this.#scores; }
+
+    /** The ability scores for the stat block. */
+    get modifiers() { return this.#modifiers; }
+
+    /** The ability scores for the stat block. */
+    get saves() { return this.#saves; }
+
+    /** The skill checks for the stat block. */
+    get skills() { return this.#skills; }
+
+    /** The manager for active, passive, and maintained token status effects. */
+    get statusEffects() { return this.#effects; }
 
     /** Generates a snapshot of the creature stat block using the current calculated values. */
     getNormalizedSheet() {
-        const pb = this.getNumeric(AbilityScore.ProficiencyBonus)?.current ?? 2;
+        const pb = this.#proficiency.current ?? 2;
 
-        const getSave = (modifier, proficiency, bonus) => {
-            const bonusAmount = (this.getNumeric(bonus)?.current ?? 0);
-            const profAmount = this.getProficiency(proficiency)?.current ?? 0;
-            const total = modifier + bonusAmount + profAmount;
+        const getSave = (save, abilityMod) => {
+            const bonusAmount = save.bonus ?? 0;
+            const profAmount = (pb * (save.proficiency ?? 0));
+            const total = abilityMod + bonusAmount + profAmount;
 
             return { total, proficiency: profAmount, bonus: bonusAmount };
         };
 
-        const getScore = (score, modifier, proficiency, bonus) => {
-            const modValue = this.getNumeric(modifier)?.current ?? 0;
+        const getScore = (score, modifier, save) => {
+            const modValue = modifier.value.current ?? 0;
 
             return {
-                score: this.getNumeric(score)?.current ?? 10,
-                modifier: modValue,
-                save: getSave(modValue, proficiency, bonus)
+                score: score.current ?? 10,
+                modifier: modifier.value.current ?? 0,
+                save: getSave(save, modValue)
             };
         };
 
-        const getSkill = (defaultModifier, proficiency, advantage, bonus) => {
-            const modValue = this.getNumeric(defaultModifier)?.current ?? 0
-            const bonusAmount = (this.getNumeric(bonus)?.current ?? 0);
-            const profAmount = this.getProficiency(proficiency)?.current ?? 0;
+        const getSkill = (skill) => {
+            const abiltyMod = this.#modifiers[skill.ability]?.value;
+            const modValue = abiltyMod?.current ?? 0
+            const bonusAmount = skill.bonus ?? 0;
+            const profAmount = (pb * (skill.proficiency ?? 0));
             const total = modValue + bonusAmount + profAmount;
 
-            return { total, proficiency: profAmount, bonus: bonusAmount, modifier: defaultModifier.score.uri };
+            return { total, proficiency: profAmount, bonus: bonusAmount, modifier: skill.ability };
         };
 
         return {
             proficiencyBonus: pb,
-            level: this.getNumeric(AbilityScore.Level)?.current ?? 1,
-            ac: this.getNumeric(AbilityScore.ArmorClass)?.current ?? 10,
+            level: this.#internals.level ?? 0,
+            ac: this.#ac.current ?? 10,
             hp: {
                 maximum: this.#hitPoints.maximum,
                 remaining: this.#hitPoints.remaining,
@@ -199,32 +244,32 @@ export default class StatBlock {
                 total: this.#hitPoints.total
             },
             scores: {
-                str: getScore(AbilityScore.STR, AbilityModifier.STR, SaveProficiency.STR, SaveBonus.STR),
-                dex: getScore(AbilityScore.DEX, AbilityModifier.DEX, SaveProficiency.DEX, SaveBonus.DEX),
-                con: getScore(AbilityScore.CON, AbilityModifier.CON, SaveProficiency.CON, SaveBonus.CON),
-                wis: getScore(AbilityScore.WIS, AbilityModifier.WIS, SaveProficiency.WIS, SaveBonus.WIS),
-                int: getScore(AbilityScore.INT, AbilityModifier.INT, SaveProficiency.INT, SaveBonus.INT),
-                cha: getScore(AbilityScore.CHA, AbilityModifier.CHA, SaveProficiency.CHA, SaveBonus.CHA)
+                str: getScore(this.#scores.str, this.#modifiers.str, this.#saves.str),
+                dex: getScore(this.#scores.dex, this.#modifiers.dex, this.#saves.dex),
+                con: getScore(this.#scores.con, this.#modifiers.con, this.#saves.con),
+                wis: getScore(this.#scores.wis, this.#modifiers.wis, this.#saves.wis),
+                int: getScore(this.#scores.int, this.#modifiers.int, this.#saves.int),
+                cha: getScore(this.#scores.cha, this.#modifiers.cha, this.#saves.cha)
             },
             skills: {
-                acrobatics: getSkill(AbilityModifier.DEX, SkillProficiency.Acrobatics, SkillAdvantage.Acrobatics, SkillBonus.Acrobatics),
-                animal_handling: getSkill(AbilityModifier.WIS, SkillProficiency.AnimalHandling, SkillAdvantage.AnimalHandling, SkillBonus.AnimalHandling),
-                arcana: getSkill(AbilityModifier.INT, SkillProficiency.Arcana, SkillAdvantage.Arcana, SkillBonus.Arcana),
-                athletics: getSkill(AbilityModifier.STR, SkillProficiency.Athletics, SkillAdvantage.Athletics, SkillBonus.Athletics),
-                deception: getSkill(AbilityModifier.CHA, SkillProficiency.Deception, SkillAdvantage.Deception, SkillBonus.Deception),
-                history: getSkill(AbilityModifier.INT, SkillProficiency.History, SkillAdvantage.History, SkillBonus.History),
-                insight: getSkill(AbilityModifier.WIS, SkillProficiency.Insight, SkillAdvantage.Insight, SkillBonus.Insight),
-                intimidation: getSkill(AbilityModifier.CHA, SkillProficiency.Intimidation, SkillAdvantage.Intimidation, SkillBonus.Intimidation),
-                investigation: getSkill(AbilityModifier.INT, SkillProficiency.Investigation, SkillAdvantage.Investigation, SkillBonus.Investigation),
-                medicine: getSkill(AbilityModifier.WIS, SkillProficiency.Medicine, SkillAdvantage.Medicine, SkillBonus.Medicine),
-                nature: getSkill(AbilityModifier.INT, SkillProficiency.Nature, SkillAdvantage.Nature, SkillBonus.Nature),
-                perception: getSkill(AbilityModifier.WIS, SkillProficiency.Perception, SkillAdvantage.Perception, SkillBonus.Perception),
-                performance: getSkill(AbilityModifier.CHA, SkillProficiency.Performance, SkillAdvantage.Performance, SkillBonus.Performance),
-                persuasion: getSkill(AbilityModifier.CHA, SkillProficiency.Persuasion, SkillAdvantage.Persuasion, SkillBonus.Persuasion),
-                religion: getSkill(AbilityModifier.INT, SkillProficiency.Religion, SkillAdvantage.Religion, SkillBonus.Religion),
-                sleight_of_hand: getSkill(AbilityModifier.DEX, SkillProficiency.SleightOfHand, SkillAdvantage.SleightOfHand, SkillBonus.SleightOfHand),
-                stealth: getSkill(AbilityModifier.DEX, SkillProficiency.Stealth, SkillAdvantage.Stealth, SkillBonus.Stealth),
-                survival: getSkill(AbilityModifier.WIS, SkillProficiency.Survival, SkillAdvantage.Survival, SkillBonus.Survival)
+                acrobatics: getSkill(this.#skills.acrobatics),
+                animal_handling: getSkill(this.#skills.animalHandling),
+                arcana: getSkill(this.#skills.arcana),
+                athletics: getSkill(this.#skills.athletics),
+                deception: getSkill(this.#skills.deception),
+                history: getSkill(this.#skills.history),
+                insight: getSkill(this.#skills.insight),
+                intimidation: getSkill(this.#skills.intimidation),
+                investigation: getSkill(this.#skills.investigation),
+                medicine: getSkill(this.#skills.medicine),
+                nature: getSkill(this.#skills.nature),
+                perception: getSkill(this.#skills.perception),
+                performance: getSkill(this.#skills.performance),
+                persuasion: getSkill(this.#skills.persuasion),
+                religion: getSkill(this.#skills.religion),
+                sleight_of_hand: getSkill(this.#skills.sleightOfHand),
+                stealth: getSkill(this.#skills.stealth),
+                survival: getSkill(this.#skills.survival)
             }
         };
     }
@@ -232,7 +277,6 @@ export default class StatBlock {
     /**
      * Retrieves a property from the stat block that implements a numeric value.
      * @param {string} uri - The identifier of the property on the stat block that implements a numeric value.
-     * @returns {NumericStatTracker}
      */
     getNumeric(uri) {
         if (uri && typeof uri === 'object' && 'uri' in uri) {
@@ -247,7 +291,6 @@ export default class StatBlock {
      * Retrieves a property from the stat block that implements a numeric value or adds it if it doesn't exist.
      * @param {string} uri - The identifier of the property on the stat block that implements a numeric value.
      * @param {(stats: StatBlock, uri: string) => NumericStatTracker} init - Callback used to initialize the condition if it doesn't already exist.
-     * @returns {NumericStatTracker}
      */
     getOrAddNumeric(uri, init) {
         if (uri && typeof uri === 'object' && 'uri' in uri) {
@@ -267,7 +310,6 @@ export default class StatBlock {
     /**
      * Retrieves the details for how a condition has been applied to the stat block.
      * @param {string} uri - The identifier of the condition being tracked on the the stat block.
-     * @returns {ConditionTracker}
      */
     getCondition(uri) {
         if (uri && typeof uri === 'object' && 'uri' in uri) {
@@ -282,7 +324,6 @@ export default class StatBlock {
      * Retrieves the details for how a condition has been applied to the stat block or adds it if it doesn't exist.
      * @param {string} uri - The identifier of the condition being tracked on the the stat block.
      * @param {(stats: StatBlock, uri: string) => ConditionTracker} init - Callback used to initialize the condition if it doesn't already exist.
-     * @returns {ConditionTracker}
      */
     getOrAddCondition(uri, init) {
         if (uri && typeof uri === 'object' && 'uri' in uri) {
@@ -299,42 +340,7 @@ export default class StatBlock {
         return condition;
     }
 
-    /**
-     * Retrieves the details for how a proficiency level has been applied to the stat block.
-     * @param {string} uri - The identifier of the proficiency level being tracked on the the stat block.
-     * @returns {ProficiencyTracker}
-     */
-    getProficiency(uri) {
-        if (uri && typeof uri === 'object' && 'uri' in uri) {
-            uri = uri.uri;
-        }
-
-        uri = uri.toLowerCase();
-        return this.#proficiencies[uri];
-    }
-
-    /**
-     * Retrieves the details for how a proficiency level has been applied to the stat block or adds it if it doesn't exist.
-     * @param {string} uri - The identifier of the proficiency level being tracked on the the stat block.
-     * @param {(stats: StatBlock, uri: string) => ProficiencyTracker} init - Callback used to initialize the proficiency level if it doesn't already exist.
-     * @returns {ProficiencyTracker}
-     */
-    getOrAddProficiency(uri, init) {
-        if (uri && typeof uri === 'object' && 'uri' in uri) {
-            uri = uri.uri;
-        }
-
-        uri = uri.toLowerCase();
-        let proficiency = this.#proficiencies[uri];
-        if (proficiency == null && typeof init === 'function') {
-            proficiency = init(this, uri);
-            this.#proficiencies[uri] = proficiency;
-        }
-
-        return proficiency;
-    }
-
-    /** @returns {{ round: number, token?: Token, initiative?: number }} A snapshot of the current initiative order in the combat tracker */
+    /** A snapshot of the current initiative order in the combat tracker */
     getCurrentInitiative() {
         return StatBlock.getTokenInitiative(this.#token);
     }
@@ -383,16 +389,16 @@ export default class StatBlock {
             const options = this.#token.options;
             const player = this.getPlayerSheet();
 
-            this.#player = (player != null || (options.characterId != null && options.itemType === 'pc'));
-            this.#contributor = (
+            this.#internals.player = (player != null || (options.characterId != null && options.itemType === 'pc'));
+            this.#internals.contributor = (
                 window.DM === true || options.player_owned === true ||
                 (window.PLAYER_ID != null && options.characterId?.toString() === window.PLAYER_ID.toString())
             );
 
             const sheets = { options, player };
 
-            if (this.#contributor) {
-                if (this.#player) {
+            if (this.#internals.contributor) {
+                if (this.#internals.player) {
                     sheets.playerExt = this.getPlayerExtended();
                 } else {
                     sheets.open5e = this.getOpen5e();
@@ -404,36 +410,36 @@ export default class StatBlock {
 
             const ac = options.armorClass ?? player?.armorClass ?? monster?.armorClass ?? 
                 open5e?.armor_class ?? open5e?.armorClass ?? 10;
-            this.#updateNumeric(AbilityScore.ArmorClass.uri, ac);
+            this.#updateNumeric(this.#ac, ac);
 
             const totalHp = options.hitPointInfo?.maximum ?? player?.hitPointInfo?.maximum ?? 0;
-            this.#updateNumeric(HitPoint.Maximum.uri, totalHp);
+            this.#updateNumeric(this.#hitPoints.maximumChanges, totalHp);
 
-            this.#refreshAbility(AbilityScore.STR, AbilityModifier.STR, SaveProficiency.STR, SaveBonus.STR, sheets);
-            this.#refreshAbility(AbilityScore.DEX, AbilityModifier.DEX, SaveProficiency.DEX, SaveBonus.DEX, sheets);
-            this.#refreshAbility(AbilityScore.CON, AbilityModifier.CON, SaveProficiency.CON, SaveBonus.CON, sheets);
-            this.#refreshAbility(AbilityScore.WIS, AbilityModifier.WIS, SaveProficiency.WIS, SaveBonus.WIS, sheets);
-            this.#refreshAbility(AbilityScore.INT, AbilityModifier.INT, SaveProficiency.INT, SaveBonus.INT, sheets);
-            this.#refreshAbility(AbilityScore.CHA, AbilityModifier.CHA, SaveProficiency.CHA, SaveBonus.CHA, sheets);
+            this.#refreshAbility(AbilityScore.STR, this.#scores.str, this.#modifiers.str, this.#saves.str, sheets);
+            this.#refreshAbility(AbilityScore.DEX, this.#scores.dex, this.#modifiers.dex, this.#saves.dex, sheets);
+            this.#refreshAbility(AbilityScore.CON, this.#scores.con, this.#modifiers.con, this.#saves.con, sheets);
+            this.#refreshAbility(AbilityScore.WIS, this.#scores.wis, this.#modifiers.wis, this.#saves.wis, sheets);
+            this.#refreshAbility(AbilityScore.INT, this.#scores.int, this.#modifiers.int, this.#saves.int, sheets);
+            this.#refreshAbility(AbilityScore.CHA, this.#scores.cha, this.#modifiers.cha, this.#saves.cha, sheets);
 
-            this.#refreshSkill(SkillProficiency.Acrobatics, SkillAdvantage.Acrobatics, SkillBonus.Acrobatics, sheets);
-            this.#refreshSkill(SkillProficiency.AnimalHandling, SkillAdvantage.AnimalHandling, SkillBonus.AnimalHandling, sheets);
-            this.#refreshSkill(SkillProficiency.Arcana, SkillAdvantage.Arcana, SkillBonus.Arcana, sheets);
-            this.#refreshSkill(SkillProficiency.Athletics, SkillAdvantage.Athletics, SkillBonus.Athletics, sheets);
-            this.#refreshSkill(SkillProficiency.Deception, SkillAdvantage.Deception, SkillBonus.Deception, sheets);
-            this.#refreshSkill(SkillProficiency.History, SkillAdvantage.History, SkillBonus.History, sheets);
-            this.#refreshSkill(SkillProficiency.Insight, SkillAdvantage.Insight, SkillBonus.Insight, sheets);
-            this.#refreshSkill(SkillProficiency.Intimidation, SkillAdvantage.Intimidation, SkillBonus.Intimidation, sheets);
-            this.#refreshSkill(SkillProficiency.Investigation, SkillAdvantage.Investigation, SkillBonus.Investigation, sheets);
-            this.#refreshSkill(SkillProficiency.Medicine, SkillAdvantage.Medicine, SkillBonus.Medicine, sheets);
-            this.#refreshSkill(SkillProficiency.Nature, SkillAdvantage.Nature, SkillBonus.Nature, sheets);
-            this.#refreshSkill(SkillProficiency.Perception, SkillAdvantage.Perception, SkillBonus.Perception, sheets);
-            this.#refreshSkill(SkillProficiency.Performance, SkillAdvantage.Performance, SkillBonus.Performance, sheets);
-            this.#refreshSkill(SkillProficiency.Persuasion, SkillAdvantage.Persuasion, SkillBonus.Persuasion, sheets);
-            this.#refreshSkill(SkillProficiency.Religion, SkillAdvantage.Religion, SkillBonus.Religion, sheets);
-            this.#refreshSkill(SkillProficiency.SleightOfHand, SkillAdvantage.SleightOfHand, SkillBonus.SleightOfHand, sheets);
-            this.#refreshSkill(SkillProficiency.Stealth, SkillAdvantage.Stealth, SkillBonus.Stealth, sheets);
-            this.#refreshSkill(SkillProficiency.Survival, SkillAdvantage.Survival, SkillBonus.Survival, sheets);
+            this.#refreshSkill(SkillCheck.Acrobatics, this.#skills.acrobatics, sheets);
+            this.#refreshSkill(SkillCheck.AnimalHandling, this.#skills.animalHandling, sheets);
+            this.#refreshSkill(SkillCheck.Arcana, this.#skills.arcana, sheets);
+            this.#refreshSkill(SkillCheck.Athletics, this.#skills.athletics, sheets);
+            this.#refreshSkill(SkillCheck.Deception, this.#skills.deception, sheets);
+            this.#refreshSkill(SkillCheck.History, this.#skills.history, sheets);
+            this.#refreshSkill(SkillCheck.Insight, this.#skills.insight, sheets);
+            this.#refreshSkill(SkillCheck.Intimidation, this.#skills.intimidation, sheets);
+            this.#refreshSkill(SkillCheck.Investigation, this.#skills.investigation, sheets);
+            this.#refreshSkill(SkillCheck.Medicine, this.#skills.medicine, sheets);
+            this.#refreshSkill(SkillCheck.Nature, this.#skills.nature, sheets);
+            this.#refreshSkill(SkillCheck.Perception, this.#skills.perception, sheets);
+            this.#refreshSkill(SkillCheck.Performance, this.#skills.performance, sheets);
+            this.#refreshSkill(SkillCheck.Persuasion, this.#skills.persuasion, sheets);
+            this.#refreshSkill(SkillCheck.Religion, this.#skills.religion, sheets);
+            this.#refreshSkill(SkillCheck.SleightOfHand, this.#skills.sleightOfHand, sheets);
+            this.#refreshSkill(SkillCheck.Stealth, this.#skills.stealth, sheets);
+            this.#refreshSkill(SkillCheck.Survival, this.#skills.survival, sheets);
 
             for(const condition of Object.values(ConditionType)) {
                 if (condition.type === PropertyType.Condition) {
@@ -458,15 +464,15 @@ export default class StatBlock {
                 condition.recalculate();
             }
 
+            for (const wellKnown of this.#wellKnownNumerics) {
+                wellKnown.recalculate();
+            }
+
             for (const numeric of Object.values(this.#numeric)) {
                 numeric.recalculate();
             }
 
             this.#hitPoints.checkMaximum();
-
-            for (const proficiency of Object.values(this.#proficiencies)) {
-                proficiency.recalculate();
-            }
 
             delete this.#warnings['recalculate'];
         } catch (error) {
@@ -503,51 +509,36 @@ export default class StatBlock {
 
     /**
      * Updates the specified numeric property for the stat block.
-     * @param {string} uri 
+     * @param {string | NumericStatTracker} tracker 
      * @param {number} value 
      * @return {NumericStatTracker}
      */
-    #updateNumeric(uri, value) {
+    #updateNumeric(tracker, value) {
         if (typeof value === 'string') {
             value = parseFloat(value);
         }
 
-        let property = this.#numeric[uri];
-        if (property == null) {
-            property = new NumericStatTracker(this, uri, value);
-            this.#numeric[uri] = property;
-        }
-
-        property.setBaseValue(value);
-
-        const snapshots = this.#token.options.snapshots?.numeric;
-        if (snapshots != null) {
-            if (this.#player) {
-                property.setSnapshot(snapshots[uri], false);
-            } else if (uri in snapshots) {
-                property.setSnapshot(undefined, true);
+        if (typeof tracker === 'string') {
+            const uri = tracker.toLowerCase();
+            tracker = this.#numeric[tracker];
+            if (tracker == null) {
+                tracker = new NumericStatTracker(this, uri, value);
+                this.#numeric[uri] = tracker;
             }
         }
 
-        return property;
-    }
+        tracker.setBaseValue(value);
 
-    /**
-     * Updates the specified proficiency property for the stat block.
-     * @param {string} uri 
-     * @param {number} value 
-     * @return {NumericStatTracker}
-     */
-    #updateProficiency(uri, config) {
-        let property = this.#proficiencies[uri];
-        if (property == null) {
-            property = new ProficiencyTracker(this, uri);
-            this.#proficiencies[uri] = property;
+        const snapshots = this.#token.options.snapshots?.numeric;
+        if (snapshots != null) {
+            if (this.#internals.player) {
+                tracker.setSnapshot(snapshots[tracker.uri], false);
+            } else if (tracker.uri in snapshots) {
+                tracker.setSnapshot(undefined, true);
+            }
         }
 
-        property.setBaseValue(config);
-
-        return property;
+        return tracker;
     }
 
     /**
@@ -558,8 +549,8 @@ export default class StatBlock {
     #refreshLevel(sheets) {
         if (sheets.player) {
             const pb = sheets.player.proficiencyBonus ?? 2;
-            this.#updateNumeric(AbilityScore.Level.uri, sheets.player.level ?? 1);
-            this.#updateNumeric(AbilityScore.ProficiencyBonus.uri, pb);
+            this.#internals.level = sheets.player.level ?? 1;
+            this.#updateNumeric(this.#proficiency, pb);
             return pb;
         }
 
@@ -584,8 +575,8 @@ export default class StatBlock {
                 pb = 1 + Math.ceil((cr > 0 ? cr : 1) / 4);
             }
 
-            this.#updateNumeric(AbilityScore.Level.uri, cr);
-            this.#updateNumeric(AbilityScore.ProficiencyBonus.uri, pb ?? 2);
+            this.#internals.level = cr;
+            this.#updateNumeric(this.#proficiency, pb ?? 2);
             return pb;
         }
 
@@ -596,93 +587,107 @@ export default class StatBlock {
                 pb = 1 + Math.ceil((cr > 0 ? cr : 1) / 4);
             }
 
-            this.#updateNumeric(AbilityScore.Level.uri, cr);
-            this.#updateNumeric(AbilityScore.ProficiencyBonus.uri, pb ?? 2);
+            this.#internals.level = cr;
+            this.#updateNumeric(this.#proficiency, pb ?? 2);
             return pb;
         }
 
-        this.#updateNumeric(AbilityScore.Level.uri, 0);
-        this.#updateNumeric(AbilityScore.ProficiencyBonus.uri, 2);
+        this.#internals.level = 0;
+        this.#updateNumeric(this.#proficiency, 2);
         return 2;
     }
 
     /**
      * Determines the best ability score value to use for the stat block.
-     * @param {AbilityScore} score - The ability score to update.
-     * @param {AbilityModifier} ability - The ability modifier to update.
-     * @param {SaveProficiency} save - The ability modifier to update.
-     * @param {SaveBonus} saveBonus - The ability modifier to update.
+     * @param {Object} config - The ability score to update.
+     * @param {NumericStatTracker} score - The ability modifier to update.
+     * @param {BlockAbilityModifier} modifier - The ability modifier to update.
+     * @param {DiceAction} save - The ability modifier to update.
      * @param {Object} sheets - The sheet information for the token.
      */
-    #refreshAbility(score, modifier, save, saveBonus, sheets) {
-        const primary = this.#refreshAbilityScore(score, sheets);
-        const secondary = this.#refreshAbilityModifier(score, modifier, primary.base, sheets);
-        this.#refreshSaveModifiers(score, save, saveBonus, secondary.base, sheets);
+    #refreshAbility(config, score, modifier, save, sheets) {
+        this.#refreshAbilityScore(config, score, sheets);
+        this.#refreshAbilityModifier(config, score, modifier, sheets);
+        this.#refreshSaveModifiers(config, save, modifier, sheets);
     }
 
     /**
      * Determines the best ability score value to use for the stat block.
-     * @param {AbilityScore} score - The ability score to update.
+     * @param {Object} config - The ability score to update.
+     * @param {NumericStatTracker} score - The ability modifier to update.
      * @param {Object} sheets - The sheet information for the token.
      * @returns {NumericStatTracker}
      */
-    #refreshAbilityScore(score, sheets) {
-        const expected = score.uri.toLowerCase();
+    #refreshAbilityScore(config, score, sheets) {
+        const expected = config.uri.toLowerCase();
         let value = sheets.options.abilities?.find((entry) => uriEquals(entry?.name, expected))?.score ??
             sheets.player?.abilities?.find((entry) => uriEquals(entry?.name, expected))?.score ??
-            sheets.monster?.stats?.find((entry) => (entry.statId === score.dndBeyond))?.value ??
-            sheets.open5e?.ability_scores?.[score.open5e] ??
+            sheets.monster?.stats?.find((entry) => (entry.statId === config.dndBeyond))?.value ??
+            sheets.open5e?.ability_scores?.[config.open5e] ??
             10;
 
-        return this.#updateNumeric(score.uri, value);
+        this.#updateNumeric(score, value);
     }
 
     /**
      * Determines the best ability modifier value to use for the stat block.
-     * @param {AbilityScore} score - The ability score with the configuration settings to find the modifier.
-     * @param {AbilityModifier} modifier - The ability modifier to update.
-     * @param {number} totalScore - The ability score that can be used to calculate the modifier.
+     * @param {Object} config - The configuration for the ability score.
+     * @param {NumericStatTracker} score - The ability score that is used to determine the baseline modifier when overrides are not present.
+     * @param {BlockAbilityModifier} modifier - The ability modifier to update.
      * @param {Object} sheets - The sheet information for the token.
      */
-    #refreshAbilityModifier(score, modifier, totalScore, sheets) {
-        const expected = score.uri.toLowerCase();
+    #refreshAbilityModifier(config, score, modifier, sheets) {
+        const expected = config.uri.toLowerCase();
         let value = sheets.options.abilities?.find((entry) => uriEquals(entry?.name, expected))?.modifier ??
             sheets.player?.abilities?.find((entry) => uriEquals(entry?.name, expected))?.modifier ??
-            sheets.open5e?.modifiers?.[score.open5e];
+            sheets.open5e?.modifiers?.[config.open5e];
 
         if (value == null) {
-            value = Math.floor((totalScore - 10) / 2);
+            value = Math.floor((score.base - 10) / 2);
         }
 
-        return this.#updateNumeric(modifier.uri, value);
+        this.#updateNumeric(modifier.value, value);
     }
 
     /**
      * Determines the best ability modifier value to use for the stat block.
-     * @param {AbilityScore} score - The ability score with the configuration settings to find the modifier.
-     * @param {SaveProficiency} save - The ability modifier to update.
-     * @param {SaveBonus} saveBonus - The ability modifier to update.
-     * @param {NumericStatTracker} abilityMod - The ability score that can be used to calculate the modifier.
+     * @param {Object} config - The configuration for the ability score.
+     * @param {DiceAction} save - The ability modifier to update.
+     * @param {BlockAbilityModifier} modifier - The ability modifier that can be used to determine any bonus values.
      * @param {Object} sheets - The sheet information for the token.
      */
-    #refreshSaveModifiers(score, save, saveBonus, abilityMod, sheets) {
+    #refreshSaveModifiers(config, save, modifier, sheets) {
         if (sheets.monster) {
-            const beyondProf = sheets.monster.savingThrows?.find((entry) => (entry.statId === score.dndBeyond));
-            this.#updateProficiency(save.uri, beyondProf != null ? ProficiencyType.Proficient : ProficiencyType.None);
-            this.#updateNumeric(saveBonus.uri, beyondProf?.bonusModifier ?? 0);
+            const beyondProf = sheets.monster.savingThrows?.find((entry) => (entry.statId === config.dndBeyond));
+            save.proficiency = beyondProf != null ? ProficiencyType.Proficient.multiplier : ProficiencyType.None.multiplier;
+            save.bonus = beyondProf?.bonusModifier ?? 0;
             return;
         }
 
         if (sheets.open5e) {
-            const openProf = sheets.open5e.saving_throws?.[score.open5e];
-            this.#updateProficiency(save.uri, openProf != null ? ProficiencyType.Proficient : ProficiencyType.None);
-            this.#updateNumeric(saveBonus.uri, 0);
+            const openProf = sheets.open5e.saving_throws?.[config.open5e];
+            let bonus = 0;
+            let proficiency = ProficiencyType.None.multiplier;
+
+            if (typeof openProf === 'number') {
+                bonus = openProf;
+
+                const abilityMod = this.#modifiers[save.ability]?.value?.current ?? 0
+                bonus -= abilityMod;
+
+                proficiency = ProficiencyType.Proficient.multiplier;
+                bonus -= (proficiency * Math.abs(sheets.pb));
+            }
+
+            save.proficiency = proficiency;
+            save.bonus = bonus;
             return;
         }
 
-        const proficient = this.#reviewPlayerSaveProficiency(save, sheets);
+        const abilityMod = modifier.value.base;
+        const proficient = this.#reviewPlayerSaveProficiency(config, sheets);
 
-        const expected = score.uri.toLowerCase();
+        const expected = config.uri.toLowerCase();
         let bonus = sheets.player?.abilities?.find((entry) => uriEquals(entry?.name, expected))?.save ??
             sheets.options.abilities?.find((entry) => uriEquals(entry?.name, expected))?.save ??
             abilityMod;
@@ -693,41 +698,43 @@ export default class StatBlock {
             bonus -= sheets.pb;
         }
 
-        this.#updateProficiency(save.uri, proficient ? ProficiencyType.Proficient : ProficiencyType.None);
-        this.#updateNumeric(saveBonus.uri, bonus);
+        save.proficiency = proficient ? ProficiencyType.Proficient.multiplier : ProficiencyType.None.multiplier;
+        save.bonus = bonus;
 
         return;
     }
 
-    #reviewPlayerSaveProficiency(save, sheets) {
-        if (save.playerExt == null) {
+    /** Review the extended player character sheet for save proficiencies when it is available */
+    #reviewPlayerSaveProficiency(config, sheets) {
+        if (typeof config.playerSaveExt !== 'string') {
             return false;
         }
 
+        const profUri = `${config.uri}:save`;
         if (sheets.playerExt == null) {
-            return sheets.options.proficiency_ext?.[save.uri] === true;
+            return sheets.options.proficiency_ext?.[profUri] === true;
         }
 
         let proficient = false;
         for (const group of Object.values(sheets.playerExt.modifiers ?? {})) {
             for (const entry of group) {
-                if (entry.type?.toLowerCase() === 'proficiency' && entry.subType?.toLowerCase() === save.playerExt) {
+                if (entry.type?.toLowerCase() === 'proficiency' && entry.subType?.toLowerCase() === config.playerSaveExt) {
                     proficient = true;
                     break;
                 }
             }
         }
 
-        const current = sheets.options.proficiency_ext?.[save.uri] ?? false;
+        const current = sheets.options.proficiency_ext?.[profUri] ?? false;
         if (current !== proficient) {
             if (sheets.options.proficiency_ext == null) {
                 sheets.options.proficiency_ext = {};
             }
 
             if (proficient === true) {
-                sheets.options.proficiency_ext[save.uri] = true;
+                sheets.options.proficiency_ext[profUri] = true;
             } else {
-                delete sheets.options.proficiency_ext[save.uri];
+                delete sheets.options.proficiency_ext[profUri];
             }
 
             this.hasPendingChanges(true);
@@ -738,41 +745,68 @@ export default class StatBlock {
 
     /**
      * Determines the best skill proficiency value to use for the stat block.
-     * @param {SkillProficiency} skill - The skill proficiency to review.
-     * @param {SkillAdvantage} advantage - Whether the skill has advantage.
-     * @param {SkillBonus} bonus - Whether the skill has a bonus.
+     * @param {Object} config - The configuration for the skill change across sheet types.
+     * @param {DiceAction} skill - The dice action associated with the skill check to update.
      * @param {Object} sheets - The sheet information for the token.
      */
-    #refreshSkill(skill, advantage, bonus, sheets) {
+    #refreshSkill(config, skill, sheets) {
         if (sheets.monster) {
-            const beyondProf = sheets.monster.savingThrows?.find((entry) => (entry.statId === skill.dndBeyond));
-            this.#updateProficiency(skill.uri, beyondProf != null ? ProficiencyType.Proficient : ProficiencyType.None);
-            this.#updateNumeric(bonus.uri, beyondProf?.bonusModifier ?? 0);
+            const beyondProf = sheets.monster.skills?.find((entry) => (entry.skillId === config.dndBeyond));
+            let bonus = 0;
+            let proficiency = ProficiencyType.None.multiplier;
+
+            if (beyondProf != null) {
+                bonus = beyondProf.value;
+
+                const abilityMod = this.#modifiers[skill.ability]?.value?.current ?? 0
+                bonus -= abilityMod;
+
+                proficiency = ProficiencyType.Proficient.multiplier;
+                bonus -= (proficiency * Math.abs(sheets.pb));
+            }
+
+            skill.proficiency = proficiency;
+            skill.bonus = bonus;
             return;
         }
 
         if (sheets.open5e) {
-            const openProf = sheets.open5e.skill_bonuses?.[skill.open5e];
-            this.#updateProficiency(skill.uri, openProf != null ? ProficiencyType.Proficient : ProficiencyType.None);
-            this.#updateNumeric(bonus.uri, 0);
+            const openProf = sheets.open5e.skill_bonuses?.[config.open5e];
+            let bonus = 0;
+            let proficiency = ProficiencyType.None.multiplier;
+
+            if (typeof openProf === 'number') {
+                bonus = openProf;
+
+                const abilityMod = this.#modifiers[skill.ability]?.value?.current ?? 0
+                bonus -= abilityMod;
+
+                proficiency = ProficiencyType.Proficient.multiplier;
+                bonus -= (proficiency * Math.abs(sheets.pb));
+            }
+
+            skill.proficiency = proficiency;
+            skill.bonus = bonus;
             return;
         }
 
         if (sheets.player == null) {
+            skill.bonus = 0;
+            skill.proficiency = ProficiencyType.None.multiplier;
             return;
         }
 
-        const settings = sheets.player.skills?.find(entry => entry.name?.toLowerCase() === skill.player) ?? {};
-        this.#updateNumeric(bonus.uri, 0);
+        const settings = sheets.player.skills?.find(entry => entry.name?.toLowerCase() === config.player) ?? {};
+        skill.bonus = 0;
 
         if (settings.isExpert === true) {
-            this.#updateProficiency(skill.uri, ProficiencyType.Expert);
+            skill.proficiency = ProficiencyType.Expert.multiplier;
         } else if (settings.isProficient === true) {
-            this.#updateProficiency(skill.uri, ProficiencyType.Proficient);
+            skill.proficiency = ProficiencyType.Proficient.multiplier;
         } else if (settings.isHalfProficient === true) {
-            this.#updateProficiency(skill.uri, ProficiencyType.Beginner);
+            skill.proficiency = ProficiencyType.Beginner.multiplier;
         } else {
-            this.#updateProficiency(skill.uri, ProficiencyType.None);
+            skill.proficiency = ProficiencyType.None.multiplier;
         }
 
         return;
@@ -812,355 +846,140 @@ export default class StatBlock {
     }
 }
 
-/**
- * Performs a case-insensitive string comparison of a pair of property URIs.
- * @param {string} value - The URI being tested without case modification
- * @param {string} expected - The expected value of the URI; should already be in lower case
- * @returns {boolean}
- */
-export function uriEquals(value, expected) {
-    return (value != null && expected != null && value.toLowerCase() === expected)
-}
-
-/** Forces any tokens from all global token stores for the specified identifier to rebuild */
-export function refreshStatBlock(id) {
-    if (id == null) {
-        return;
-    }
-
-    refreshGlobalStatBlock(window.TOKEN_OBJECTS, id);
-    refreshGlobalStatBlock(window.all_token_objects, id);
-}
-
-/** Forces any tokens for the specified identifier to rebuild */
-function refreshGlobalStatBlock(tokens, id) {
-    for (const token of Object.values(tokens)) {
-        if (token.options.id === id) {
-            token.stats.rebuild();
-        }
+/** Defines the ability scores associated with a stat block. */
+class BlockAbilityScores {
+    constructor(stats) {
+        this.str = new NumericStatTracker(stats, 'str', 10);
+        this.dex = new NumericStatTracker(stats, 'dex', 10);
+        this.con = new NumericStatTracker(stats, 'con', 10);
+        this.wis = new NumericStatTracker(stats, 'wis', 10);
+        this.int = new NumericStatTracker(stats, 'int', 10);
+        this.cha = new NumericStatTracker(stats, 'cha', 10);
+        Object.freeze(this);
     }
 }
 
-// #region Player Character Sheets
-
-/** Forces any tokens from all global token stores that implement the specified player character sheet to rebuild */
-export function refreshPlayerSheets(player) {
-    if (player == null) {
-        return;
-    }
-
-    refreshGlobalPlayerSheets(window.TOKEN_OBJECTS, player);
-    refreshGlobalPlayerSheets(window.all_token_objects, player);
-}
-
-/** Forces any tokens that implement the specified player character sheet to rebuild */
-function refreshGlobalPlayerSheets(tokens, player) {
-    for (const token of Object.values(tokens)) {
-        if (token.options.sheet === player) {
-            token.stats.rebuild();
-        }
+/** Defines the ability modifiers associated with a stat block. */
+class BlockAbilityModifiers {
+    constructor(stats) {
+        this.str = new BlockAbilityModifier(stats, 'str', 'Strength Ability Check');
+        this.dex = new BlockAbilityModifier(stats, 'dex', 'Dexterity Ability Check');
+        this.con = new BlockAbilityModifier(stats, 'con', 'Constitution Ability Check');
+        this.wis = new BlockAbilityModifier(stats, 'wis', 'Wisdom Ability Check');
+        this.int = new BlockAbilityModifier(stats, 'int', 'Intellegence Ability Check');
+        this.cha = new BlockAbilityModifier(stats, 'cha', 'Charisma Ability Check');
+        Object.freeze(this);
     }
 }
 
-/** Forces any tokens from all global token stores that implement the specified extended player character sheet to rebuild */
-export function refreshPlayerExtended(player) {
-    if (player == null) {
-        return;
+/** Defines an ability modifier associated with a stat block. */
+class BlockAbilityModifier {
+    constructor(stats, uri, name) {
+        this.value = new NumericStatTracker(stats, `${uri}:modifier`, 0);
+
+        this.check = new DiceAction(stats.diceContext, `${uri}:check`, name, true, uri, true);
+        this.check.tags.addRange([ 'ability', uri ]);
+        this.check.tagFreeze();
+
+        Object.freeze(this);
     }
 
-    const asNumber = (typeof player === 'number') ? player : parseInt(player);
-    const asString = player.toString();
-
-    refreshGlobalPlayerExtended(window.TOKEN_OBJECTS, asNumber, asString);
-    refreshGlobalPlayerExtended(window.all_token_objects, asNumber, asString);
+    /** Tracks the value for the ability score modifier. */
+    value;
+    /** Performs a d20 test using the ability score modifier.*/
+    check;
 }
 
-/** Forces any tokens that implement the specified extended player character sheet to rebuild */
-function refreshGlobalPlayerExtended(tokens, asNumber, asString) {
-    for (const token of Object.values(tokens)) {
-        if (token.options.characterId === asNumber || token.options.characterId === asString) {
-            token.stats.rebuild();
-        }
-    }
-}
+/** Defines the saving throws associated with a stat block. */
+class BlockSavingThrows {
+    constructor(stats) {
+        this.str = new DiceAction(stats.diceContext, 'str:save', 'Strength Saving Throw', true, 'str', true);
+        this.dex = new DiceAction(stats.diceContext, 'dex:save', 'Dexterity Saving Throw', true, 'dex', true);
+        this.con = new DiceAction(stats.diceContext, 'con:save', 'Constitution Saving Throw', true, 'con', true);
+        this.wis = new DiceAction(stats.diceContext, 'wis:save', 'Wisdom Saving Throw', true, 'wis', true);
+        this.int = new DiceAction(stats.diceContext, 'int:save', 'Intellegence Saving Throw', true, 'int', true);
+        this.cha = new DiceAction(stats.diceContext, 'cha:save', 'Charisma Saving Throw', true, 'cha', true);
+        this.death = new DiceAction(stats.diceContext, 'death:save', 'Death Saving Throw', true, undefined, false);
 
-/** Cache of v5 character sheets */
-const playerSheetsExt = {};
-
-/** Loads the cache of extended player character sheets for the provided identifier */
-export function fetchPlayerExtendedSheet(id) {
-    if (typeof id === 'number') {
-        id = id.toString();
-    }
-
-    const owner = (window.DM || window.characterData?.id?.toString() === (id ?? ''));
-    if (!owner || id == null || typeof id !== 'string' || id.trim().length <= 1) {
-        return undefined;
-    }
-
-    if (id in playerSheetsExt) {
-        return playerSheetsExt[id].sheet;
-    }
-
-    const loader = { loading: true, failed: false, sheet: undefined };
-    playerSheetsExt[id] = loader;
-
-    if (window.characterData?.id?.toString() == id) {
-        loader.sheet = window.characterData;
-        return loader.sheet;
-    }
-
-    DDBApi.fetchCharacter(id).then((payload) => {
-        loader.sheet = payload;
-        refreshPlayerExtended(id);
-    }).catch((error) => {
-        loader.failed = true;
-        console.error(`Failed to load extended player character sheet ${id}`, error);
-    }).finally(() => {
-        loader.loading = false
-    });
-
-    return loader.sheet;
-}
-
-// #endregion
-
-// #region Open 5e
-
-/** Forces any tokens from all global token stores that implement the specified D&D Beyond monster stat block to rebuild */
-export function refreshOpen5eStatBlocks(monster) {
-    if (monster == null) {
-        return;
-    }
-    
-    monster = monster.toLowerCase();
-    refreshOpen5eMonsterStats(window.TOKEN_OBJECTS, monster);
-    refreshOpen5eMonsterStats(window.all_token_objects, monster);
-}
-
-/** Forces any tokens that implement the specified Beyond monster stat block to rebuild */
-function refreshOpen5eMonsterStats(tokens, monster) {
-    for (const token of Object.values(tokens)) {
-        if (uriEquals(token.options.itemType, 'open5e') && uriEquals(token.options.itemId, monster)) {
-            token.stats.rebuild();
-        }
-    }
-}
-
-const open5eCreatures = {};
-
-/** Retrieves the common Open 5E stat block if the token is an instance of one */
-export function fetchOpen5eSheetForToken(token) {
-    if (!uriEquals(token.options?.itemType, 'open5e') || token.options?.itemId == null){
-        return null;
-    }
-
-    return fetchOpen5eSheet(token.options.itemId);
-}
-
-/** Loads the cache of Open 5E creature stat blocks for the provided key */
-export function fetchOpen5eSheet(key) {
-    key = key?.toLowerCase();
-    if (key == null) {
-        return undefined;
-    }
-
-    if (key in open5eCreatures) {
-        return open5eCreatures[key].sheet;
-    }
-
-    const loader = { loading: true, failed: false, sheet: undefined };
-    open5eCreatures[key] = loader;
-
-    // We are doing single lookups here because any fragility with the API calls
-    // should not prevent entire batches from loading and this is only reacting
-    // to tokens within the campaign
-    let url = `https://api.open5e.com/v2/creatures/?key__in=${key}&limit=1`
-    fetch(url).then((response) => {
-        if (!response.ok) {
-            throw new Error(`Failed to load Open5e creature stat block ${key} with status code ${response.status}`);
-        }
-
-        return response.json();
-    }).then((payload) => {
-        loader.sheet = payload?.results?.find(entry => uriEquals(entry.key, key));
-        refreshOpen5eStatBlocks(key);
-    }).catch((error) => {
-        loader.failed = true;
-        console.error(`Failed to load Open5e creature stat block ${key}`, error);
-    }).finally(() => loader.loading = false);
-
-    return undefined;
-}
-
-// #endregion
-
-// #region D&D Beyond Monsters
-
-const beyondCreatures = {
-    sheets: {},
-    pending: new Set(),
-    timer: undefined,
-    delay: 2000 // Initial wait delay while the VTT loads
-};
-
-/** Forces any tokens from all global token stores that implement the specified D&D Beyond monster stat block to rebuild */
-export function refreshMonsterStatBlocks(monster) {
-    if (monster == null) {
-        return;
-    }
-
-    refreshGlobalMonsterStats(window.TOKEN_OBJECTS, monster);
-    refreshGlobalMonsterStats(window.all_token_objects, monster);
-}
-
-/** Forces any tokens that implement the specified Beyond monster stat block to rebuild */
-function refreshGlobalMonsterStats(tokens, monster) {
-    for (const token of Object.values(tokens)) {
-        if (token.options.monster === monster) {
-            token.stats.rebuild();
-        }
-    }
-}
-
-/**
- * Loads the cache of D&D Beyond creature stat blocks for the provided token
- * @param {Token} token - The token to retrieve the monster stat block for.
- */
-export function fetchBeyondSheetForToken(token) {
-    const itemType = token?.options?.itemType?.toLowerCase();
-    if (itemType !== 'monster') {
-        return undefined;
-    }
-
-    const monster = token.options.monster ?? token.options.itemId;
-    if (monster == null){
-        return undefined;
-    }
-
-    return fetchBeyondSheet(monster);
-}
-
-/**
- * Loads the cache of D&D Beyond creature stat blocks for the provided identifier
- * @param {number | undefined} monster - The identifier of the monster to retrieve.
- */
-export function fetchBeyondSheet(monster) {
-    if (monster == null) {
-        return undefined;
-    }
-
-    if (monster in beyondCreatures.sheets) {
-        const requested = beyondCreatures.sheets[monster];
-        if (requested.sheet !== undefined) {
-            return requested.sheet;
-        }
-
-        const fromCache = cached_monster_items[monster]?.monsterData;
-        if (fromCache !== undefined) {
-            beyondCreatures.pending.delete(monster);
-            if (beyondCreatures.pending.size === 0 && beyondCreatures.timer !== undefined) {
-                window.clearTimeout(beyondCreatures.timer);
-                beyondCreatures.timer = undefined;
+        for (const stat of Object.values(this)) {
+            if (!(stat instanceof DiceAction) || typeof stat.ability !== 'string') {
+                continue;
             }
 
-            requested.sheet = fromCache;
-            requested.loading = false;
-            requested.failed = false;
+            stat.tags.addRange([ 'save', stat.ability ])
+            stat.tagFreeze();
         }
 
-        return requested.sheet;
-    }
+        this.death.tags.addRange([ 'save', 'death' ])
+        this.death.tagFreeze();
 
-    const fromCache = cached_monster_items[monster]?.monsterData;
-    const loader = { loading: true, failed: false, sheet: fromCache };
-    beyondCreatures.sheets[monster] = loader;
-
-    if (fromCache != null) {
-        return fromCache;
-    }
-
-    appendPendingBeyondMonster(monster);
-    return undefined;
-}
-
-/** Adds a monster to the pending queue and starts the wait timer to give the existing caches time if needed */
-function appendPendingBeyondMonster(monster) {
-    beyondCreatures.pending.add(monster);
-
-    if (beyondCreatures.timer === undefined) {
-        beyondCreatures.timer = window.setTimeout(fetchPendingBeyondSheets, beyondCreatures.delay);
+        Object.freeze(this);
     }
 }
 
-/** Loads the cache of D&D Beyond creature stat blocks for any currently pending keys */
-function fetchPendingBeyondSheets() {
-    if (window.LOADING === true) {
-        beyondCreatures.timer = window.setTimeout(fetchPendingBeyondSheets, beyondCreatures.delay);
-        return;
-    }
+/** Defines the skills associated with a stat block. */
+class BlockSkillChecks {
+    constructor(stats) {
+        this.acrobatics = new DiceAction(stats.diceContext, 'acrobatics', 'Acrobatics', true, 'dex', false);
+        this.animalHandling = new DiceAction(stats.diceContext, 'animal_handling', 'Animal Handling', true, 'wis', false);
+        this.arcana = new DiceAction(stats.diceContext, 'arcana', 'Arcana', true, 'int', false);
+        this.athletics = new DiceAction(stats.diceContext, 'athletics', 'Athletics', true, 'str', false);
+        this.deception = new DiceAction(stats.diceContext, 'deception', 'Deception', true, 'cha', false);
+        this.history = new DiceAction(stats.diceContext, 'history', 'History', true, 'int', false);
+        this.insight = new DiceAction(stats.diceContext, 'insight', 'Insight', true, 'wis', false);
+        this.intimidation = new DiceAction(stats.diceContext, 'intimidation', 'Intimidation', true, 'cha', false);
+        this.investigation = new DiceAction(stats.diceContext, 'investigation', 'Investigation', true, 'int', false);
+        this.medicine = new DiceAction(stats.diceContext, 'medicine', 'Medicine', true, 'wis', false);
+        this.nature = new DiceAction(stats.diceContext, 'nature', 'Nature', true, 'int', false);
+        this.perception = new DiceAction(stats.diceContext, 'perception', 'Perception', true, 'wis', false);
+        this.performance = new DiceAction(stats.diceContext, 'performance', 'Performance', true, 'cha', false);
+        this.persuasion = new DiceAction(stats.diceContext, 'persuasion', 'Persuasion', true, 'cha', false);
+        this.religion = new DiceAction(stats.diceContext, 'religion', 'Religion', true, 'int', false);
+        this.sleightOfHand = new DiceAction(stats.diceContext, 'Sleight of Hand', 'sleight_of_hand', true, 'dex', false);
+        this.stealth = new DiceAction(stats.diceContext, 'stealth', 'Stealth', true, 'dex', false);
+        this.survival = new DiceAction(stats.diceContext, 'survival', 'Survival', true, 'wis', false);
 
-    const reviewing = new Set(beyondCreatures.pending.values());
-    beyondCreatures.pending.clear();
-    beyondCreatures.timer = undefined;
+        for (const stat of Object.values(this)) {
+            if (!(stat instanceof DiceAction)) {
+                continue;
+            }
 
-    const updating = [];
-    for (const key of reviewing.values()) {
-        const requested = beyondCreatures.sheets[key];
-        if (requested.sheet !== undefined) {
-            continue;
+            stat.tags.addRange([ 'skill', stat.uri ])
+            stat.tagFreeze();
         }
 
-        const fromCache = cached_monster_items[key]?.monsterData;
-        if (fromCache !== undefined) {
-            requested.sheet = fromCache;
-            requested.loading = false;
-            requested.failed = false;
-            continue;
-        }
-
-        updating.push(key);
+        Object.freeze(this);
     }
-
-    if (updating.length === 0) {
-        return;
-    }
-
-    const individual = () => {
-        for (const monster of updating) {
-            const target = beyondCreatures.sheets[monster];
-
-            DDBApi.fetchMonsters([monster]).then((response) => {
-                target.sheet = response?.find(entry => entry.id === monster);
-                target.failed = false;
-                refreshMonsterStatBlocks(monster);
-            }).catch((error) => {
-                target.failed = true;
-                console.error(`Failed to load D&D Beyond creature stat block ${monster}`, error);
-            }).finally(() => target.loading = false);
-        }
-    }
-
-    // Attempt a batch fetch first but if it fails roll over to the indivual fetch
-    DDBApi.fetchMonsters(updating).then((response) => {
-        for (const monster of updating) {
-            const target = beyondCreatures.sheets[monster];
-            target.sheet = response?.find(entry => entry.id === monster);
-            target.failed = false;
-            target.loading = false
-            refreshMonsterStatBlocks(monster);
-        }
-    }).catch((error) => {
-        console.error('Batch retrieval of D&D Beyond monster sheet failed; rolling over to individual lookups', error);
-        individual();
-    });
 }
 
-// #endregion
+/** Defines the information from a creature stat block that is needed for a dice action to be executed. */
+class BlockDiceContext extends DiceActionContext {
+    #stats;
+
+    /** @param {StatBlock} stats  */
+    constructor(stats) {
+        super();
+        this.#stats = stats;
+        Object.freeze(this);
+    }
+
+    /** The level of the creature performing the action. */
+    get level() { return this.#stats.level; }
+
+    /** Gets the numeric value associated with the provided URI if one exists.
+     * @param {string} uri - The value to lookup within the context.
+     * @returns {number}
+     */
+    getNumericValue(uri) { throw new Error('Not Implemented'); }
+
+    /** The collection of available dice action modifiers
+     * @returns {DiceActionModifier[]} */
+    listActionModifiers() { throw new Error('Not Implemented'); }
+
+    /** The collection of available dice roll modifiers
+     * @returns {DiceRollModifier[]} */
+    listRollModifiers() { throw new Error('Not Implemented'); }
+}
 
 // Addressing compatibility issues
 window.initStatBlock = (token) => new StatBlock(token);
-window.refreshTokenStats = refreshStatBlock;
-window.refreshPlayerTokenStats = refreshPlayerSheets;
-window.refreshMonsterTokenStats = refreshMonsterStatBlocks;
-window.refreshOpen5eTokenStats = refreshOpen5eStatBlocks;

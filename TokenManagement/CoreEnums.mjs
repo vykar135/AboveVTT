@@ -76,6 +76,16 @@ export class Configuration {
 }
 
 /**
+ * Performs a case-insensitive string comparison of a pair of property URIs.
+ * @param {string} value - The URI being tested without case modification
+ * @param {string} expected - The expected value of the URI; should already be in lower case
+ * @returns {boolean}
+ */
+export function uriEquals(value, expected) {
+    return (value != null && expected != null && value.toLowerCase() === expected)
+}
+
+/**
  * Defines the type of behavior that a property on a token utilizies
  * @type {Configuration & {
  *   Number: ConfigurationSettings,
@@ -376,12 +386,12 @@ export const ConditionResistance = new Configuration({
  * }}
  */
 export const AbilityScore = new Configuration({
-    STR: { uri: 'str', name: 'Strength Score', short: 'Strength', dndBeyond: 1, open5e: 'strength' },
-    DEX: { uri: 'dex', name: 'Dexterity Score', short: 'Dexterity', dndBeyond: 2, open5e: 'dexterity' },
-    CON: { uri: 'con', name: 'Constitution Score', short: 'Constitution', dndBeyond: 3, open5e: 'constitution' },
-    INT: { uri: 'int', name: 'Intelligence Score', short: 'Intelligence', dndBeyond: 4, open5e: 'intelligence' },
-    WIS: { uri: 'wis', name: 'Wisdom Score', short: 'Wisdom', dndBeyond: 5, open5e: 'wisdom' },
-    CHA: { uri: 'cha', name: 'Charisma Score', short: 'Charisma', dndBeyond: 6, open5e: 'charisma' },
+    STR: { uri: 'str', name: 'Strength Score', short: 'Strength', dndBeyond: 1, open5e: 'strength', playerSaveExt: 'strength-saving-throws' },
+    DEX: { uri: 'dex', name: 'Dexterity Score', short: 'Dexterity', dndBeyond: 2, open5e: 'dexterity', playerSaveExt: 'dexterity-saving-throws' },
+    CON: { uri: 'con', name: 'Constitution Score', short: 'Constitution', dndBeyond: 3, open5e: 'constitution', playerSaveExt: 'constitution-saving-throws' },
+    INT: { uri: 'int', name: 'Intelligence Score', short: 'Intelligence', dndBeyond: 4, open5e: 'intelligence', playerSaveExt: 'intelligence-saving-throws' },
+    WIS: { uri: 'wis', name: 'Wisdom Score', short: 'Wisdom', dndBeyond: 5, open5e: 'wisdom', playerSaveExt: 'wisdom-saving-throws' },
+    CHA: { uri: 'cha', name: 'Charisma Score', short: 'Charisma', dndBeyond: 6, open5e: 'charisma', playerSaveExt: 'charisma-saving-throws' },
     ArmorClass: { uri: 'ac', name: 'Armor Class', open5e: 'armor_class' },
     ProficiencyBonus: { uri: 'pb', name: 'Proficiency Bonus', open5e: 'proficiency_bonus' },
     Level: { uri: 'level', name: 'Level', open5e: 'challenge_rating' }
@@ -399,12 +409,12 @@ export const AbilityScore = new Configuration({
  * }}
  */
 export const AbilityModifier = new Configuration({
-    STR: { uri: 'modifier:str', name: 'Strength Modifier', score: AbilityScore.STR },
-    DEX: { uri: 'modifier:dex', name: 'Dexterity Modifier', score: AbilityScore.DEX },
-    CON: { uri: 'modifier:con', name: 'Constitution Modifier', score: AbilityScore.CON },
-    INT: { uri: 'modifier:int', name: 'Intelligence Modifier', score: AbilityScore.INT },
-    WIS: { uri: 'modifier:wis', name: 'Wisdom Modifier', score: AbilityScore.WIS },
-    CHA: { uri: 'modifier:cha', name: 'Charisma Modifier', score: AbilityScore.CHA },
+    STR: { uri: 'str:modifier', name: 'Strength Modifier', score: AbilityScore.STR },
+    DEX: { uri: 'dex:modifier', name: 'Dexterity Modifier', score: AbilityScore.DEX },
+    CON: { uri: 'con:modifier', name: 'Constitution Modifier', score: AbilityScore.CON },
+    INT: { uri: 'int:modifier', name: 'Intelligence Modifier', score: AbilityScore.INT },
+    WIS: { uri: 'wis:modifier', name: 'Wisdom Modifier', score: AbilityScore.WIS },
+    CHA: { uri: 'cha:modifier', name: 'Charisma Modifier', score: AbilityScore.CHA },
     Initiative: { uri: 'modifier:initiative', name: 'Initiative', score: AbilityScore.DEX }
 }, { type: PropertyType.Number });
 
@@ -482,15 +492,14 @@ export const SpellTracking = new Configuration({
  * }}
  */
 export const AbilityCheck = new Configuration({
-    Any: { uri: 'check', name: 'Any Ability Check', diceTags: [ 'check' ] },
+    Any: { uri: 'check:any', name: 'Any Ability Check', diceTags: [ 'check' ] },
     STR: { uri: 'check:str', name: 'Strength Check', diceTags: [ 'check', AbilityScore.STR.uri ] },
     DEX: { uri: 'check:dex', name: 'Dexterity Check', diceTags: [ 'check', AbilityScore.DEX.uri ] },
     CON: { uri: 'check:con', name: 'Constitution Check', diceTags: [ 'check', AbilityScore.CON.uri ] },
     INT: { uri: 'check:int', name: 'Intelligence Check', diceTags: [ 'check', AbilityScore.INT.uri ] },
     WIS: { uri: 'check:wis', name: 'Wisdom Check', diceTags: [ 'check', AbilityScore.WIS.uri ] },
-    CHA: { uri: 'check:cha', name: 'Charisma Check', diceTags: [ 'check', AbilityScore.CHA.uri ] },
-    Proficiency: { uri: 'check:pb', name: 'Proficiency Check', diceTags: [ 'check', AbilityScore.ProficiencyBonus.uri ] }
-}, { type: PropertyType.Roll, rollType: RollType.AbilityCheck });
+    CHA: { uri: 'check:cha', name: 'Charisma Check', diceTags: [ 'check', AbilityScore.CHA.uri ] }
+});
 
 /**
  * @type {Configuration & {
@@ -505,87 +514,15 @@ export const AbilityCheck = new Configuration({
  * }}
  */
 export const SavingThrow = new Configuration({
-    Any: { uri: 'save', name: 'Any Saving Throw', diceTags: [ 'save' ] },
+    Any: { uri: 'save:any', name: 'Any Saving Throw', diceTags: [ 'save' ] },
     STR: { uri: 'save:str', name: 'Strength Saving Throw', diceTags: [ 'save', AbilityScore.STR.uri ] },
     DEX: { uri: 'save:dex', name: 'Dexterity Saving Throw', diceTags: [ 'save', AbilityScore.DEX.uri ] },
     CON: { uri: 'save:con', name: 'Constitution Saving Throw', diceTags: [ 'save', AbilityScore.CON.uri ] },
     INT: { uri: 'save:int', name: 'Intelligence Saving Throw', diceTags: [ 'save', AbilityScore.INT.uri ] },
     WIS: { uri: 'save:wis', name: 'Wisdom Saving Throw', diceTags: [ 'save', AbilityScore.WIS.uri ] },
     CHA: { uri: 'save:cha', name: 'Charisma Saving Throw', diceTags: [ 'save', AbilityScore.CHA.uri ] },
-    Death: { uri: 'save:death', name: 'Death Saving Throw', diceTags: [ 'save:death' ] }
-}, { type: PropertyType.Roll, rollType: RollType.SavingThrow });
-
-/**
- * Defines how proficiency for saving throws can be applied
- * @type {Configuration & {
- *   Any: DiceModifierSettings,
- *   STR: DiceModifierSettings,
- *   DEX: DiceModifierSettings,
- *   CON: DiceModifierSettings,
- *   INT: DiceModifierSettings,
- *   WIS: DiceModifierSettings,
- *   CHA: DiceModifierSettings,
- *   Death: DiceModifierSettings
- * }}
- */
-export const SaveProficiency = new Configuration({
-    Any: { uri: 'proficiency:save', name: 'Any Save Proficiency', diceTags: SavingThrow.Any.diceTags },
-    STR: { uri: 'proficiency:save:str', name: 'Strength Save Proficiency', diceTags: SavingThrow.STR.diceTags, playerExt: 'strength-saving-throws' },
-    DEX: { uri: 'proficiency:save:dex', name: 'Dexterity Save Proficiency', diceTags: SavingThrow.DEX.diceTags, playerExt: 'dexterity-saving-throws' },
-    CON: { uri: 'proficiency:save:con', name: 'Constitution Save Proficiency', diceTags: SavingThrow.CON.diceTags, playerExt: 'constitution-saving-throws' },
-    INT: { uri: 'proficiency:save:int', name: 'Intelligence Save Proficiency', diceTags: SavingThrow.INT.diceTags, playerExt: 'intelligence-saving-throws' },
-    WIS: { uri: 'proficiency:save:wis', name: 'Wisdom Save Proficiency', diceTags: SavingThrow.WIS.diceTags, playerExt: 'wisdom-saving-throws' },
-    CHA: { uri: 'proficiency:save:cha', name: 'Charisma Save Proficiency', diceTags: SavingThrow.CHA.diceTags, playerExt: 'charisma-saving-throws' },
-    Death: { uri: 'proficiency:save:death', name: 'Death Save Proficiency', diceTags: SavingThrow.Death.diceTags }
-}, { type: PropertyType.Proficiency });
-
-/**
- * Defines how saving throws can acquire advantage
- * @type {Configuration & {
- *   Any: DiceModifierSettings,
- *   STR: DiceModifierSettings,
- *   DEX: DiceModifierSettings,
- *   CON: DiceModifierSettings,
- *   INT: DiceModifierSettings,
- *   WIS: DiceModifierSettings,
- *   CHA: DiceModifierSettings,
- *   Death: DiceModifierSettings
- * }}
- */
-export const SaveAdvantage = new Configuration({
-    Any: { uri: 'advantage:save', name: 'Any Save Resistance', diceTags: SavingThrow.Any.diceTags },
-    STR: { uri: 'advantage:save:str', name: 'Strength Save Resistance', diceTags: SavingThrow.STR.diceTags, playerExt: 'strength-saving-throws' },
-    DEX: { uri: 'advantage:save:dex', name: 'Dexterity Save Resistance', diceTags: SavingThrow.DEX.diceTags, playerExt: 'dexterity-saving-throws' },
-    CON: { uri: 'advantage:save:con', name: 'Constitution Save Resistance', diceTags: SavingThrow.CON.diceTags, playerExt: 'constitution-saving-throws' },
-    INT: { uri: 'advantage:save:int', name: 'Intelligence Save Resistance', diceTags: SavingThrow.INT.diceTags, playerExt: 'intelligence-saving-throws' },
-    WIS: { uri: 'advantage:save:wis', name: 'Wisdom Save Resistance', diceTags: SavingThrow.WIS.diceTags, playerExt: 'wisdom-saving-throws' },
-    CHA: { uri: 'advantage:save:cha', name: 'Charisma Save Resistance', diceTags: SavingThrow.CHA.diceTags, playerExt: 'charisma-saving-throws' },
-    Death: { uri: 'advantage:save:death', name: 'Death Save Resistance', diceTags: SavingThrow.Death.diceTags }
-}, { type: PropertyType.Advantage });
-
-/**
- * Defines how flat bonuses for saving throws can be applied
- * @type {Configuration & {
- *   Any: DiceModifierSettings,
- *   STR: DiceModifierSettings,
- *   DEX: DiceModifierSettings,
- *   CON: DiceModifierSettings,
- *   INT: DiceModifierSettings,
- *   WIS: DiceModifierSettings,
- *   CHA: DiceModifierSettings,
- *   Death: DiceModifierSettings
- * }}
- */
-export const SaveBonus = new Configuration({
-    Any: { uri: 'bonus:save', name: 'Any Save Bonus', diceTags: SavingThrow.Any.diceTags },
-    STR: { uri: 'bonus:save:str', name: 'Strength Save Bonus', diceTags: SavingThrow.STR.diceTags, playerExt: 'strength-saving-throws' },
-    DEX: { uri: 'bonus:save:dex', name: 'Dexterity Save Bonus', diceTags: SavingThrow.DEX.diceTags, playerExt: 'dexterity-saving-throws' },
-    CON: { uri: 'bonus:save:con', name: 'Constitution Save Bonus', diceTags: SavingThrow.CON.diceTags, playerExt: 'constitution-saving-throws' },
-    INT: { uri: 'bonus:save:int', name: 'Intelligence Save Bonus', diceTags: SavingThrow.INT.diceTags, playerExt: 'intellegence-saving-throws' },
-    WIS: { uri: 'bonus:save:wis', name: 'Wisdom Save Bonus', diceTags: SavingThrow.WIS.diceTags, playerExt: 'wisdom-saving-throws' },
-    CHA: { uri: 'bonus:save:cha', name: 'Charisma Save Bonus', diceTags: SavingThrow.CHA.diceTags, playerExt: 'charisma-saving-throws' },
-    Death: { uri: 'bonus:save:death', name: 'Death Save Bonus', diceTags: SavingThrow.Death.diceTags }
-}, { type: PropertyType.Number });
+    Death: { uri: 'save:death', name: 'Death Saving Throw', diceTags: [ 'save', 'death' ] }
+});
 
 /**
  * Proficiency and critical are omitted from this configuration because skill checks follow the default which is true.
@@ -618,215 +555,34 @@ export const SaveBonus = new Configuration({
  * }}
  */
 export const SkillCheck = new Configuration({
-    Any: { uri: 'skill', name: 'Any Skill Check', diceTags: [ 'skill' ] },
+    Any: { uri: 'skill:any', name: 'Any Skill Check', diceTags: [ 'skill' ] },
 
-    STR: { uri: 'skill:str', name: 'Strength Skill Check', ability: AbilityScore.STR, diceTags: [ 'skill', AbilityScore.STR.uri ] },
-    DEX: { uri: 'skill:dex', name: 'Dexterity Skill Check', ability: AbilityScore.DEX, diceTags: [ 'skill', AbilityScore.DEX.uri ] },
-    CON: { uri: 'skill:con', name: 'Constitution Skill Check', ability: AbilityScore.CON, diceTags: [ 'skill', AbilityScore.CON.uri ] },
-    WIS: { uri: 'skill:wis', name: 'Wisdom Skill Check', ability: AbilityScore.WIS, diceTags: [ 'skill', AbilityScore.WIS.uri ] },
-    INT: { uri: 'skill:int', name: 'Intellegence Skill Check', ability: AbilityScore.INT, diceTags: [ 'skill', AbilityScore.INT.uri ] },
-    CHA: { uri: 'skill:cha', name: 'Charisma Skill Check', ability: AbilityScore.CHA, diceTags: [ 'skill', AbilityScore.CHA.uri ] },
+    STR: { uri: 'skill:str', name: 'Strength Skill Check', diceTags: [ 'skill', AbilityScore.STR.uri ] },
+    DEX: { uri: 'skill:dex', name: 'Dexterity Skill Check', diceTags: [ 'skill', AbilityScore.DEX.uri ] },
+    CON: { uri: 'skill:con', name: 'Constitution Skill Check', diceTags: [ 'skill', AbilityScore.CON.uri ] },
+    WIS: { uri: 'skill:wis', name: 'Wisdom Skill Check', diceTags: [ 'skill', AbilityScore.WIS.uri ] },
+    INT: { uri: 'skill:int', name: 'Intellegence Skill Check', diceTags: [ 'skill', AbilityScore.INT.uri ] },
+    CHA: { uri: 'skill:cha', name: 'Charisma Skill Check', diceTags: [ 'skill', AbilityScore.CHA.uri ] },
 
-    Acrobatics: { uri: 'skill:acrobatics', name: 'Acrobatics', ability: AbilityScore.DEX, diceTags: [ 'skill:acrobatics' ] },
-    AnimalHandling: { uri: 'skill:animal_handling', name: 'Animal Handling', ability: AbilityScore.WIS, diceTags: [ 'skill:animal_handling' ] },
-    Arcana: { uri: 'skill:arcana', name: 'Arcana', ability: AbilityScore.INT, diceTags: [ 'skill:arcana' ] },
-    Athletics: { uri: 'skill:athletics', name: 'Athletics', ability: AbilityScore.STR, diceTags: [ 'skill:athletics' ] },
-    Deception: { uri: 'skill:deception', name: 'Deception', ability: AbilityScore.CHA, diceTags: [ 'skill:deception' ] },
-    History: { uri: 'skill:history', name: 'History', ability: AbilityScore.INT, diceTags: [ 'skill:history' ] },
-    Insight: { uri: 'skill:insight', name: 'Insight', ability: AbilityScore.WIS, diceTags: [ 'skill:insight' ] },
-    Intimidation: { uri: 'skill:intimidation', name: 'Intimidation', ability: AbilityScore.CHA, diceTags: [ 'skill:intimidation' ] },
-    Investigation: { uri: 'skill:investigation', name: 'Investigation', ability: AbilityScore.INT, diceTags: [ 'skill:investigation' ] },
-    Medicine: { uri: 'skill:medicine', name: 'Medicine', ability: AbilityScore.WIS, diceTags: [ 'skill:medicine' ] },
-    Nature: { uri: 'skill:nature', name: 'Nature', ability: AbilityScore.INT, diceTags: [ 'skill:nature' ] },
-    Perception: { uri: 'skill:perception', name: 'Perception', ability: AbilityScore.WIS, diceTags: [ 'skill:perception' ] },
-    Performance: { uri: 'skill:performance', name: 'Performance', ability: AbilityScore.CHA, diceTags: [ 'skill:performance' ] },
-    Persuasion: { uri: 'skill:persuasion', name: 'Persuasion', ability: AbilityScore.CHA, diceTags: [ 'skill:persuasion' ] },
-    Religion: { uri: 'skill:religion', name: 'Religion', ability: AbilityScore.INT, diceTags: [ 'skill:religion' ] },
-    SleightOfHand: { uri: 'skill:sleight_of_hand', name: 'Sleight of Hand', ability: AbilityScore.DEX, diceTags: [ 'skill:sleight_of_hand' ] },
-    Stealth: { uri: 'skill:stealth', name: 'Stealth', ability: AbilityScore.DEX, diceTags: [ 'skill:stealth' ] },
-    Survival: { uri: 'skill:survival', name: 'Survival', ability: AbilityScore.WIS, diceTags: [ 'skill:survival' ] }
-}, { type: PropertyType.Roll, rollType: RollType.SkillCheck });
-
-/**
- * Defines how proficiency for skill checks can be applied
- * @type {Configuration & {
- *   Any: DiceModifierSettings,
- *   STR: DiceModifierSettings,
- *   DEX: DiceModifierSettings,
- *   CON: DiceModifierSettings,
- *   WIS: DiceModifierSettings,
- *   INT: DiceModifierSettings,
- *   CHA: DiceModifierSettings,
- *   Acrobatics: DiceModifierSettings,
- *   AnimalHandling: DiceModifierSettings,
- *   Arcana: DiceModifierSettings,
- *   Athletics: DiceModifierSettings,
- *   Deception: DiceModifierSettings,
- *   History: DiceModifierSettings,
- *   Insight: DiceModifierSettings,
- *   Intimidation: DiceModifierSettings,
- *   Investigation: DiceModifierSettings,
- *   Medicine: DiceModifierSettings,
- *   Nature: DiceModifierSettings,
- *   Perception: DiceModifierSettings,
- *   Performance: DiceModifierSettings,
- *   Persuasion: DiceModifierSettings,
- *   Religion: DiceModifierSettings,
- *   SleightOfHand: DiceModifierSettings,
- *   Stealth: DiceModifierSettings,
- *   Survival: DiceModifierSettings
- * }}
- */
-export const SkillProficiency = new Configuration({
-    Any: { uri: 'proficiency:skill', name: 'Any Skill Proficiency', diceTags: SkillCheck.Any.diceTags },
-
-    STR: { uri: 'proficiency:skill:str', name: 'Strength Skill Proficiency', diceTags: SkillCheck.STR.diceTags },
-    DEX: { uri: 'proficiency:skill:dex', name: 'Dexterity Skill Proficiency', diceTags: SkillCheck.DEX.diceTags },
-    CON: { uri: 'proficiency:skill:con', name: 'Constitution Skill Proficiency', diceTags: SkillCheck.CON.diceTags },
-    WIS: { uri: 'proficiency:skill:wis', name: 'Wisdom Skill Proficiency', diceTags: SkillCheck.WIS.diceTags },
-    INT: { uri: 'proficiency:skill:int', name: 'Intellegence Skill Proficiency', diceTags: SkillCheck.INT.diceTags },
-    CHA: { uri: 'proficiency:skill:cha', name: 'Charisma Skill Proficiency', diceTags: SkillCheck.CHA.diceTags },
-
-    Acrobatics: { uri: 'proficiency:skill:acrobatics', name: 'Acrobatics Proficiency', diceTags: SkillCheck.Acrobatics.diceTags, open5e: 'acrobatics', dndBeyond: 3, player: 'acrobatics' },
-    AnimalHandling: { uri: 'proficiency:skill:animal_handling', name: 'Animal Handling Proficiency', diceTags: SkillCheck.AnimalHandling.diceTags, open5e: 'animal_handling', dndBeyond: 11, player: 'animal handling' },
-    Arcana: { uri: 'proficiency:skill:arcana', name: 'Arcana Proficiency', diceTags: SkillCheck.Arcana.diceTags, open5e: 'arcana', dndBeyond: 6, player: 'arcana' },
-    Athletics: { uri: 'proficiency:skill:athletics', name: 'Athletics Proficiency', diceTags: SkillCheck.Athletics.diceTags, open5e: 'athletics', dndBeyond: 2, player: 'athletics' },
-    Deception: { uri: 'proficiency:skill:deception', name: 'Deception Proficiency', diceTags: SkillCheck.Deception.diceTags, open5e: 'deception', dndBeyond: 16, player: 'deception' },
-    History: { uri: 'proficiency:skill:history', name: 'History Proficiency', diceTags: SkillCheck.History.diceTags, open5e: 'history', dndBeyond: 7, player: 'history' },
-    Insight: { uri: 'proficiency:skill:insight', name: 'Insight Proficiency', diceTags: SkillCheck.Insight.diceTags, open5e: 'insight', dndBeyond: 12, player: 'insight' },
-    Intimidation: { uri: 'proficiency:skill:intimidation', name: 'Intimidation Proficiency', diceTags: SkillCheck.Intimidation.diceTags, open5e: 'intimidation', dndBeyond: 17, player: 'intimidation' },
-    Investigation: { uri: 'proficiency:skill:investigation', name: 'Investigation Proficiency', diceTags: SkillCheck.Investigation.diceTags, open5e: 'investigation', dndBeyond: 8, player: 'investigation' },
-    Medicine: { uri: 'proficiency:skill:medicine', name: 'Medicine Proficiency', diceTags: SkillCheck.Medicine.diceTags, open5e: 'medicine', dndBeyond: 13, player: 'medicine' },
-    Nature: { uri: 'proficiency:skill:nature', name: 'Nature Proficiency', diceTags: SkillCheck.Nature.diceTags, open5e: 'nature', dndBeyond: 9, player: 'nature' },
-    Perception: { uri: 'proficiency:skill:perception', name: 'Perception Proficiency', diceTags: SkillCheck.Perception.diceTags, open5e: 'perception', dndBeyond: 14, player: 'perception' },
-    Performance: { uri: 'proficiency:skill:performance', name: 'Performance Proficiency', diceTags: SkillCheck.Performance.diceTags, open5e: 'performance', dndBeyond: 18, player: 'performance' },
-    Persuasion: { uri: 'proficiency:skill:persuasion', name: 'Persuasion Proficiency', diceTags: SkillCheck.Persuasion.diceTags, open5e: 'persuasion', dndBeyond: 19, player: 'persuasion' },
-    Religion: { uri: 'proficiency:skill:religion', name: 'Religion Proficiency', diceTags: SkillCheck.Religion.diceTags, open5e: 'religion', dndBeyond: 10, player: 'religion' },
-    SleightOfHand: { uri: 'proficiency:skill:sleight_of_hand', name: 'Sleight of Hand Proficiency', diceTags: SkillCheck.SleightOfHand.diceTags, open5e: 'sleight_of_hand', dndBeyond: 4, player: 'sleight of hand' },
-    Stealth: { uri: 'proficiency:skill:stealth', name: 'Stealth Proficiency', diceTags: SkillCheck.Stealth.diceTags, open5e: 'stealth', dndBeyond: 5, player: 'stealth' },
-    Survival: { uri: 'proficiency:skill:survival', name: 'Survival Proficiency', diceTags: SkillCheck.Survival.diceTags, open5e: 'survival', dndBeyond: 15, player: 'survival' }
-}, { type: PropertyType.Proficiency });
-
-/**
- * Defines how advantage for skill checks can be applied
- * @type {Configuration & {
- *   Any: DiceModifierSettings,
- *   STR: DiceModifierSettings,
- *   DEX: DiceModifierSettings,
- *   CON: DiceModifierSettings,
- *   WIS: DiceModifierSettings,
- *   INT: DiceModifierSettings,
- *   CHA: DiceModifierSettings,
- *   Acrobatics: DiceModifierSettings,
- *   AnimalHandling: DiceModifierSettings,
- *   Arcana: DiceModifierSettings,
- *   Athletics: DiceModifierSettings,
- *   Deception: DiceModifierSettings,
- *   History: DiceModifierSettings,
- *   Insight: DiceModifierSettings,
- *   Intimidation: DiceModifierSettings,
- *   Investigation: DiceModifierSettings,
- *   Medicine: DiceModifierSettings,
- *   Nature: DiceModifierSettings,
- *   Perception: DiceModifierSettings,
- *   Performance: DiceModifierSettings,
- *   Persuasion: DiceModifierSettings,
- *   Religion: DiceModifierSettings,
- *   SleightOfHand: DiceModifierSettings,
- *   Stealth: DiceModifierSettings,
- *   Survival: DiceModifierSettings
- * }}
- */
-export const SkillAdvantage = new Configuration({
-    Any: { uri: 'advantage:skill', name: 'Any Skill Advantage', diceTags: SkillCheck.Any.diceTags },
-
-    STR: { uri: 'advantage:skill:str', name: 'Strength Skill Advantage', diceTags: SkillCheck.STR.diceTags },
-    DEX: { uri: 'advantage:skill:dex', name: 'Dexterity Skill Advantage', diceTags: SkillCheck.DEX.diceTags },
-    CON: { uri: 'advantage:skill:con', name: 'Constitution Skill Advantage', diceTags: SkillCheck.CON.diceTags },
-    WIS: { uri: 'advantage:skill:wis', name: 'Wisdom Skill Advantage', diceTags: SkillCheck.WIS.diceTags },
-    INT: { uri: 'advantage:skill:int', name: 'Intellegence Skill Advantage', diceTags: SkillCheck.INT.diceTags },
-    CHA: { uri: 'advantage:skill:cha', name: 'Charisma Skill Advantage', diceTags: SkillCheck.CHA.diceTags },
-
-    Acrobatics: { uri: 'advantage:skill:acrobatics', name: 'Acrobatics Advantage', diceTags: SkillCheck.Acrobatics.diceTags },
-    AnimalHandling: { uri: 'advantage:skill:animal_handling', name: 'Animal Handling Advantage', diceTags: SkillCheck.AnimalHandling.diceTags },
-    Arcana: { uri: 'advantage:skill:arcana', name: 'Arcana Advantage', diceTags: SkillCheck.Arcana.diceTags },
-    Athletics: { uri: 'advantage:skill:athletics', name: 'Athletics Advantage', diceTags: SkillCheck.Athletics.diceTags },
-    Deception: { uri: 'advantage:skill:deception', name: 'Deception Advantage', diceTags: SkillCheck.Deception.diceTags },
-    History: { uri: 'advantage:skill:history', name: 'History Advantage', diceTags: SkillCheck.History.diceTags },
-    Insight: { uri: 'advantage:skill:insight', name: 'Insight Advantage', diceTags: SkillCheck.Insight.diceTags },
-    Intimidation: { uri: 'advantage:skill:intimidation', name: 'Intimidation Advantage', diceTags: SkillCheck.Intimidation.diceTags },
-    Investigation: { uri: 'advantage:skill:investigation', name: 'Investigation Advantage', diceTags: SkillCheck.Investigation.diceTags },
-    Medicine: { uri: 'advantage:skill:medicine', name: 'Medicine Advantage', diceTags: SkillCheck.Medicine.diceTags },
-    Nature: { uri: 'advantage:skill:nature', name: 'Nature Advantage', diceTags: SkillCheck.Nature.diceTags },
-    Perception: { uri: 'advantage:skill:perception', name: 'Perception Advantage', diceTags: SkillCheck.Perception.diceTags },
-    Performance: { uri: 'advantage:skill:performance', name: 'Performance Advantage', diceTags: SkillCheck.Performance.diceTags },
-    Persuasion: { uri: 'advantage:skill:persuasion', name: 'Persuasion Advantage', diceTags: SkillCheck.Persuasion.diceTags },
-    Religion: { uri: 'advantage:skill:religion', name: 'Religion Advantage', diceTags: SkillCheck.Religion.diceTags },
-    SleightOfHand: { uri: 'advantage:skill:sleight_of_hand', name: 'Sleight of Hand Advantage', diceTags: SkillCheck.SleightOfHand.diceTags },
-    Stealth: { uri: 'advantage:skill:stealth', name: 'Stealth Advantage', diceTags: SkillCheck.Stealth.diceTags },
-    Survival: { uri: 'advantage:skill:survival', name: 'Survival Advantage', diceTags: SkillCheck.Survival.diceTags }
-}, { type: PropertyType.Advantage });
-
-
-/**
- * Defines how bonuses for skill checks can be applied
- * @type {Configuration & {
- *   Any: DiceModifierSettings,
- *   STR: DiceModifierSettings,
- *   DEX: DiceModifierSettings,
- *   CON: DiceModifierSettings,
- *   WIS: DiceModifierSettings,
- *   INT: DiceModifierSettings,
- *   CHA: DiceModifierSettings,
- *   Acrobatics: DiceModifierSettings,
- *   AnimalHandling: DiceModifierSettings,
- *   Arcana: DiceModifierSettings,
- *   Athletics: DiceModifierSettings,
- *   Deception: DiceModifierSettings,
- *   History: DiceModifierSettings,
- *   Insight: DiceModifierSettings,
- *   Intimidation: DiceModifierSettings,
- *   Investigation: DiceModifierSettings,
- *   Medicine: DiceModifierSettings,
- *   Nature: DiceModifierSettings,
- *   Perception: DiceModifierSettings,
- *   Performance: DiceModifierSettings,
- *   Persuasion: DiceModifierSettings,
- *   Religion: DiceModifierSettings,
- *   SleightOfHand: DiceModifierSettings,
- *   Stealth: DiceModifierSettings,
- *   Survival: DiceModifierSettings
- * }}
- */
-export const SkillBonus = new Configuration({
-    Any: { uri: 'bonus:skill', name: 'Any Skill Bonus', diceTags: SkillCheck.Any.diceTags },
-
-    STR: { uri: 'bonus:skill:str', name: 'Strength Skill Bonus', diceTags: SkillCheck.STR.diceTags },
-    DEX: { uri: 'bonus:skill:dex', name: 'Dexterity Skill Bonus', diceTags: SkillCheck.DEX.diceTags },
-    CON: { uri: 'bonus:skill:con', name: 'Constitution Skill Bonus', diceTags: SkillCheck.CON.diceTags },
-    WIS: { uri: 'bonus:skill:wis', name: 'Wisdom Skill Bonus', diceTags: SkillCheck.WIS.diceTags },
-    INT: { uri: 'bonus:skill:int', name: 'Intellegence Skill Bonus', diceTags: SkillCheck.INT.diceTags },
-    CHA: { uri: 'bonus:skill:cha', name: 'Charisma Skill Bonus', diceTags: SkillCheck.CHA.diceTags },
-
-    Acrobatics: { uri: 'bonus:skill:acrobatics', name: 'Acrobatics Bonus', diceTags: SkillCheck.Acrobatics.diceTags },
-    AnimalHandling: { uri: 'bonus:skill:animal_handling', name: 'Animal Handling Bonus', diceTags: SkillCheck.AnimalHandling.diceTags },
-    Arcana: { uri: 'bonus:skill:arcana', name: 'Arcana Bonus', diceTags: SkillCheck.Arcana.diceTags },
-    Athletics: { uri: 'bonus:skill:athletics', name: 'Athletics Bonus', diceTags: SkillCheck.Athletics.diceTags },
-    Deception: { uri: 'bonus:skill:deception', name: 'Deception Bonus', diceTags: SkillCheck.Deception.diceTags },
-    History: { uri: 'bonus:skill:history', name: 'History Bonus', diceTags: SkillCheck.History.diceTags },
-    Insight: { uri: 'bonus:skill:insight', name: 'Insight Bonus', diceTags: SkillCheck.Insight.diceTags },
-    Intimidation: { uri: 'bonus:skill:intimidation', name: 'Intimidation Bonus', diceTags: SkillCheck.Intimidation.diceTags },
-    Investigation: { uri: 'bonus:skill:investigation', name: 'Investigation Bonus', diceTags: SkillCheck.Investigation.diceTags },
-    Medicine: { uri: 'bonus:skill:medicine', name: 'Medicine Bonus', diceTags: SkillCheck.Medicine.diceTags },
-    Nature: { uri: 'bonus:skill:nature', name: 'Nature Bonus', diceTags: SkillCheck.Nature.diceTags },
-    Perception: { uri: 'bonus:skill:perception', name: 'Perception Bonus', diceTags: SkillCheck.Perception.diceTags },
-    Performance: { uri: 'bonus:skill:performance', name: 'Performance Bonus', diceTags: SkillCheck.Performance.diceTags },
-    Persuasion: { uri: 'bonus:skill:persuasion', name: 'Persuasion Bonus', diceTags: SkillCheck.Persuasion.diceTags },
-    Religion: { uri: 'bonus:skill:religion', name: 'Religion Bonus', diceTags: SkillCheck.Religion.diceTags },
-    SleightOfHand: { uri: 'bonus:skill:sleight_of_hand', name: 'Sleight of Hand Bonus', diceTags: SkillCheck.SleightOfHand.diceTags },
-    Stealth: { uri: 'bonus:skill:stealth', name: 'Stealth Bonus', diceTags: SkillCheck.Stealth.diceTags },
-    Survival: { uri: 'bonus:skill:survival', name: 'Survival Bonus', diceTags: SkillCheck.Survival.diceTags }
-}, { type: PropertyType.Number });
+    Acrobatics: { uri: 'acrobatics', name: 'Acrobatics', diceTags: [ 'skill', 'acrobatics' ], open5e: 'acrobatics', dndBeyond: 3, player: 'acrobatics' },
+    AnimalHandling: { uri: 'animal_handling', name: 'Animal Handling', diceTags: [ 'skill', 'animal_handling' ], open5e: 'animal_handling', dndBeyond: 11, player: 'animal handling' },
+    Arcana: { uri: 'arcana', name: 'Arcana', diceTags: [ 'skill', 'arcana' ], open5e: 'arcana', dndBeyond: 6, player: 'arcana' },
+    Athletics: { uri: 'athletics', name: 'Athletics', diceTags: [ 'skill', 'athletics' ], open5e: 'athletics', dndBeyond: 2, player: 'athletics' },
+    Deception: { uri: 'deception', name: 'Deception', diceTags: [ 'skill', 'deception' ], open5e: 'deception', dndBeyond: 16, player: 'deception' },
+    History: { uri: 'history', name: 'History', diceTags: [ 'skill', 'history' ], open5e: 'history', dndBeyond: 7, player: 'history' },
+    Insight: { uri: 'insight', name: 'Insight', diceTags: [ 'skill', 'insight' ], open5e: 'insight', dndBeyond: 12, player: 'insight' },
+    Intimidation: { uri: 'intimidation', name: 'Intimidation', diceTags: [ 'skill', 'intimidation' ], open5e: 'intimidation', dndBeyond: 17, player: 'intimidation' },
+    Investigation: { uri: 'investigation', name: 'Investigation', diceTags: [ 'skill', 'investigation' ], open5e: 'investigation', dndBeyond: 8, player: 'investigation' },
+    Medicine: { uri: 'medicine', name: 'Medicine', diceTags: [ 'skill', 'medicine' ], open5e: 'medicine', dndBeyond: 13, player: 'medicine' },
+    Nature: { uri: 'nature', name: 'Nature', diceTags: [ 'skill', 'nature' ], open5e: 'nature', dndBeyond: 9, player: 'nature' },
+    Perception: { uri: 'perception', name: 'Perception', diceTags: [ 'skill', 'perception' ], open5e: 'perception', dndBeyond: 14, player: 'perception' },
+    Performance: { uri: 'performance', name: 'Performance', diceTags: [ 'skill', 'performance' ], open5e: 'performance', dndBeyond: 18, player: 'performance' },
+    Persuasion: { uri: 'persuasion', name: 'Persuasion', diceTags: [ 'skill', 'persuasion' ], open5e: 'persuasion', dndBeyond: 19, player: 'persuasion' },
+    Religion: { uri: 'religion', name: 'Religion', diceTags: [ 'skill', 'religion' ], open5e: 'religion', dndBeyond: 10, player: 'religion' },
+    SleightOfHand: { uri: 'sleight_of_hand', name: 'Sleight of Hand', diceTags: [ 'skill', 'sleight_of_hand' ], open5e: 'sleight_of_hand', dndBeyond: 4, player: 'sleight of hand' },
+    Stealth: { uri: 'stealth', name: 'Stealth', diceTags: [ 'skill', 'stealth' ], open5e: 'stealth', dndBeyond: 5, player: 'stealth' },
+    Survival: { uri: 'survival', name: 'Survival', diceTags: [ 'skill', 'survival' ], open5e: 'survival', dndBeyond: 15, player: 'survival' }
+});
 
 /**
  * @type {Configuration & {
@@ -856,9 +612,7 @@ function buildPropertyIndex() {
         DamageResistance, ConditionType, ConditionResistance,
         AbilityScore, AbilityModifier, AbilityCheck,
         HitPoint, SpellTracking, AbilityConstraints, 
-        SavingThrow, SaveProficiency, SaveAdvantage, SaveBonus,
-        SkillCheck, SkillProficiency, SkillAdvantage, SkillBonus,
-        Speed
+        SavingThrow, SkillCheck, Speed
     ];
 
     const index = {};

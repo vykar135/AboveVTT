@@ -1,0 +1,343 @@
+import { uriEquals } from "./CoreEnums.mjs";
+
+/** Forces any tokens from all global token stores for the specified identifier to rebuild */
+export function refreshStatBlock(id) {
+    if (id == null) {
+        return;
+    }
+
+    refreshGlobalStatBlock(window.TOKEN_OBJECTS, id);
+    refreshGlobalStatBlock(window.all_token_objects, id);
+}
+
+/** Forces any tokens for the specified identifier to rebuild */
+function refreshGlobalStatBlock(tokens, id) {
+    for (const token of Object.values(tokens)) {
+        if (token.options.id === id) {
+            token.stats.rebuild();
+        }
+    }
+}
+
+// #region Player Character Sheets
+
+/** Forces any tokens from all global token stores that implement the specified player character sheet to rebuild */
+export function refreshPlayerSheets(player) {
+    if (player == null) {
+        return;
+    }
+
+    refreshGlobalPlayerSheets(window.TOKEN_OBJECTS, player);
+    refreshGlobalPlayerSheets(window.all_token_objects, player);
+}
+
+/** Forces any tokens that implement the specified player character sheet to rebuild */
+function refreshGlobalPlayerSheets(tokens, player) {
+    for (const token of Object.values(tokens)) {
+        if (token.options.sheet === player) {
+            token.stats.rebuild();
+        }
+    }
+}
+
+/** Forces any tokens from all global token stores that implement the specified extended player character sheet to rebuild */
+export function refreshPlayerExtended(player) {
+    if (player == null) {
+        return;
+    }
+
+    const asNumber = (typeof player === 'number') ? player : parseInt(player);
+    const asString = player.toString();
+
+    refreshGlobalPlayerExtended(window.TOKEN_OBJECTS, asNumber, asString);
+    refreshGlobalPlayerExtended(window.all_token_objects, asNumber, asString);
+}
+
+/** Forces any tokens that implement the specified extended player character sheet to rebuild */
+function refreshGlobalPlayerExtended(tokens, asNumber, asString) {
+    for (const token of Object.values(tokens)) {
+        if (token.options.characterId === asNumber || token.options.characterId === asString) {
+            token.stats.rebuild();
+        }
+    }
+}
+
+/** Cache of v5 character sheets */
+const playerSheetsExt = {};
+
+/** Loads the cache of extended player character sheets for the provided identifier */
+export function fetchPlayerExtendedSheet(id) {
+    if (typeof id === 'number') {
+        id = id.toString();
+    }
+
+    const owner = (window.DM || window.characterData?.id?.toString() === (id ?? ''));
+    if (!owner || id == null || typeof id !== 'string' || id.trim().length <= 1) {
+        return undefined;
+    }
+
+    if (id in playerSheetsExt) {
+        return playerSheetsExt[id].sheet;
+    }
+
+    const loader = { loading: true, failed: false, sheet: undefined };
+    playerSheetsExt[id] = loader;
+
+    if (window.characterData?.id?.toString() == id) {
+        loader.sheet = window.characterData;
+        return loader.sheet;
+    }
+
+    DDBApi.fetchCharacter(id).then((payload) => {
+        loader.sheet = payload;
+        refreshPlayerExtended(id);
+    }).catch((error) => {
+        loader.failed = true;
+        console.error(`Failed to load extended player character sheet ${id}`, error);
+    }).finally(() => {
+        loader.loading = false
+    });
+
+    return loader.sheet;
+}
+
+// #endregion
+
+// #region Open 5e
+
+/** Forces any tokens from all global token stores that implement the specified D&D Beyond monster stat block to rebuild */
+export function refreshOpen5eStatBlocks(monster) {
+    if (monster == null) {
+        return;
+    }
+    
+    monster = monster.toLowerCase();
+    refreshOpen5eMonsterStats(window.TOKEN_OBJECTS, monster);
+    refreshOpen5eMonsterStats(window.all_token_objects, monster);
+}
+
+/** Forces any tokens that implement the specified Beyond monster stat block to rebuild */
+function refreshOpen5eMonsterStats(tokens, monster) {
+    for (const token of Object.values(tokens)) {
+        if (uriEquals(token.options.itemType, 'open5e') && uriEquals(token.options.itemId, monster)) {
+            token.stats.rebuild();
+        }
+    }
+}
+
+const open5eCreatures = {};
+
+/** Retrieves the common Open 5E stat block if the token is an instance of one */
+export function fetchOpen5eSheetForToken(token) {
+    if (!uriEquals(token.options?.itemType, 'open5e') || token.options?.itemId == null){
+        return null;
+    }
+
+    return fetchOpen5eSheet(token.options.itemId);
+}
+
+/** Loads the cache of Open 5E creature stat blocks for the provided key */
+export function fetchOpen5eSheet(key) {
+    key = key?.toLowerCase();
+    if (key == null) {
+        return undefined;
+    }
+
+    if (key in open5eCreatures) {
+        return open5eCreatures[key].sheet;
+    }
+
+    const loader = { loading: true, failed: false, sheet: undefined };
+    open5eCreatures[key] = loader;
+
+    // We are doing single lookups here because any fragility with the API calls
+    // should not prevent entire batches from loading and this is only reacting
+    // to tokens within the campaign
+    let url = `https://api.open5e.com/v2/creatures/?key__in=${key}&limit=1`
+    fetch(url).then((response) => {
+        if (!response.ok) {
+            throw new Error(`Failed to load Open5e creature stat block ${key} with status code ${response.status}`);
+        }
+
+        return response.json();
+    }).then((payload) => {
+        loader.sheet = payload?.results?.find(entry => uriEquals(entry.key, key));
+        refreshOpen5eStatBlocks(key);
+    }).catch((error) => {
+        loader.failed = true;
+        console.error(`Failed to load Open5e creature stat block ${key}`, error);
+    }).finally(() => loader.loading = false);
+
+    return undefined;
+}
+
+// #endregion
+
+// #region D&D Beyond Monsters
+
+const beyondCreatures = {
+    sheets: {},
+    pending: new Set(),
+    timer: undefined,
+    delay: 2000 // Initial wait delay while the VTT loads
+};
+
+/** Forces any tokens from all global token stores that implement the specified D&D Beyond monster stat block to rebuild */
+export function refreshMonsterStatBlocks(monster) {
+    if (monster == null) {
+        return;
+    }
+
+    refreshGlobalMonsterStats(window.TOKEN_OBJECTS, monster);
+    refreshGlobalMonsterStats(window.all_token_objects, monster);
+}
+
+/** Forces any tokens that implement the specified Beyond monster stat block to rebuild */
+function refreshGlobalMonsterStats(tokens, monster) {
+    for (const token of Object.values(tokens)) {
+        if (token.options.monster === monster) {
+            token.stats.rebuild();
+        }
+    }
+}
+
+/**
+ * Loads the cache of D&D Beyond creature stat blocks for the provided token
+ * @param {Token} token - The token to retrieve the monster stat block for.
+ */
+export function fetchBeyondSheetForToken(token) {
+    const itemType = token?.options?.itemType?.toLowerCase();
+    if (itemType !== 'monster') {
+        return undefined;
+    }
+
+    const monster = token.options.monster ?? token.options.itemId;
+    if (monster == null){
+        return undefined;
+    }
+
+    return fetchBeyondSheet(monster);
+}
+
+/**
+ * Loads the cache of D&D Beyond creature stat blocks for the provided identifier
+ * @param {number | undefined} monster - The identifier of the monster to retrieve.
+ */
+export function fetchBeyondSheet(monster) {
+    if (monster == null) {
+        return undefined;
+    }
+
+    if (monster in beyondCreatures.sheets) {
+        const requested = beyondCreatures.sheets[monster];
+        if (requested.sheet !== undefined) {
+            return requested.sheet;
+        }
+
+        const fromCache = cached_monster_items[monster]?.monsterData;
+        if (fromCache !== undefined) {
+            beyondCreatures.pending.delete(monster);
+            if (beyondCreatures.pending.size === 0 && beyondCreatures.timer !== undefined) {
+                window.clearTimeout(beyondCreatures.timer);
+                beyondCreatures.timer = undefined;
+            }
+
+            requested.sheet = fromCache;
+            requested.loading = false;
+            requested.failed = false;
+        }
+
+        return requested.sheet;
+    }
+
+    const fromCache = cached_monster_items[monster]?.monsterData;
+    const loader = { loading: true, failed: false, sheet: fromCache };
+    beyondCreatures.sheets[monster] = loader;
+
+    if (fromCache != null) {
+        return fromCache;
+    }
+
+    appendPendingBeyondMonster(monster);
+    return undefined;
+}
+
+/** Adds a monster to the pending queue and starts the wait timer to give the existing caches time if needed */
+function appendPendingBeyondMonster(monster) {
+    beyondCreatures.pending.add(monster);
+
+    if (beyondCreatures.timer === undefined) {
+        beyondCreatures.timer = window.setTimeout(fetchPendingBeyondSheets, beyondCreatures.delay);
+    }
+}
+
+/** Loads the cache of D&D Beyond creature stat blocks for any currently pending keys */
+function fetchPendingBeyondSheets() {
+    if (window.LOADING === true) {
+        beyondCreatures.timer = window.setTimeout(fetchPendingBeyondSheets, beyondCreatures.delay);
+        return;
+    }
+
+    const reviewing = new Set(beyondCreatures.pending.values());
+    beyondCreatures.pending.clear();
+    beyondCreatures.timer = undefined;
+
+    const updating = [];
+    for (const key of reviewing.values()) {
+        const requested = beyondCreatures.sheets[key];
+        if (requested.sheet !== undefined) {
+            continue;
+        }
+
+        const fromCache = cached_monster_items[key]?.monsterData;
+        if (fromCache !== undefined) {
+            requested.sheet = fromCache;
+            requested.loading = false;
+            requested.failed = false;
+            continue;
+        }
+
+        updating.push(key);
+    }
+
+    if (updating.length === 0) {
+        return;
+    }
+
+    const individual = () => {
+        for (const monster of updating) {
+            const target = beyondCreatures.sheets[monster];
+
+            DDBApi.fetchMonsters([monster]).then((response) => {
+                target.sheet = response?.find(entry => entry.id === monster);
+                target.failed = false;
+                refreshMonsterStatBlocks(monster);
+            }).catch((error) => {
+                target.failed = true;
+                console.error(`Failed to load D&D Beyond creature stat block ${monster}`, error);
+            }).finally(() => target.loading = false);
+        }
+    }
+
+    // Attempt a batch fetch first but if it fails roll over to the indivual fetch
+    DDBApi.fetchMonsters(updating).then((response) => {
+        for (const monster of updating) {
+            const target = beyondCreatures.sheets[monster];
+            target.sheet = response?.find(entry => entry.id === monster);
+            target.failed = false;
+            target.loading = false
+            refreshMonsterStatBlocks(monster);
+        }
+    }).catch((error) => {
+        console.error('Batch retrieval of D&D Beyond monster sheet failed; rolling over to individual lookups', error);
+        individual();
+    });
+}
+
+// #endregion
+
+// Addressing compatibility issues
+window.refreshTokenStats = refreshStatBlock;
+window.refreshPlayerTokenStats = refreshPlayerSheets;
+window.refreshMonsterTokenStats = refreshMonsterStatBlocks;
+window.refreshOpen5eTokenStats = refreshOpen5eStatBlocks;

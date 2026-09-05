@@ -1,18 +1,20 @@
 /** @import { TokenHitPointInfo } from './Token.types.js' */
 
 import { HitPoint } from "./CoreEnums.mjs";
+import NumericStatTracker from "./NumericStatTracker.mjs";
 import StatBlock from "./StatBlock.mjs";
 
 /** Assists with the management of the various types of hit points for a token */
 export default class HitPointBlock {
-    /** @type {StatBlock} */
     #statBlock;
+    #maximum;
 
     /**
      * @param {StatBlock} stats The stat block to retrieve the hit point metadata for
      */
     constructor(stats){
         this.#statBlock = stats;
+        this.#maximum = new NumericStatTracker(stats, 'hp:max', 0);
     }
 
     /** @returns {TokenHitPointInfo} The hit point information that is stored on the token */
@@ -88,25 +90,20 @@ export default class HitPointBlock {
         return info;
     }
 
-    /** @returns {number} The calculated maximum hit points of the creature or object */
-    get maximum() {
-        return this.#statBlock.getNumeric(HitPoint.Maximum.uri)?.current ?? 0;
-    }
+    /** Provides the numeric stat tracker for the maximum hit point. */
+    get maximumChanges() { return this.#maximum; }
+
+    /** The calculated maximum hit points of the creature or object */
+    get maximum() { return this.#maximum.current ?? 0; }
 
     /** @returns {number} The remaining number of hit points that the creature or object has before it will either die or begin making death saving throws  */
-    get remaining() {
-        return this.#getCurrent().current ?? 0;
-    }
+    get remaining() { return this.#getCurrent().current ?? 0; }
 
-    /** @returns {number} The total number of hit points the creature or object has including temporary hit hpoints */
-    get total() {
-        return this.remaining + this.temp;
-    }
+    /** The total number of hit points the creature or object has including temporary hit hpoints */
+    get total() { return this.remaining + this.temp; }
 
     /** @returns {number} The number of temporary hit hpoints that the creature or object has */
-    get temp() {
-        return this.#getCurrent().temp ?? 0;
-    }
+    get temp() { return this.#getCurrent().temp ?? 0; }
 
     /** Review the reported values for the player sheet when available against the expected amounts. */
     isPlayerNotSynced() {

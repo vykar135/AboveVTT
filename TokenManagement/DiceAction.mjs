@@ -39,6 +39,48 @@ export class DiceActionContext {
     }
 }
 
+/** The base features for a dice action */
+class DiceActionFeatures {
+    /** @type {DiceRollConfig[]} */
+    #die;
+    /** @type {DiceRollModifier[]} */
+    #rollModifiers;
+
+    constructor() {
+        if (this.constructor === DiceActionFeatures) {
+            throw new Error("Cannot create an instance of an dice action features directly");
+        }
+
+        this.#die = [];
+        this.#rollModifiers = [];
+    }
+
+    /** The baseline set of dice rolls to include; such as weapon damage die. */
+    get die() { return this.#die; }
+    /** The set of dice roll modifiers that are specific to this action. */
+    get rollModifiers() { return this.#rollModifiers; }
+    /** @type {number | FixedValueModifier} The multiplier for the proficiency bonus to apply to the roll and rounded down. */
+    proficiency;
+    /** @type {number | FixedValueModifier} The fixed bonus to apply to the base roll */
+    bonus;
+    /** @type {HitPointEffect} Default method used for to apply the result of damage rolls to the target's hit points; ignored for d20 tests */
+    hp;
+    /** @type {boolean?} Defines whether advantage (true) or disadvantage (false) is active for d20 tests; otherwise undefined for neither. Will automatically cancel if both are seen for a roll. */
+    advantage;
+    /** @type {number | FixedValueModifier} Defines the total number of additional dice to use if advantage is triggered. */
+    advantageSize;
+    /** @type {number | FixedValueModifier} Defines the total number of additional dice to use if disadvantage is triggered. */
+    disadvantageSize;
+    /** @type {boolean} Whether the dice action is permitted to be execute critical rolls. */
+    canCritical;
+    /** @type {'standard' | 'double' | 'perfect'} The method used to calculate the effect of a critical dice action. */
+    criticalStyle;
+    /** @type {number | FixedValueModifier} For a d20 test, if the roll is at or over this amount, it is considered a critical success. */
+    criticalThreshold;
+    /** @type {number | FixedValueModifier} For a d20 test, if the roll is at or under this amount, it is considered a critical failure. */
+    fumbleThreshold;
+}
+
 export class DiceAction extends DiceActionFeatures {
     /** @type {DiceActionContext} */
     #context;
@@ -52,7 +94,7 @@ export class DiceAction extends DiceActionFeatures {
     #properties;
     /** @type {boolean} */
     #d20test;
-    /** @type {AbilityModifierType} */
+    /** @type {AbilityModifierType?} */
     #ability;
     /** @type {boolean} */
     #abilityLocked;
@@ -67,10 +109,11 @@ export class DiceAction extends DiceActionFeatures {
      * @param {string} uri - The idetifier of the dice action being taken for quick lookups
      * @param {string} name - The friendly name of the dice action to be shown to the user.
      * @param {boolean} d20test - Whether this is a d20 test
-     * @param {AbilityModifierType} ability - The ability modifier to apply to the dice roll.
+     * @param {AbilityModifierType?} ability - The ability modifier to apply to the dice roll.
      * @param {boolean} abilityLocked - Whether the ability modifier can be changed for the roll.
      */
     constructor(context, uri, name, d20test, ability, abilityLocked) {
+        super();
         this.#context = context;
         this.#uri = uri;
         this.#name = name;
@@ -105,10 +148,11 @@ export class DiceAction extends DiceActionFeatures {
     get abilityLocked() { return this.#abilityLocked; }
     /** The ability modifier to apply to the dice roll. */
     get ability() { return this.#ability; }
-    set ability(value) {
-        if (this.#abilityLocked === false) {
-            this.#ability = value;
-        }
+
+    tagFreeze() {
+        this.#tags.freeze();
+        this.#properties.freeze();
+        this.#resultTags.freeze();
     }
 }
 
@@ -152,47 +196,52 @@ export class DiceActionModifier extends DiceActionFeatures {
     ability;
 }
 
-/** The base features for a dice action */
-class DiceActionFeatures {
-    /** @type {DiceRollConfig[]} */
-    #die;
-    /** @type {DiceRollModifier[]} */
-    #rollModifiers;
-
+/** The base feature for a dice roll */
+class DiceRollFeatures {
     constructor() {
-        if (this.constructor === DiceActionFeatures) {
-            throw new Error("Cannot create an instance of an dice action features directly");
+        if (this.constructor === DiceRollFeatures) {
+            throw new Error("Cannot create an instance of an dice roll features directly");
         }
-
-        this.#die = [];
-        this.#rollModifiers = [];
     }
 
-    /** The baseline set of dice rolls to include; such as weapon damage die. */
-    get die() { return this.#die; }
-    /** The set of dice roll modifiers that are specific to this action. */
-    get rollModifiers() { return this.#rollModifiers; }
-    /** @type {HitPointEffect} Default method used for to apply the result of damage rolls to the target's hit points; ignored for d20 tests */
+    /** @type {number | FixedValueModifier} The number of dice to include in the roll. */
+    count;
+    /** @type {number} The number of sides on the die to roll. */
+    sides;
+    /** @type {HitPointEffect} How the result of damage rolls are applied to the target's hit points. */
     hp;
-    /** @type {number | FixedValueModifier} The multiplier for the proficiency bonus to apply to the roll and rounded down. */
-    proficiency;
-    /** @type {number | FixedValueModifier} The fixed bonus to apply to the base roll */
-    bonus;
-    /** @type {boolean?} Defines whether advantage (true) or disadvantage (false) is active for d20 tests; otherwise undefined for neither. Will automatically cancel if both are seen for a roll. */
-    advantage;
-    /** @type {number | FixedValueModifier} Defines the total number of additional dice to use if advantage is triggered. */
-    advantageSize;
-    /** @type {number | FixedValueModifier} Defines the total number of additional dice to use if disadvantage is triggered. */
-    disadvantageSize;
-    /** @type {boolean} Whether the dice action is permitted to be execute critical rolls. */
-    canCritical;
-    /** @type {'standard' | 'double' | 'perfect'} The method used to calculate the effect of a critical dice action. */
-    criticalStyle;
-    /** @type {number | FixedValueModifier} For a d20 test, if the roll is at or over this amount, it is considered a critical success. */
-    criticalThreshold;
-    /** @type {number | FixedValueModifier} For a d20 test, if the roll is at or under this amount, it is considered a critical failure. */
-    fumbleThreshold;
+    /** @type {number | FixedValueModifier} The fixed amount to include in the roll. */
+    fixed;
+    /** @type {boolean} Whether the roll is subject to critical hit rules when applicable. */
+    critical;
+    /** @type {number | FixedValueModifier} The dice roll only occurs when the value is greater than (positive) or less than (negative) the specified amount on the roll from the d20 test without modifiers. */
+    d20trigger;
+    /** @type {number | FixedValueModifier} The dice roll will first run a d100 test and only occurs when the value is greater than (positive) or less than (negative) the specified amount. */
+    chance;
+    /** @type {boolean} Whether the result of the roll is considered a penalty against the final result. */
+    penalty;
+    /** @type {'once' | 'continuous'} Whether the roll will be replayed and added to the final result if the preceding roll was for maximum value. */
+    explosive;
+    /** @type {boolean} Whether the roll is automatically its maximum value; see "Beacon of Hope" */
+    forceMaximum;
+    /** @type {number | FixedValueModifier} The number of dice roll results for non-d20 tests that are effective based on the highest or lowest; positive value for highest, negative for lowest. */
+    keep;
+    /** @type {number | FixedValueModifier} Modifies the number of dice included in the roll for non-d20 tests; can be used with "keep" to make advantage-like rolls */
+    additionalCount;
+    /** @type {number | FixedValueModifier} If the value of the roll is under this, it is rerolled once and the new value is taken. */
+    rerollUnder;
+    /** @type {boolean} Whether reroll under continues to happen until the condition is met. */
+    rerollUnderUntil;
+    /** @type {number | FixedValueModifier} If the value of the roll is over this, it is rerolled once and the new value is taken. */
+    rerollOver;
+    /** @type {boolean} Whether reroll over continues to happen until the condition is met. */
+    rerollOverUntil;
+    /** @type {number | FixedValueModifier} If the roll is under this value, it is automatically increased to the minimum. */
+    minimum;
+    /** @type {number | FixedValueModifier} If the roll is over this value, it is automatically reduced to the maximum. */
+    maximum;
 }
+
 
 /** Defines a dice roll that has been requested */
 class DiceRoll extends DiceRollFeatures {
@@ -375,52 +424,6 @@ export class DiceRollModifier extends DiceRollFeatures {
     spellSlot;
 }
 
-/** The base feature for a dice roll */
-class DiceRollFeatures {
-    constructor() {
-        if (this.constructor === DiceRollFeatures) {
-            throw new Error("Cannot create an instance of an dice roll features directly");
-        }
-    }
-
-    /** @type {number | FixedValueModifier} The number of dice to include in the roll. */
-    count;
-    /** @type {number} The number of sides on the die to roll. */
-    sides;
-    /** @type {HitPointEffect} How the result of damage rolls are applied to the target's hit points. */
-    hp;
-    /** @type {number | FixedValueModifier} The fixed amount to include in the roll. */
-    fixed;
-    /** @type {boolean} Whether the roll is subject to critical hit rules when applicable. */
-    critical;
-    /** @type {number | FixedValueModifier} The dice roll only occurs when the value is greater than (positive) or less than (negative) the specified amount on the roll from the d20 test without modifiers. */
-    d20trigger;
-    /** @type {number | FixedValueModifier} The dice roll will first run a d100 test and only occurs when the value is greater than (positive) or less than (negative) the specified amount. */
-    chance;
-    /** @type {boolean} Whether the result of the roll is considered a penalty against the final result. */
-    penalty;
-    /** @type {'once' | 'continuous'} Whether the roll will be replayed and added to the final result if the preceding roll was for maximum value. */
-    explosive;
-    /** @type {boolean} Whether the roll is automatically its maximum value; see "Beacon of Hope" */
-    forceMaximum;
-    /** @type {number | FixedValueModifier} The number of dice roll results for non-d20 tests that are effective based on the highest or lowest; positive value for highest, negative for lowest. */
-    keep;
-    /** @type {number | FixedValueModifier} Modifies the number of dice included in the roll for non-d20 tests; can be used with "keep" to make advantage-like rolls */
-    additionalCount;
-    /** @type {number | FixedValueModifier} If the value of the roll is under this, it is rerolled once and the new value is taken. */
-    rerollUnder;
-    /** @type {boolean} Whether reroll under continues to happen until the condition is met. */
-    rerollUnderUntil;
-    /** @type {number | FixedValueModifier} If the value of the roll is over this, it is rerolled once and the new value is taken. */
-    rerollOver;
-    /** @type {boolean} Whether reroll over continues to happen until the condition is met. */
-    rerollOverUntil;
-    /** @type {number | FixedValueModifier} If the roll is under this value, it is automatically increased to the minimum. */
-    minimum;
-    /** @type {number | FixedValueModifier} If the roll is over this value, it is automatically reduced to the maximum. */
-    maximum;
-}
-
 /** Assigns or imports a fixed value used in a dice roll from a stat block. */
 export class FixedValueModifier {
     constructor() {
@@ -472,7 +475,9 @@ export class FixedValueModifier {
 export class DiceTagSet extends Set {
     constructor(tags) {
         super();
-        this.append(tags);
+        if (tags != null) {
+            this.addRange(tags);
+        }
     }
 
     /** Freezes the set */
@@ -567,7 +572,9 @@ export class DiceTagLookup {
 
     constructor(tags) {
         this.#sets = [];
-        this.append(tags);
+        if (tags != null) {
+            this.addRange(tags);
+        }
     }
 
     /**
