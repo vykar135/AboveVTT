@@ -5,18 +5,50 @@
  *  'lightning' | 'necrotic' | 'poison' | 'psychic' | 'radiant' | 'thunder'} HitPointEffect
 */
 
-import StatBlock from "./StatBlock.mjs";
+/** Defines the information from a creature stat block that is needed for a dice action to be executed. */
+export class DiceActionContext {
+    constructor() {
+        if (this.constructor === DiceActionContext) {
+            throw new Error("Cannot create an instance of an dice roll features directly");
+        }
+    }
+
+    /** The level of the creature performing the action. */
+    get level() {
+        throw new Error('The level getter for the derivied type based on DiceActionContext must be overridden');
+    }
+
+    /** Gets the numeric value associated with the provided URI if one exists.
+     * @param {string} uri - The value to lookup within the context.
+     * @returns {number}
+     */
+    getNumericValue(uri) {
+        throw new Error('getNumericValue() for the derivied type based on DiceActionContext must be overridden');
+    }
+
+    /** The collection of available dice action modifiers
+     * @returns {DiceActionModifier[]} */
+    listActionModifiers() {
+        throw new Error('listActionModifiers() for the derivied type based on DiceActionContext must be overridden');
+    }
+
+    /** The collection of available dice roll modifiers
+     * @returns {DiceRollModifier[]} */
+    listRollModifiers() {
+        throw new Error('listRollModifiers() for the derivied type based on DiceActionContext must be overridden');
+    }
+}
 
 export class DiceAction extends DiceActionFeatures {
-    /** @type {StatBlock} */
-    #stats;
+    /** @type {DiceActionContext} */
+    #context;
     /** @type {string} */
     #uri;
     /** @type {string} */
     #name;
-    /** @type {TagSet}*/
+    /** @type {DiceTagSet}*/
     #tags;
-    /** @type {TagSet} */
+    /** @type {DiceTagSet} */
     #properties;
     /** @type {boolean} */
     #d20test;
@@ -24,37 +56,37 @@ export class DiceAction extends DiceActionFeatures {
     #ability;
     /** @type {boolean} */
     #abilityLocked;
-    /** @type {TagSet} */
+    /** @type {DiceTagSet} */
     #resultTags;
     /** @type {DiceActionModifier[]} */
     #actionModifiers;
 
     /**
      * Initializes the dice action with the baseline details before addressing modifiers.
-     * @param {StatBlock} stats - The creature stat block to execute the dice action for.
+     * @param {DiceActionContext} context - The values used to determine what modifiers are applied to the dice action when executed.
      * @param {string} uri - The idetifier of the dice action being taken for quick lookups
      * @param {string} name - The friendly name of the dice action to be shown to the user.
      * @param {boolean} d20test - Whether this is a d20 test
      * @param {AbilityModifierType} ability - The ability modifier to apply to the dice roll.
      * @param {boolean} abilityLocked - Whether the ability modifier can be changed for the roll.
      */
-    constructor(stats, uri, name, d20test, ability, abilityLocked) {
-        this.#stats = stats;
+    constructor(context, uri, name, d20test, ability, abilityLocked) {
+        this.#context = context;
         this.#uri = uri;
         this.#name = name;
         this.#d20test = d20test;
         this.#ability = ability;
         this.#abilityLocked = (abilityLocked === false);
-        this.#tags = new TagSet();
-        this.#properties = new TagSet();
-        this.#resultTags = new TagSet();
+        this.#tags = new DiceTagSet();
+        this.#properties = new DiceTagSet();
+        this.#resultTags = new DiceTagSet();
         this.#actionModifiers = [];
 
         Object.seal(this);
     }
 
-    /** The creature stat block to execute the dice action for */
-    get stats() { return this.#stats; }
+    /** The values used to determine what modifiers are applied to the dice action when executed. */
+    get context() { return this.#context; }
     /** The idetifier of the dice action being taken for quick lookups */
     get uri() { return this.#uri; }
     /** The friendly name of the dice action to be shown to the user. */
@@ -64,8 +96,8 @@ export class DiceAction extends DiceActionFeatures {
     /** Automatically injects a d20 roll into the die collection but tracks it as the only roll eligible for advantage and imports the same tags as the baseline. */
     get d20test() { return this.#d20test; }
     /** Collection of user visible properties for the dice action. */
-    get properties() { this.#properties; }
-    /** The set of tags assigned to any top-level fixed values such as proficiency bonus and ability modifier.*/
+    get properties() { return this.#properties; }
+    /** The set of tags assigned to results for any top-level fixed values such as the d20 test, proficiency bonus, and ability modifier.*/
     get resultTags() { return this.#resultTags; }
     /** The set of dice action modifiers that are specific to this action. */
     get actionModifiers() { return this.#actionModifiers; }
@@ -82,12 +114,12 @@ export class DiceAction extends DiceActionFeatures {
 
 /** Defines a change in to any dice roll that matches the specified tags */
 export class DiceActionModifier extends DiceActionFeatures {
-    /** @type {TagSet} */
+    /** @type {DiceTagLookup} */
     #tags;
 
     constructor() {
         super();
-        this.#tags = new TagSet();
+        this.#tags = new DiceTagSet();
         Object.seal(this);
     }
 
@@ -104,10 +136,18 @@ export class DiceActionModifier extends DiceActionFeatures {
         Object.freeze(this);
     }
     
-    /** @type {(string | string[])[]} The set of tags that are used to determine if this modifier qualifies for a dice action; top level entries are OR, collections within the main array are AND */
-    get tags() { return this.#tags; }
     /** @type {number} The order that the modification will be applied to the baseline relative to other queued modifications. */
     priority;
+    /** @type {DiceTagLookup} The set of tags that are used to determine if this modifier qualifies for a dice action; top level entries are OR, collections within the main array are AND */
+    get tags() { return this.#tags; }
+    /** @type {boolean} Whether the tag search can occur for the source stat block */
+    fromSelf;
+    /** @type {boolean} Whether the tag search can occur for the target stat block */
+    fromTarget;
+    /** @type {number} The minimum character level or challenge rating required for this modifier to be active. */
+    level;
+    /** @type {number} The minimum spell slot required for this modifier to be active. */
+    spellSlot;
     /** @type {AbilityModifierType} The ability modifier to apply to the dice roll. */
     ability;
 }
@@ -156,18 +196,18 @@ class DiceActionFeatures {
 
 /** Defines a dice roll that has been requested */
 class DiceRoll extends DiceRollFeatures {
-    /** @type {StatBlock} */
-    #stats;
+    /** @type {DiceActionContext} */
+    #context;
     /** @type {boolean} */
     #d20test;
 
     /**
-     * @param {StatBlock} stats - The stat block being rolled against.
+     * @param {DiceActionContext} context - The stat block being rolled against.
      * @param {boolean} d20test - Whether this is for a d20 test
      */
-    constructor(stats, d20test) {
+    constructor(context, d20test) {
         super();
-        this.#stats = stats;
+        this.#context = context;
         this.#d20test = d20test;
 
         if (d20test === true) {
@@ -251,7 +291,7 @@ class DiceRoll extends DiceRollFeatures {
         }
 
         if (requested instanceof FixedValueModifier) {
-            return requested.getValue(this.#stats, current);
+            return requested.getValue(this.#context, current);
         }
 
         return requested;
@@ -260,12 +300,12 @@ class DiceRoll extends DiceRollFeatures {
 
 /** Defines a dice roll associated with a dice action */
 export class DiceRollConfig extends DiceRollFeatures {
-    /** @type {TagSet} */
+    /** @type {DiceTagSet} */
     #tags;
 
     constructor() {
         super();
-        this.#tags = new TagSet();
+        this.#tags = new DiceTagSet();
         Object.seal(this);
     }
 
@@ -289,9 +329,9 @@ export class DiceRollConfig extends DiceRollFeatures {
 
     /**
      * Generates a dice roll based on the configuration.
-     * @param {StatBlock} stats - The stat block being rolled against. */
-    begin(stats) {
-        const roll = new DiceRoll(stats, false);
+     * @param {DiceActionContext} context - The stat block being rolled against. */
+    begin(context) {
+        const roll = new DiceRoll(context, false);
         roll.import(this);
         return roll;
     }
@@ -299,12 +339,12 @@ export class DiceRollConfig extends DiceRollFeatures {
 
 /** Defines a change in to any dice roll that matches the specified tags */
 export class DiceRollModifier extends DiceRollFeatures {
-    /** @type {TagSet} */
+    /** @type {DiceTagLookup} */
     #tags;
 
     constructor() {
         super();
-        this.#tags = new TagSet();
+        this.#tags = new DiceTagLookup();
         Object.seal(this);
     }
 
@@ -321,10 +361,18 @@ export class DiceRollModifier extends DiceRollFeatures {
         Object.freeze(this);
     }
 
-    /** @type {(string | string[])[]} The set of tags used to discover what queued dice rolls this rule applies to; top level entries are OR, collections within the main array are AND */
-    get tags() { return this.#tags; }
     /** @type {number} The order that the modification will be applied to the rolls relative to other queued modifications; the final result for these properties is LIFO. */
     priority;
+    /** @type {DiceTagLookup} The set of tags used to discover what queued dice rolls this rule applies to; top level entries are OR, collections within the main array are AND */
+    get tags() { return this.#tags; }
+    /** @type {boolean} Whether the tag search can occur for the source stat block */
+    fromSelf;
+    /** @type {boolean} Whether the tag search can occur for the target stat block */
+    fromTarget;
+    /** @type {number} The minimum character level or challenge rating required for this modifier to be active. */
+    level;
+    /** @type {number} The minimum spell slot required for this modifier to be active. */
+    spellSlot;
 }
 
 /** The base feature for a dice roll */
@@ -390,15 +438,15 @@ export class FixedValueModifier {
 
     /**
      * Calculates the fixed value to 
-     * @param {StatBlock} stats - The stat block to import values from.
+     * @param {DiceActionContext} context - The dice action context to import values from.
      * @param {number} current - The current fixed value assigned to the dice roll.
      * @returns {number}
      */
-    getValue(stats, current) {
+    getValue(context, current) {
         let calculated = this.amount ?? 0;
 
         if (typeof this.imports === 'string') {
-            const imported = stats.getNumeric(this.imports)?.current ?? 0;
+            const imported = context.getNumericValue(this.imports) ?? 0;
             if (this.penalty === true && imported > 0) {
                 calculated -= imported;
             } else {
@@ -420,8 +468,8 @@ export class FixedValueModifier {
  }
 
 
-/** Manages a set that normalizes all values to lower case */
-export class TagSet extends Set {
+/** Manages a set of strings that are normalized to lower case */
+export class DiceTagSet extends Set {
     constructor(tags) {
         super();
         this.append(tags);
@@ -506,6 +554,168 @@ export class TagSet extends Set {
         }
 
         for (let tag of tags) {
+            this.delete(tag)
+        }
+    }
+}
+
+
+/** Manages a set of collection of strings that are normalized to lower case */
+export class DiceTagLookup {
+    /** @type {string[][]} */
+    #sets;
+
+    constructor(tags) {
+        this.#sets = [];
+        this.append(tags);
+    }
+
+    /**
+     * Determines whether the provided set of tags is covered by the lookups within this collection.
+     * @param {DiceTagSet} tags - The collection of tags to review
+     */
+    covers(tags) {
+        if (!(tags instanceof DiceTagSet)) {
+            throw new Error('Must provide a tag set to review coverage of');
+        }
+
+        if (tags.size === 0) {
+            return false;
+        }
+
+        for (const lookups of this.#sets) {
+            let found = true;
+            for (const tag of lookups) {
+                if (!tags.has(tag)) {
+                    found = false;
+                    break;
+                }
+            }
+
+            if (found) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /** Freezes the set */
+    freeze() {
+        for (const entry of this.#sets) {
+            Object.freeze(entry);
+        }
+
+        Object.freeze(this);
+    }
+
+    /** Clears the set */
+    clear() {
+        this.#sets = [];
+    }
+
+    /**
+     * Normalizes the provided tag collection.
+     * @param {(string | string[])} tags - The collection of tags that must be present on a modifier */
+    #normalize(tags) {
+        if (!Array.isArray(tags)) {
+            tags = [tags];
+        }
+
+        for (let i = tags.length - 1; i >= 0; i--) {
+            if (typeof tags[i] !== 'string') {
+                throw new Error('May only provide string values to a tag lookup set.');
+            }
+
+            tags[i] = tags[i].toLowerCase().trim();
+            if (tags[i] === '') {
+                tags.splice(i, 1);
+            }
+        }
+
+        if (tags.length === 0) {
+            throw new Error('Must provide at least 1 value to a tag lookup set.');
+        }
+
+        tags.sort();
+        return tags;
+    }
+
+    /**
+     * Determines whether a normalized tag collection exists in the set.
+     * @param {string[]} normalized - The collection of tags that must be present on a modifier */
+    #findIndex(normalized) {
+        for (let main = 0; main < this.#sets.length; i++) {
+            const entry = this.#sets[main];
+            if (entry.length !== normalized.length) {
+                continue;
+            }
+
+            let found = true;
+            for (let i = 0; i < entry.length; i++) {
+                if (entry[i] !== normalized[i]) {
+                    found = false;
+                    break;
+                }
+            }
+
+            if (!found) {
+                continue;
+            }
+
+            return main;
+        }
+
+        return -1;
+    }
+
+    /**
+     * Appends the provided tag collection to the set.
+     * @param {(string | string[])} tags - The collection of tags that must be present on a modifier
+     */
+    add(tags) {
+        const normalized = this.#normalize(tags);
+        const indexOf = this.#findIndex(normalized);
+        if (indexOf < 0) {
+            this.#sets.push(normalized);
+        }
+    }
+
+    /**
+     * Removes the provided tag collection from the set.
+     * @param {(string | string[])} tags - The collection of tags that must be present on a modifier
+     */
+    delete(tags) {
+        const normalized = this.#normalize(tags);
+        const indexOf = this.#findIndex(normalized);
+        this.#sets.splice(indexOf, 1);
+        return (indexOf >= 0);
+    }
+
+    /**
+     * Appends the provided tag collections to the set.
+     * @param {(string | string[])[]} sets 
+     */
+    addRange(sets) {
+        if (!Array.isArray(tags)) {
+            throw new Error('Must provide either the array of string to append to the tag set.');
+        }
+
+        for (let tag of sets) {
+            this.add(tag)
+        }
+    }
+
+    /**
+     * Removes the provided tag collections from the set.
+     * @param {(string | string[])[]} sets 
+     */
+    deleteRange(sets) {
+        if (!Array.isArray(tags)) {
+            throw new Error('Must provide either the array of string to append to the tag set.');
+        }
+
+        for (let tag of sets) {
             this.delete(tag)
         }
     }
