@@ -25,14 +25,15 @@ export default class StatBlock {
     #diceContext;
     #effects;
     #wellKnownNumerics;
+    #level;
+    #pendingChanges;
+    #player;
+    #contributor;
 
     /** @type {{ [uri: string]: NumericStatTracker}} */
     #numeric;
     /** @type {{ [uri: string]: string}} Components within the stat block that failed to complete successuflly */
     #warnings;
-
-    /** Collection of internal properties that are not subject to change tracking. */
-    #internals;
 
     /** @param {Token} token - The token to normalize the stat block for. */
     constructor(token){
@@ -57,6 +58,7 @@ export default class StatBlock {
         const score = this.#scores;
         const modifiers = this.#modifiers;
         this.#wellKnownNumerics = [
+            this.#ac, this.#proficiency,
             score.str, score.dex, score.con, score.wis, score.int, score.cha,
             modifiers.str.value, modifiers.dex.value, modifiers.con.value, modifiers.wis.value, modifiers.int.value, modifiers.cha.value,
             this.#hitPoints.maximumChanges
@@ -65,14 +67,11 @@ export default class StatBlock {
         this.#warnings = {};
         this.#numeric = {};
 
-        this.#internals = {
-            level: 0,
-            pendingChanges: false,
-            player: false,
-            contributor: false
-        };
+        this.#level = 0;
+        this.#pendingChanges = false;
+        this.#player = false;
+        this.#contributor = false;
 
-        Object.seal(this.#internals);
         Object.freeze(this);
 
         this.rebuild();
@@ -83,8 +82,8 @@ export default class StatBlock {
      * @returns Whether the stat block requested to be synced.
     */
     sync() {
-        if (this.#internals.pendingChanges === true) {
-            this.#internals.pendingChanges = false;
+        if (this.#pendingChanges === true) {
+            this.#pendingChanges = false;
 
             try {
                 this.#token.sync();
@@ -105,8 +104,8 @@ export default class StatBlock {
      * @returns Whether the stat block requested to be synced.
      */
     update_and_sync() {
-        if (this.#internals.pendingChanges === true) {
-            this.#internals.pendingChanges = false;
+        if (this.#pendingChanges === true) {
+            this.#pendingChanges = false;
 
             try {
                 this.#token.update_and_sync();
@@ -148,7 +147,7 @@ export default class StatBlock {
      */
     hasPendingChanges(modified) {
         if (modified === true) {
-            this.#internals.pendingChanges = true;
+            this.#pendingChanges = true;
         }
     }
 
@@ -159,10 +158,10 @@ export default class StatBlock {
     get token() { return this.#token; }
 
     /** Whether the stat block is for a player */
-    get isPlayer() { return this.#internals.player; }
+    get isPlayer() { return this.#player; }
 
     /** Whether the user can contribute to the token. */
-    get isContributor() { return (window.DM === true || this.#internals.contributor === true); }
+    get isContributor() { return (window.DM === true || this.#contributor === true); }
 
     /** The context used for any dice actions performed from this stat block. */
     get diceContext() { return this.#diceContext; }
@@ -177,7 +176,7 @@ export default class StatBlock {
     get ac() { return this.#ac.current ?? 10; }
 
     /** The character level or creature challenge rating for the stat block. */
-    get level() { return this.#internals.level; }
+    get level() { return this.#level; }
 
     /** The proficiency bonus for the stat block. */
     get proficiencyBonus() { return this.#proficiency; }
@@ -237,7 +236,7 @@ export default class StatBlock {
 
         return {
             proficiencyBonus: pb,
-            level: this.#internals.level ?? 0,
+            level: this.#level ?? 0,
             ac: this.#ac.current ?? 10,
             hp: {
                 maximum: this.#hitPoints.maximum,
@@ -358,16 +357,16 @@ export default class StatBlock {
             const options = this.#token.options;
             const player = this.getPlayerSheet();
 
-            this.#internals.player = (player != null || (options.characterId != null && options.itemType === 'pc'));
-            this.#internals.contributor = (
+            this.#player = (player != null || (options.characterId != null && options.itemType === 'pc'));
+            this.#contributor = (
                 window.DM === true || options.player_owned === true ||
                 (window.PLAYER_ID != null && options.characterId?.toString() === window.PLAYER_ID.toString())
             );
 
             const sheets = { options, player };
 
-            if (this.#internals.contributor) {
-                if (this.#internals.player) {
+            if (this.#contributor) {
+                if (this.#player) {
                     sheets.playerExt = this.getPlayerExtended();
                 } else {
                     sheets.open5e = this.getOpen5e();
@@ -496,7 +495,7 @@ export default class StatBlock {
 
         const snapshots = this.#token.options.snapshots?.numeric;
         if (snapshots != null) {
-            if (this.#internals.player) {
+            if (this.#player) {
                 tracker.setSnapshot(snapshots[tracker.uri], false);
             } else if (tracker.uri in snapshots) {
                 tracker.setSnapshot(undefined, true);
@@ -514,7 +513,7 @@ export default class StatBlock {
     #refreshLevel(sheets) {
         if (sheets.player) {
             const pb = sheets.player.proficiencyBonus ?? 2;
-            this.#internals.level = sheets.player.level ?? 1;
+            this.#level = sheets.player.level ?? 1;
             this.#updateNumeric(this.#proficiency, pb);
             return pb;
         }
@@ -540,7 +539,7 @@ export default class StatBlock {
                 pb = 1 + Math.ceil((cr > 0 ? cr : 1) / 4);
             }
 
-            this.#internals.level = cr;
+            this.#level = cr;
             this.#updateNumeric(this.#proficiency, pb ?? 2);
             return pb;
         }
@@ -552,12 +551,12 @@ export default class StatBlock {
                 pb = 1 + Math.ceil((cr > 0 ? cr : 1) / 4);
             }
 
-            this.#internals.level = cr;
+            this.#level = cr;
             this.#updateNumeric(this.#proficiency, pb ?? 2);
             return pb;
         }
 
-        this.#internals.level = 0;
+        this.#level = 0;
         this.#updateNumeric(this.#proficiency, 2);
         return 2;
     }
