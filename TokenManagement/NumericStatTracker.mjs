@@ -145,14 +145,11 @@ export default class NumericStatTracker {
             }
 
             // Are we at the entry point of the recalculation process?
-            if (visited == null) {
-                visited = new Set();
-            }
-
-            visited.add(this.#uri);
+            const localVisited = visited ?? new Set();
+            localVisited.add(this.#uri);
 
             const importing = this.#stats.getNumeric(applied.imports);
-            const [importBase, importAmount, importMulti] = importing.#recalculateGraph(version, visited);
+            const [importBase, importAmount, importMulti] = importing.#recalculateGraph(version, localVisited);
             const imported = (importBase + importAmount) * importMulti;
             if (applied.importPenalty === true && imported > 0) {
                 calculated -= imported;
