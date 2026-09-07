@@ -1,7 +1,7 @@
 /** @import { Token } from './Token.types.js' */
 
 import { fetchBeyondSheetForToken, fetchOpen5eSheetForToken, fetchPlayerExtendedSheet } from './StatBlockSources.mjs';
-import { AbilityScore, ConditionType, DamageType, ProficiencyType, SkillCheck, uriEquals } from './CoreEnums.mjs'
+import { DiceActionsEnabled, AbilityScore, ConditionType, DamageType, ProficiencyType, SkillCheck, uriEquals } from './CoreEnums.mjs'
 import HitPointBlock from './HitPointBlock.mjs';
 import ConditionTracker from './ConditionTracker.mjs';
 import NumericStatTracker from './NumericStatTracker.mjs';
@@ -151,6 +151,10 @@ export default class StatBlock {
      * @param {boolean} modified - Whether a modification occurred.
      */
     hasPendingChanges(modified) {
+        if (!DiceActionsEnabled) {
+            return;
+        }
+
         if (modified === true) {
             this.#pendingChanges = true;
         }
@@ -413,6 +417,10 @@ export default class StatBlock {
 
     /** Rebuilds the stat block for the token */
     rebuild() {
+        if (!DiceActionsEnabled) {
+            return;
+        }
+
         try {
             const options = this.#token.options;
             const player = this.getPlayerSheet();
@@ -510,6 +518,10 @@ export default class StatBlock {
 
     /** Recalculates the values for the properties within the stat block after changes have been applied. */
     recalculate() {
+        if (!DiceActionsEnabled) {
+            return;
+        }
+
         try {
             for (const condition of Object.values(this.#conditions)) {
                 condition.recalculate();
@@ -1143,3 +1155,4 @@ class BlockDiceContext extends DiceActionContext {
 
 // Addressing compatibility issues
 window.initStatBlock = (token) => new StatBlock(token);
+window.statNormalizationEnabled = DiceActionsEnabled;

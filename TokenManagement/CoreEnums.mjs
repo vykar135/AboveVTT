@@ -13,6 +13,23 @@
  * @typedef { DiceModifierSettings & { ability: KnownConfigurationSettings } } SkillCheckSettings
  */
 
+/** Determines if a development feature is active. */
+export function checkFeatureEnabled(feature) {
+    let features = localStorage.getItem('AVTT-Development-Features') ?? {};
+    if (typeof features === 'string') {
+        features = JSON.parse(features);
+    }
+
+    if (feature in features) {
+        return (features[feature] === true);
+    }
+
+    return (AVTT_ENVIRONMENT[feature] === true);
+}
+
+/** Whether normalized stat blocks and dice actions are enabled */
+export const DiceActionsEnabled = checkFeatureEnabled('dice_actions');
+
 /** Manages a sealed index of configuration settings for a given type. */
 export class Configuration {
     /** @type {{ [uri: string]: ConfigurationSettings}} */

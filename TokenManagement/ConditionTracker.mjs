@@ -133,7 +133,7 @@ export default class ConditionTracker {
         instance = instance.toLocaleLowerCase();
         const index = this.#sources.findIndex(entry => entry.instance === instance);
 
-        const impact =  {
+        const impact = {
             instance, intensity, immunity,
             version: this.#stats.statusEffects.version
         };

@@ -1,7 +1,11 @@
-import { uriEquals } from "./CoreEnums.mjs";
+import { DiceActionsEnabled, uriEquals } from "./CoreEnums.mjs";
 
 /** Forces any tokens from all global token stores for the specified identifier to rebuild */
 export function refreshStatBlock(id) {
+    if (!DiceActionsEnabled) {
+        return;
+    }
+
     if (id == null) {
         return;
     }
@@ -23,6 +27,10 @@ function refreshGlobalStatBlock(tokens, id) {
 
 /** Forces any tokens from all global token stores that implement the specified player character sheet to rebuild */
 export function refreshPlayerSheets(player) {
+    if (!DiceActionsEnabled) {
+        return;
+    }
+
     if (player == null) {
         return;
     }
@@ -42,6 +50,10 @@ function refreshGlobalPlayerSheets(tokens, player) {
 
 /** Forces any tokens from all global token stores that implement the specified extended player character sheet to rebuild */
 export function refreshPlayerExtended(player) {
+    if (!DiceActionsEnabled) {
+        return;
+    }
+
     if (player == null) {
         return;
     }
@@ -67,6 +79,10 @@ const playerSheetsExt = {};
 
 /** Loads the cache of extended player character sheets for the provided identifier */
 export function fetchPlayerExtendedSheet(id) {
+    if (!DiceActionsEnabled) {
+        return;
+    }
+
     if (typeof id === 'number') {
         id = id.toString();
     }
@@ -107,6 +123,10 @@ export function fetchPlayerExtendedSheet(id) {
 
 /** Forces any tokens from all global token stores that implement the specified D&D Beyond monster stat block to rebuild */
 export function refreshOpen5eStatBlocks(monster) {
+    if (!DiceActionsEnabled) {
+        return;
+    }
+
     if (monster == null) {
         return;
     }
@@ -129,6 +149,10 @@ const open5eCreatures = {};
 
 /** Retrieves the common Open 5E stat block if the token is an instance of one */
 export function fetchOpen5eSheetForToken(token) {
+    if (!DiceActionsEnabled) {
+        return;
+    }
+
     if (!uriEquals(token.options?.itemType, 'open5e') || token.options?.itemId == null){
         return null;
     }
@@ -138,6 +162,10 @@ export function fetchOpen5eSheetForToken(token) {
 
 /** Loads the cache of Open 5E creature stat blocks for the provided key */
 export function fetchOpen5eSheet(key) {
+    if (!DiceActionsEnabled) {
+        return;
+    }
+
     key = key?.toLowerCase();
     if (key == null) {
         return undefined;
@@ -184,6 +212,10 @@ const beyondCreatures = {
 
 /** Forces any tokens from all global token stores that implement the specified D&D Beyond monster stat block to rebuild */
 export function refreshMonsterStatBlocks(monster) {
+    if (!DiceActionsEnabled) {
+        return;
+    }
+
     if (monster == null) {
         return;
     }
@@ -206,6 +238,10 @@ function refreshGlobalMonsterStats(tokens, monster) {
  * @param {Token} token - The token to retrieve the monster stat block for.
  */
 export function fetchBeyondSheetForToken(token) {
+    if (!DiceActionsEnabled) {
+        return;
+    }
+
     const itemType = token?.options?.itemType?.toLowerCase();
     if (itemType !== 'monster') {
         return undefined;
@@ -224,6 +260,10 @@ export function fetchBeyondSheetForToken(token) {
  * @param {number | undefined} monster - The identifier of the monster to retrieve.
  */
 export function fetchBeyondSheet(monster) {
+    if (!DiceActionsEnabled) {
+        return;
+    }
+
     if (monster == null) {
         return undefined;
     }
