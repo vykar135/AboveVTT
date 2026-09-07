@@ -59,10 +59,12 @@ export default class StatBlock {
 
         const score = this.#scores;
         const modifiers = this.#modifiers;
+
         this.#wellKnownNumerics = [
-            this.#ac, this.#proficiency,
+            this.#proficiency,
             score.str, score.dex, score.con, score.wis, score.int, score.cha,
             modifiers.str.value, modifiers.dex.value, modifiers.con.value, modifiers.wis.value, modifiers.int.value, modifiers.cha.value,
+            this.#ac,
             this.#hitPoints.maximumChanges
         ];
         
@@ -260,6 +262,7 @@ export default class StatBlock {
         };
 
         return {
+            hasSheet: this.#hasSheet,
             proficiencyBonus: pb,
             level: this.#level ?? 0,
             ac: this.#ac.current ?? 10,

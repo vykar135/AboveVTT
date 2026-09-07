@@ -2,6 +2,7 @@ import StatBlock from "./StatBlock.mjs";
 
 /**
  * @typedef {Object} NumericStatImpact
+ * @property {string} instance - The reference to the status effect that produced the change.
  * @property {number} version - The version of the status effect collect at the time the impact was applied.
  * @property {number} setTo - The fixed amount to set the value of the property to.
  * @property {number} amount - The fixed amount to change the property by.
@@ -26,7 +27,7 @@ export default class NumericStatTracker {
     #multiplier;
     /** @type {number | undefined} */
     #snapshot;
-    /** @type {{ [instance: string]: NumericStatImpact }} */
+    /** @type {NumericStatImpact[]} */
     #sources;
     /** @type {number} */
     #calculated;
@@ -40,7 +41,7 @@ export default class NumericStatTracker {
         this.#uri = uri;
         this.#stats = stats;
         this.#base = value;
-        this.#sources = {};
+        this.#sources = [];
         this.#calculated = 0;
         this.#multiplier = 1;
         this.#baseOverride = undefined;
@@ -126,12 +127,9 @@ export default class NumericStatTracker {
         let multipler = undefined;
         let calculated = 0;
 
-        for (const [key, applied] of Object.entries(this.#sources)) {
-            if (applied.version !== version) {
-                delete this.#sources[key];
-                continue;
-            }
-
+        this.#sources = this.#sources.filter(entry => entry.version === version);
+        
+        for (const applied of this.#sources) {
             if (applied.setTo != null) {
                 base = applied.setTo;
             }
@@ -231,9 +229,11 @@ export default class NumericStatTracker {
         }
 
         instance = instance.toLocaleLowerCase();
+        impact.instance = instance;
         impact.version = this.#stats.statusEffects.version;
+        Object.freeze(impact);
         
-        this.#sources[instance] = impact;
+        this.#sources.push(impact);
         this.#stats.hasPendingChanges(true);
     }
 
@@ -248,7 +248,7 @@ export default class NumericStatTracker {
         }
 
         instance = instance.toLocaleLowerCase();
-        delete this.#sources[instance];
+        this.#sources = this.#sources.filter(entry => entry.instance !== instance);
         this.#stats.hasPendingChanges(true);
     }
 
@@ -256,7 +256,7 @@ export default class NumericStatTracker {
      * Removes all modification instances
      */
     clearInstances() {
-        this.#sources = {};
+        this.#sources = [];
         this.#stats.hasPendingChanges(true);
     }
 }
