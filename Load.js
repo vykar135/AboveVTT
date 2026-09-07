@@ -79,6 +79,7 @@
         "TokenManagement/HitPointBlock.mjs",
         "TokenManagement/NumericStatTracker.mjs",
 		"TokenManagement/ConditionTracker.mjs",
+		"TokenManagement/DefenseTracker.mjs",
         "TokenManagement/StatBlockSources.mjs",
         "TokenManagement/StatBlock.mjs",
         "TokenManagement/TokenStatusEffects.mjs",

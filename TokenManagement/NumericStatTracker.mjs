@@ -232,7 +232,9 @@ export default class NumericStatTracker {
 
         instance = instance.toLocaleLowerCase();
         impact.version = this.#stats.statusEffects.version;
+        
         this.#sources[instance] = impact;
+        this.#stats.hasPendingChanges(true);
     }
 
     /**
@@ -247,6 +249,7 @@ export default class NumericStatTracker {
 
         instance = instance.toLocaleLowerCase();
         delete this.#sources[instance];
+        this.#stats.hasPendingChanges(true);
     }
 
     /**
@@ -254,5 +257,6 @@ export default class NumericStatTracker {
      */
     clearInstances() {
         this.#sources = {};
+        this.#stats.hasPendingChanges(true);
     }
 }

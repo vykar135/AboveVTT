@@ -430,7 +430,7 @@ export class FixedValueModifier {
         Object.seal(this);
     }
 
-    /** @type {'set' | 'add' | 'subtract' | 'multiplier'} The operation to use relavative to the current value. */
+    /** @type {'set' | 'add' | 'subtract' | 'multiplier' | 'multiplier_up'} The operation to use relavative to the current value. */
     operation;
     /** @type {number} The fixed amount used within the effect. */
     amount;
@@ -463,7 +463,10 @@ export class FixedValueModifier {
         } else if (op === 'subtract') {
             calculated = current - calculated;
         } else if (op === 'multiplier') {
-            calculated = current * calculated;
+            // RAW across the board is to round down unless explicitly stated otherwise
+            calculated = Math.floor(current * calculated);
+        } else if (op === 'multiplier_up') {
+            calculated = Math.ceil(current * calculated);
         }
 
         return calculated;

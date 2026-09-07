@@ -7,8 +7,6 @@ export default class ConditionTracker {
     #stats
     #uri;
     #name;
-    #srd;
-    #dndBeyond;
     #incapacitates;
     #tokenActive;
     #playerActive;
@@ -18,23 +16,19 @@ export default class ConditionTracker {
     #baseImmunity;
     #immunity;
 
-    /** @type {{ [instance: string]: { version: number, intensity: number, immunity: boolean | undefined } }} */
+    /** @type {{ instance: string, version: number, intensity: number, immunity: boolean | undefined }[]} */
     #sources;
 
     /**
      * @param {StatBlock} stats - The stat block that this property is for.
      * @param {string} uri - The identifier of the condition.
      * @param {string} name - The name to display for the condition.
-     * @param {string} srd - The URI of the condition found on player character sheets.
-     * @param {number} dndBeyond - The value of the condition within D&D Beyond.
      * @param {boolean} incapacitates - Whether the condition incapacitates the token while active.
      */
-    constructor(stats, uri, name, srd, dndBeyond, incapacitates){
+    constructor(stats, uri, name, incapacitates){
         this.#stats = stats;
         this.#uri = uri;
         this.#name = name;
-        this.#srd = srd;
-        this.#dndBeyond = dndBeyond;
         this.#incapacitates = incapacitates;
         this.#tokenActive = false;
         this.#playerActive = false;
@@ -53,12 +47,6 @@ export default class ConditionTracker {
 
     /** The name to display for the condition. */
     get name() { return this.#name; }
-
-    /** The value of the condition within D&D Beyond. */
-    get dndBeyond() { return this.#dndBeyond; }
-
-    /** The URI of the condition found on player character sheets. */
-    get srd() { return this.#srd; }
 
     /** Whether the condition incapacitates the token while active. */
     get incapacitates() { return this.#incapacitates; }
@@ -105,14 +93,12 @@ export default class ConditionTracker {
         let intensity = this.#baseIntensity ?? 0;
         let immunity = this.#baseImmunity;
 
-        for (const [key, applied] of this.#sources) {
-            if (applied.version === version) {
-                active = true;
-                intensity += (applied.intensity ?? 1);
-                immunity = applied.immunity ?? immunity;
-            } else {
-                delete this.#sources[key];
-            }
+        this.#sources = this.#sources.filter(entry => entry.version === version);
+
+        for (const applied of this.#sources) {
+            active = true;
+            intensity += (applied.intensity ?? 1);
+            immunity = applied.immunity ?? immunity;
         }
 
         this.#effectActive = active;
@@ -126,15 +112,31 @@ export default class ConditionTracker {
      * Appends an instance of the condition being applied to the stat block.
      * @param {string} instance - The tracking identifier within the instance of the behavior for the effect impact
      * @param {number} intensity - The numeric value representing the intensity of the effects from the condition
+     * @param {boolean} immunity - Whether the creature is immune to the effects of the condition.
      */
-    addInstance(instance, intensity) {
+    addInstance(instance, intensity, immunity) {
         if (typeof instance !== 'string') {
             console.warn(`Attempting to append an instance of condition ${this.#uri} without a valid instance identifier`);
             return;
         }
 
+        if (typeof immunity !== 'boolean' && immunity != null) {
+            console.warn(`Attempting to append immunity to ${this.#uri} without a valid boolean value`);
+            immunity = undefined;
+        }
+
+        if (typeof intensity !== 'number') {
+            console.warn(`Attempting to append intensity to ${this.#uri} without a valid numeric value`);
+            intensity = undefined;
+        }
+
         instance = instance.toLocaleLowerCase();
-        this.#sources[instance] = { version: this.#stats.statusEffects.version, intensity }
+        this.#sources.push({
+            instance, intensity, immunity,
+            version: this.#stats.statusEffects.version
+        });
+
+        this.#stats.hasPendingChanges(true);
     }
 
     /**
@@ -147,14 +149,16 @@ export default class ConditionTracker {
             return;
         }
 
-        instance = instance.toLocaleLowerCase();
-        delete this.#sources[instance];
+        instance = instance.toLowerCase();
+        this.#sources = this.#sources.filter(entry => entry.instance !== instance);
+        this.#stats.hasPendingChanges(true);
     }
 
     /**
      * Removes all instances of the condition
      */
     clearInstances() {
-        this.#sources = {};
+        this.#sources = [];
+        this.#stats.hasPendingChanges(true);
     }
 }

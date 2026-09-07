@@ -1,12 +1,13 @@
 /** @import { Token } from './Token.types.js' */
 
 import { fetchBeyondSheetForToken, fetchOpen5eSheetForToken, fetchPlayerExtendedSheet } from './StatBlockSources.mjs';
-import { AbilityScore, ProficiencyType, SkillCheck, uriEquals } from './CoreEnums.mjs'
+import { AbilityScore, ConditionType, ProficiencyType, SkillCheck, uriEquals } from './CoreEnums.mjs'
 import HitPointBlock from './HitPointBlock.mjs';
 import ConditionTracker from './ConditionTracker.mjs';
 import NumericStatTracker from './NumericStatTracker.mjs';
 import TokenStatusEffects from './TokenStatusEffects.mjs';
 import { DiceAction, DiceActionContext } from './DiceAction.mjs';
+import DefenseTracker from './DefenseTracker.mjs';
 
 /**
  * Manages a normalized stat block for the provided token
@@ -21,6 +22,7 @@ export default class StatBlock {
     #saves;
     #skills;
     #conditions;
+    #defenses;
     #hitPoints;
     #diceContext;
     #effects;
@@ -29,6 +31,7 @@ export default class StatBlock {
     #pendingChanges;
     #player;
     #contributor;
+    #hasSheet;
 
     /** @type {{ [uri: string]: NumericStatTracker}} */
     #numeric;
@@ -48,6 +51,7 @@ export default class StatBlock {
         this.#saves = new BlockSavingThrows(this);
         this.#skills = new BlockSkillChecks(this);
         this.#conditions = new BlockConditions(this);
+        this.#defenses = new BlockDefenses(this);
         this.#hitPoints = new HitPointBlock(this);
         this.#effects = new TokenStatusEffects(this);
 
@@ -71,6 +75,7 @@ export default class StatBlock {
         this.#pendingChanges = false;
         this.#player = false;
         this.#contributor = false;
+        this.#hasSheet = false;
 
         Object.freeze(this);
 
@@ -163,6 +168,9 @@ export default class StatBlock {
     /** Whether the user can contribute to the token. */
     get isContributor() { return (window.DM === true || this.#contributor === true); }
 
+    /** Whether a backing character or monster stat block was found for the token */
+    get hasSheet() { return this.#hasSheet; }
+
     /** The context used for any dice actions performed from this stat block. */
     get diceContext() { return this.#diceContext; }
 
@@ -199,6 +207,9 @@ export default class StatBlock {
     /** The current state of condition for the stat block. */
     get conditions() { return this.#conditions; }
 
+    /** The current state of defenses against the various types of damage for the stat block. */
+    get defenses() { return this.#defenses; }
+
     /** The manager for active, passive, and maintained token status effects. */
     get statusEffects() { return this.#effects; }
 
@@ -232,6 +243,22 @@ export default class StatBlock {
             const total = modValue + bonusAmount + profAmount;
 
             return { total, proficiency: profAmount, bonus: bonusAmount, modifier: skill.ability };
+        };
+
+        const getCondition = (condition) => {
+            return {
+                active: condition.isActive, 
+                intensity: condition.isActive ? condition.intensity : 0, 
+                immune: condition.immune
+            }
+        };
+
+        const getDefense = (defense) => {
+            return {
+                immune: defense.immune, 
+                resistant: defense.resistant, 
+                vulnerable: defense.vulnerable
+            }
         };
 
         return {
@@ -271,6 +298,38 @@ export default class StatBlock {
                 sleight_of_hand: getSkill(this.#skills.sleightOfHand),
                 stealth: getSkill(this.#skills.stealth),
                 survival: getSkill(this.#skills.survival)
+            },
+            conditions: {
+                blinded: getCondition(this.#conditions.blinded),
+                charmed: getCondition(this.#conditions.charmed),
+                deafened: getCondition(this.#conditions.deafened),
+                exhaustion: getCondition(this.#conditions.exhaustion),
+                frightened: getCondition(this.#conditions.frightened),
+                grappled: getCondition(this.#conditions.grappled),
+                incapacitated: getCondition(this.#conditions.incapacitated),
+                invisible: getCondition(this.#conditions.invisible),
+                paralyzed: getCondition(this.#conditions.paralyzed),
+                petrified: getCondition(this.#conditions.petrified),
+                poisoned: getCondition(this.#conditions.poisoned),
+                prone: getCondition(this.#conditions.prone),
+                restrained: getCondition(this.#conditions.restrained),
+                stunned: getCondition(this.#conditions.stunned),
+                unconscious: getCondition(this.#conditions.unconscious)
+            },
+            defenses: {
+                slashing: getDefense(this.#defenses.slashing),
+                piercing: getDefense(this.#defenses.piercing),
+                bludgeoning: getDefense(this.#defenses.bludgeoning),
+                acid: getDefense(this.#defenses.acid),
+                cold: getDefense(this.#defenses.cold),
+                fire: getDefense(this.#defenses.fire),
+                force: getDefense(this.#defenses.force),
+                lightning: getDefense(this.#defenses.lightning),
+                necrotic: getDefense(this.#defenses.necrotic),
+                poison: getDefense(this.#defenses.poison),
+                psychic: getDefense(this.#defenses.psychic),
+                radiant: getDefense(this.#defenses.radiant),
+                thunder: getDefense(this.#defenses.thunder)
             }
         };
     }
@@ -302,7 +361,7 @@ export default class StatBlock {
         let property = this.#numeric[uri];
         if (property == null && typeof init === 'function') {
             property = init(this, uri);
-            this.#numeric[uri] = condition;
+            this.#numeric[uri] = property;
         }
 
         return property;
@@ -374,6 +433,7 @@ export default class StatBlock {
                 }
             }
 
+            this.#hasSheet = ((sheets.player ?? sheets.playerExt ?? sheets.open5e ?? sheets.monster) != null);
             sheets.pb = this.#refreshLevel(sheets);
 
             const ac = options.armorClass ?? player?.armorClass ?? monster?.armorClass ?? 
@@ -409,9 +469,21 @@ export default class StatBlock {
             this.#refreshSkill(SkillCheck.Stealth, this.#skills.stealth, sheets);
             this.#refreshSkill(SkillCheck.Survival, this.#skills.survival, sheets);
 
-            for(const condition of Object.values(this.#conditions)) {
-                this.#refreshCondition(condition, sheets);
-            }
+            this.#refreshCondition(this.#conditions.blinded, ConditionType.Blinded, sheets);
+            this.#refreshCondition(this.#conditions.charmed, ConditionType.Charmed, sheets);
+            this.#refreshCondition(this.#conditions.deafened, ConditionType.Deafened, sheets);
+            this.#refreshCondition(this.#conditions.exhaustion, ConditionType.Exhaustion, sheets);
+            this.#refreshCondition(this.#conditions.frightened, ConditionType.Frightened, sheets);
+            this.#refreshCondition(this.#conditions.grappled, ConditionType.Grappled, sheets);
+            this.#refreshCondition(this.#conditions.incapacitated, ConditionType.Incapacitated, sheets);
+            this.#refreshCondition(this.#conditions.invisible, ConditionType.Invisible, sheets);
+            this.#refreshCondition(this.#conditions.paralyzed, ConditionType.Paralyzed, sheets);
+            this.#refreshCondition(this.#conditions.petrified, ConditionType.Petrified, sheets);
+            this.#refreshCondition(this.#conditions.poisoned, ConditionType.Poisoned, sheets);
+            this.#refreshCondition(this.#conditions.prone, ConditionType.Prone, sheets);
+            this.#refreshCondition(this.#conditions.restrained, ConditionType.Restrained, sheets);
+            this.#refreshCondition(this.#conditions.stunned, ConditionType.Stunned, sheets);
+            this.#refreshCondition(this.#conditions.unconscious, ConditionType.Unconscious, sheets);
 
             delete this.#warnings['rebuild'];
         } catch (error) {
@@ -426,6 +498,10 @@ export default class StatBlock {
         try {
             for (const condition of Object.values(this.#conditions)) {
                 condition.recalculate();
+            }
+
+            for (const defense of Object.values(this.#defenses)) {
+                defense.recalculate();
             }
 
             for (const wellKnown of this.#wellKnownNumerics) {
@@ -779,10 +855,11 @@ export default class StatBlock {
     /**
      * Determines whether a condition is applied to the stat block.
      * @param {ConditionTracker} condition - The condition to update.
+     * @param {{ srd: string, dndBeyond: number }}} config - Configuration settings for finding the condition on the various sheets
      * @param {Object} sheets - The sheet information for the token.
      */
-    #refreshCondition(condition, sheets) {
-        const findUri = (condition.srd ?? '').toLowerCase().trim();
+    #refreshCondition(condition, config, sheets) {
+        const findUri = (config.srd ?? '').toLowerCase().trim();
         const fromToken = (sheets.options.conditions?.findIndex(entry => entry?.name?.toLowerCase() === findUri) ?? -1) >= 0;
         const player = (sheets.player?.conditions?.find((entry) => entry?.name?.toLowerCase() === findUri));
 
@@ -793,7 +870,7 @@ export default class StatBlock {
 
         const immunity = (
             (sheets.player?.immunities?.find((entry) => entry?.name?.toLowerCase() === findUri)) ??
-            (sheets.monster?.conditionImmunities?.find((entry) => typeof entry === 'number' && entry === condition.dndBeyond)) ??
+            (sheets.monster?.conditionImmunities?.find((entry) => typeof entry === 'number' && entry === config.dndBeyond)) ??
             (sheets.open5e?.resistances_and_immunities?.condition_immunities?.find((entry) => entry?.key?.toLowerCase() === findUri))
         );
 
@@ -918,21 +995,43 @@ class BlockSkillChecks {
 class BlockConditions {
     /** @param {StatBlock} stats */
     constructor(stats) {
-        this.blinded = new ConditionTracker(stats, 'blinded', 'Blinded', "Blinded", 1, false);
-        this.charmed = new ConditionTracker(stats, 'charmed', 'Charmed', "Charmed", 2, false);
-        this.deafened = new ConditionTracker(stats, 'deafened', 'Deafened', "Deafened", 3, false);
-        this.exhaustion = new ConditionTracker(stats, 'exhaustion', 'Exhaustion', 'Exhaustion', 4, false);
-        this.frightened = new ConditionTracker(stats, 'frightened', 'Frightened', "Frightened", 5, false);
-        this.grappled = new ConditionTracker(stats, 'grappled', 'Grappled', "Grappled", 6, false);
-        this.incapacitated = new ConditionTracker(stats, 'incapacitated', 'Incapacitated', "Incapacitated", 7, true);
-        this.invisible = new ConditionTracker(stats, 'invisible', 'Invisible', "Invisible", 8, false);
-        this.paralyzed = new ConditionTracker(stats, 'paralyzed', 'Paralyzed', "Paralyzed", 9, true);
-        this.petrified = new ConditionTracker(stats, 'petrified', 'Petrified', "Petrified", 10, true);
-        this.poisoned = new ConditionTracker(stats, 'poisoned', 'Poisoned', "Poisoned", 11, false);
-        this.prone = new ConditionTracker(stats, 'prone', 'Prone', "Prone", 12, false);
-        this.restrained = new ConditionTracker(stats, 'restrained', 'Restrained', "Restrained", 13, false);
-        this.stunned = new ConditionTracker(stats, 'stunned', 'Stunned', "Stunned", 14, true);
-        this.unconscious = new ConditionTracker(stats, 'unconscious', 'Unconscious', "Unconscious", 15, true);
+        this.blinded = new ConditionTracker(stats, 'blinded', 'Blinded', false);
+        this.charmed = new ConditionTracker(stats, 'charmed', 'Charmed', false);
+        this.deafened = new ConditionTracker(stats, 'deafened', 'Deafened', false);
+        this.exhaustion = new ConditionTracker(stats, 'exhaustion', 'Exhaustion', false);
+        this.frightened = new ConditionTracker(stats, 'frightened', 'Frightened', false);
+        this.grappled = new ConditionTracker(stats, 'grappled', 'Grappled', false);
+        this.incapacitated = new ConditionTracker(stats, 'incapacitated', 'Incapacitated', true);
+        this.invisible = new ConditionTracker(stats, 'invisible', 'Invisible', false);
+        this.paralyzed = new ConditionTracker(stats, 'paralyzed', 'Paralyzed', true);
+        this.petrified = new ConditionTracker(stats, 'petrified', 'Petrified', true);
+        this.poisoned = new ConditionTracker(stats, 'poisoned', 'Poisoned', false);
+        this.prone = new ConditionTracker(stats, 'prone', 'Prone', false);
+        this.restrained = new ConditionTracker(stats, 'restrained', 'Restrained', false);
+        this.stunned = new ConditionTracker(stats, 'stunned', 'Stunned', true);
+        this.unconscious = new ConditionTracker(stats, 'unconscious', 'Unconscious', true);
+
+        Object.freeze(this);
+    }
+}
+
+/** Defines the standard set of defenses agaist damage type that can be applied to a stat block. */
+class BlockDefenses {
+    /** @param {StatBlock} stats */
+    constructor(stats) {
+        this.slashing = new DefenseTracker(stats, 'slashing', 'Slashing');
+        this.piercing = new DefenseTracker(stats, 'piercing', 'Piercing');
+        this.bludgeoning = new DefenseTracker(stats, 'bludgeoning', 'Bludgeoning');
+        this.acid = new DefenseTracker(stats, 'acid', 'Acid');
+        this.cold = new DefenseTracker(stats, 'cold', 'Cold');
+        this.fire = new DefenseTracker(stats, 'fire', 'Fire');
+        this.force = new DefenseTracker(stats, 'force', 'Force');
+        this.lightning = new DefenseTracker(stats, 'lightning', 'Lightning');
+        this.necrotic = new DefenseTracker(stats, 'necrotic', 'Necrotic');
+        this.poison = new DefenseTracker(stats, 'poison', 'Poison');
+        this.psychic = new DefenseTracker(stats, 'psychic', 'Psychic');
+        this.radiant = new DefenseTracker(stats, 'radiant', 'Radiant');
+        this.thunder = new DefenseTracker(stats, 'thunder', 'Thunder');
 
         Object.freeze(this);
     }

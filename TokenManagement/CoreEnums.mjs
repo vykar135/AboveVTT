@@ -96,7 +96,6 @@ export function uriEquals(value, expected) {
  *   Proficiency: ConfigurationSettings,
  *   Advantage: ConfigurationSettings,
  *   Resistance: ConfigurationSettings,
- *   AbilityModifier: ConfigurationSettings,
  *   DieSize: ConfigurationSettings
  * }}
  */
@@ -109,7 +108,6 @@ export const PropertyType = new Configuration({
     Proficiency: { uri: 'prop:proficiency', name: 'Proficiency' },
     Advantage: { uri: 'prop:advantage', name: 'Advantage' },
     Resistance: { uri: 'prop:resistance', name: 'Resistance' },
-    AbilityModifier: { uri: 'prop:ability:modifier', name: 'Ability Modifier' },
     DieSize: { uri: 'prop:die:size', name: 'Die Size' }
 });
 
@@ -318,21 +316,21 @@ export const DamageResistance = new Configuration({
  * }}
  */
 export const ConditionType = new Configuration({
-    Blinded: { uri: 'blinded', name: 'Blinded', srd: "Blinded" },
-    Charmed: { uri: 'charmed', name: 'Charmed', srd: "Charmed" },
-    Deafened: { uri: 'deafened', name: 'Deafened', srd: "Deafened" },
-    Frightened: { uri: 'frightened', name: 'Frightened', srd: "Frightened" },
-    Grappled: { uri: 'grappled', name: 'Grappled', srd: "Grappled" },
-    Incapacitated: { uri: 'incapacitated', name: 'Incapacitated', incapacitates: true, srd: "Incapacitated" },
-    Invisible: { uri: 'invisible', name: 'Invisible', srd: "Invisible" },
-    Paralyzed: { uri: 'paralyzed', name: 'Paralyzed', incapacitates: true, srd: "Paralyzed" },
-    Petrified: { uri: 'petrified', name: 'Petrified', incapacitates: true, srd: "Petrified" },
-    Poisoned: { uri: 'poisoned', name: 'Poisoned', srd: "Poisoned" },
-    Prone: { uri: 'prone', name: 'Prone', srd: "Prone" },
-    Restrained: { uri: 'restrained', name: 'Restrained', srd: "Restrained" },
-    Stunned: { uri: 'stunned', name: 'Stunned', incapacitates: true, srd: "Stunned" },
-    Unconscious: { uri: 'unconscious', name: 'Unconscious', incapacitates: true, srd: "Unconscious" },
-    Exhaustion: { uri: 'exhaustion', name: 'Exhaustion', type: PropertyType.Number, min: 0, max: 11, srd: "Exhaustion" }
+    Blinded: { uri: 'blinded', name: 'Blinded', srd: "Blinded", dndBeyond: 1 },
+    Charmed: { uri: 'charmed', name: 'Charmed', srd: "Charmed", dndBeyond: 2 },
+    Deafened: { uri: 'deafened', name: 'Deafened', srd: "Deafened", dndBeyond: 3 },
+    Exhaustion: { uri: 'exhaustion', name: 'Exhaustion', type: PropertyType.Number, min: 0, max: 11, srd: "Exhaustion", dndBeyond: 4 },
+    Frightened: { uri: 'frightened', name: 'Frightened', srd: "Frightened", dndBeyond: 5 },
+    Grappled: { uri: 'grappled', name: 'Grappled', srd: "Grappled", dndBeyond: 6 },
+    Incapacitated: { uri: 'incapacitated', name: 'Incapacitated', incapacitates: true, srd: "Incapacitated", dndBeyond: 7 },
+    Invisible: { uri: 'invisible', name: 'Invisible', srd: "Invisible", dndBeyond: 8 },
+    Paralyzed: { uri: 'paralyzed', name: 'Paralyzed', incapacitates: true, srd: "Paralyzed", dndBeyond: 9 },
+    Petrified: { uri: 'petrified', name: 'Petrified', incapacitates: true, srd: "Petrified", dndBeyond: 10 },
+    Poisoned: { uri: 'poisoned', name: 'Poisoned', srd: "Poisoned", dndBeyond: 11 },
+    Prone: { uri: 'prone', name: 'Prone', srd: "Prone", dndBeyond: 12 },
+    Restrained: { uri: 'restrained', name: 'Restrained', srd: "Restrained", dndBeyond: 13 },
+    Stunned: { uri: 'stunned', name: 'Stunned', incapacitates: true, srd: "Stunned", dndBeyond: 14 },
+    Unconscious: { uri: 'unconscious', name: 'Unconscious', incapacitates: true, srd: "Unconscious", dndBeyond: 15 }
 }, { type: PropertyType.Condition });
 
 /**
@@ -373,13 +371,13 @@ export const AbilityScore = new Configuration({
  * }}
  */
 export const AbilityModifier = new Configuration({
-    STR: { uri: 'str:modifier', name: 'Strength Modifier', score: AbilityScore.STR },
-    DEX: { uri: 'dex:modifier', name: 'Dexterity Modifier', score: AbilityScore.DEX },
-    CON: { uri: 'con:modifier', name: 'Constitution Modifier', score: AbilityScore.CON },
-    INT: { uri: 'int:modifier', name: 'Intelligence Modifier', score: AbilityScore.INT },
-    WIS: { uri: 'wis:modifier', name: 'Wisdom Modifier', score: AbilityScore.WIS },
-    CHA: { uri: 'cha:modifier', name: 'Charisma Modifier', score: AbilityScore.CHA },
-    Initiative: { uri: 'modifier:initiative', name: 'Initiative', score: AbilityScore.DEX }
+    STR: { uri: 'str:modifier', name: 'Strength Modifier' },
+    DEX: { uri: 'dex:modifier', name: 'Dexterity Modifier' },
+    CON: { uri: 'con:modifier', name: 'Constitution Modifier' },
+    INT: { uri: 'int:modifier', name: 'Intelligence Modifier' },
+    WIS: { uri: 'wis:modifier', name: 'Wisdom Modifier' },
+    CHA: { uri: 'cha:modifier', name: 'Charisma Modifier' },
+    Initiative: { uri: 'initiative', name: 'Initiative' }
 }, { type: PropertyType.Number });
 
 /**
@@ -456,14 +454,14 @@ export const SpellTracking = new Configuration({
  * }}
  */
 export const AbilityCheck = new Configuration({
-    Any: { uri: 'check:any', name: 'Any Ability Check', diceTags: [ 'check' ] },
-    STR: { uri: 'check:str', name: 'Strength Check', diceTags: [ 'check', AbilityScore.STR.uri ] },
-    DEX: { uri: 'check:dex', name: 'Dexterity Check', diceTags: [ 'check', AbilityScore.DEX.uri ] },
-    CON: { uri: 'check:con', name: 'Constitution Check', diceTags: [ 'check', AbilityScore.CON.uri ] },
-    INT: { uri: 'check:int', name: 'Intelligence Check', diceTags: [ 'check', AbilityScore.INT.uri ] },
-    WIS: { uri: 'check:wis', name: 'Wisdom Check', diceTags: [ 'check', AbilityScore.WIS.uri ] },
-    CHA: { uri: 'check:cha', name: 'Charisma Check', diceTags: [ 'check', AbilityScore.CHA.uri ] }
-});
+    Any: { uri: 'any:check', name: 'Any Ability Check', diceTags: [ 'check' ] },
+    STR: { uri: 'str:check', name: 'Strength Check', diceTags: [ 'check', AbilityScore.STR.uri ] },
+    DEX: { uri: 'dex:check', name: 'Dexterity Check', diceTags: [ 'check', AbilityScore.DEX.uri ] },
+    CON: { uri: 'con:check', name: 'Constitution Check', diceTags: [ 'check', AbilityScore.CON.uri ] },
+    INT: { uri: 'int:check', name: 'Intelligence Check', diceTags: [ 'check', AbilityScore.INT.uri ] },
+    WIS: { uri: 'wis:check', name: 'Wisdom Check', diceTags: [ 'check', AbilityScore.WIS.uri ] },
+    CHA: { uri: 'cha:check', name: 'Charisma Check', diceTags: [ 'check', AbilityScore.CHA.uri ] }
+}, { type: PropertyType.Roll });
 
 /**
  * @type {Configuration & {
@@ -478,15 +476,15 @@ export const AbilityCheck = new Configuration({
  * }}
  */
 export const SavingThrow = new Configuration({
-    Any: { uri: 'save:any', name: 'Any Saving Throw', diceTags: [ 'save' ] },
-    STR: { uri: 'save:str', name: 'Strength Saving Throw', diceTags: [ 'save', AbilityScore.STR.uri ] },
-    DEX: { uri: 'save:dex', name: 'Dexterity Saving Throw', diceTags: [ 'save', AbilityScore.DEX.uri ] },
-    CON: { uri: 'save:con', name: 'Constitution Saving Throw', diceTags: [ 'save', AbilityScore.CON.uri ] },
-    INT: { uri: 'save:int', name: 'Intelligence Saving Throw', diceTags: [ 'save', AbilityScore.INT.uri ] },
-    WIS: { uri: 'save:wis', name: 'Wisdom Saving Throw', diceTags: [ 'save', AbilityScore.WIS.uri ] },
-    CHA: { uri: 'save:cha', name: 'Charisma Saving Throw', diceTags: [ 'save', AbilityScore.CHA.uri ] },
-    Death: { uri: 'save:death', name: 'Death Saving Throw', diceTags: [ 'save', 'death' ] }
-});
+    Any: { uri: 'any:save', name: 'Any Saving Throw', diceTags: [ 'save' ] },
+    STR: { uri: 'str:save', name: 'Strength Saving Throw', diceTags: [ 'save', AbilityScore.STR.uri ] },
+    DEX: { uri: 'dex:save', name: 'Dexterity Saving Throw', diceTags: [ 'save', AbilityScore.DEX.uri ] },
+    CON: { uri: 'con:save', name: 'Constitution Saving Throw', diceTags: [ 'save', AbilityScore.CON.uri ] },
+    INT: { uri: 'int:save', name: 'Intelligence Saving Throw', diceTags: [ 'save', AbilityScore.INT.uri ] },
+    WIS: { uri: 'wis:save', name: 'Wisdom Saving Throw', diceTags: [ 'save', AbilityScore.WIS.uri ] },
+    CHA: { uri: 'cha:save', name: 'Charisma Saving Throw', diceTags: [ 'save', AbilityScore.CHA.uri ] },
+    Death: { uri: 'death:save', name: 'Death Saving Throw', diceTags: [ 'save', 'death' ] }
+}, { type: PropertyType.Roll });
 
 /**
  * Proficiency and critical are omitted from this configuration because skill checks follow the default which is true.
@@ -519,14 +517,14 @@ export const SavingThrow = new Configuration({
  * }}
  */
 export const SkillCheck = new Configuration({
-    Any: { uri: 'skill:any', name: 'Any Skill Check', diceTags: [ 'skill' ] },
+    Any: { uri: 'any:skill', name: 'Any Skill Check', diceTags: [ 'skill' ] },
 
-    STR: { uri: 'skill:str', name: 'Strength Skill Check', diceTags: [ 'skill', AbilityScore.STR.uri ] },
-    DEX: { uri: 'skill:dex', name: 'Dexterity Skill Check', diceTags: [ 'skill', AbilityScore.DEX.uri ] },
-    CON: { uri: 'skill:con', name: 'Constitution Skill Check', diceTags: [ 'skill', AbilityScore.CON.uri ] },
-    WIS: { uri: 'skill:wis', name: 'Wisdom Skill Check', diceTags: [ 'skill', AbilityScore.WIS.uri ] },
-    INT: { uri: 'skill:int', name: 'Intellegence Skill Check', diceTags: [ 'skill', AbilityScore.INT.uri ] },
-    CHA: { uri: 'skill:cha', name: 'Charisma Skill Check', diceTags: [ 'skill', AbilityScore.CHA.uri ] },
+    STR: { uri: 'str:skill', name: 'Strength Skill Check', diceTags: [ 'skill', AbilityScore.STR.uri ] },
+    DEX: { uri: 'dex:skill', name: 'Dexterity Skill Check', diceTags: [ 'skill', AbilityScore.DEX.uri ] },
+    CON: { uri: 'con:skill', name: 'Constitution Skill Check', diceTags: [ 'skill', AbilityScore.CON.uri ] },
+    WIS: { uri: 'wis:skill', name: 'Wisdom Skill Check', diceTags: [ 'skill', AbilityScore.WIS.uri ] },
+    INT: { uri: 'int:skill', name: 'Intellegence Skill Check', diceTags: [ 'skill', AbilityScore.INT.uri ] },
+    CHA: { uri: 'cha:skill', name: 'Charisma Skill Check', diceTags: [ 'skill', AbilityScore.CHA.uri ] },
 
     Acrobatics: { uri: 'acrobatics', name: 'Acrobatics', diceTags: [ 'skill', 'acrobatics' ], open5e: 'acrobatics', dndBeyond: 3, player: 'acrobatics' },
     AnimalHandling: { uri: 'animal_handling', name: 'Animal Handling', diceTags: [ 'skill', 'animal_handling' ], open5e: 'animal_handling', dndBeyond: 11, player: 'animal handling' },
@@ -546,7 +544,7 @@ export const SkillCheck = new Configuration({
     SleightOfHand: { uri: 'sleight_of_hand', name: 'Sleight of Hand', diceTags: [ 'skill', 'sleight_of_hand' ], open5e: 'sleight_of_hand', dndBeyond: 4, player: 'sleight of hand' },
     Stealth: { uri: 'stealth', name: 'Stealth', diceTags: [ 'skill', 'stealth' ], open5e: 'stealth', dndBeyond: 5, player: 'stealth' },
     Survival: { uri: 'survival', name: 'Survival', diceTags: [ 'skill', 'survival' ], open5e: 'survival', dndBeyond: 15, player: 'survival' }
-});
+}, { type: PropertyType.Roll });
 
 /**
  * @type {Configuration & {
