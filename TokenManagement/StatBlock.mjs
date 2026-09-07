@@ -1,7 +1,7 @@
 /** @import { Token } from './Token.types.js' */
 
 import { fetchBeyondSheetForToken, fetchOpen5eSheetForToken, fetchPlayerExtendedSheet } from './StatBlockSources.mjs';
-import { AbilityScore, ConditionType, PropertyType, ProficiencyType, SkillCheck, uriEquals } from './CoreEnums.mjs'
+import { AbilityScore, ProficiencyType, SkillCheck, uriEquals } from './CoreEnums.mjs'
 import HitPointBlock from './HitPointBlock.mjs';
 import ConditionTracker from './ConditionTracker.mjs';
 import NumericStatTracker from './NumericStatTracker.mjs';
@@ -20,6 +20,7 @@ export default class StatBlock {
     #initiative;
     #saves;
     #skills;
+    #conditions;
     #hitPoints;
     #diceContext;
     #effects;
@@ -27,12 +28,10 @@ export default class StatBlock {
 
     /** @type {{ [uri: string]: NumericStatTracker}} */
     #numeric;
-    /** @type {{ [uri: string]: ConditionTracker}} */
-    #conditions;
     /** @type {{ [uri: string]: string}} Components within the stat block that failed to complete successuflly */
     #warnings;
 
-    /** Collection of internal properties that are still writable after freezing the instance. */
+    /** Collection of internal properties that are not subject to change tracking. */
     #internals;
 
     /** @param {Token} token - The token to normalize the stat block for. */
@@ -47,6 +46,7 @@ export default class StatBlock {
         this.#modifiers = new BlockAbilityModifiers(this);
         this.#saves = new BlockSavingThrows(this);
         this.#skills = new BlockSkillChecks(this);
+        this.#conditions = new BlockConditions(this);
         this.#hitPoints = new HitPointBlock(this);
         this.#effects = new TokenStatusEffects(this);
 
@@ -64,7 +64,6 @@ export default class StatBlock {
         
         this.#warnings = {};
         this.#numeric = {};
-        this.#conditions = {}
 
         this.#internals = {
             level: 0,
@@ -198,6 +197,9 @@ export default class StatBlock {
     /** The skill checks for the stat block. */
     get skills() { return this.#skills; }
 
+    /** The current state of condition for the stat block. */
+    get conditions() { return this.#conditions; }
+
     /** The manager for active, passive, and maintained token status effects. */
     get statusEffects() { return this.#effects; }
 
@@ -307,39 +309,6 @@ export default class StatBlock {
         return property;
     }
 
-    /**
-     * Retrieves the details for how a condition has been applied to the stat block.
-     * @param {string} uri - The identifier of the condition being tracked on the the stat block.
-     */
-    getCondition(uri) {
-        if (uri && typeof uri === 'object' && 'uri' in uri) {
-            uri = uri.uri;
-        }
-
-        uri = uri.toLowerCase();
-        return this.#conditions[uri];
-    }
-
-    /**
-     * Retrieves the details for how a condition has been applied to the stat block or adds it if it doesn't exist.
-     * @param {string} uri - The identifier of the condition being tracked on the the stat block.
-     * @param {(stats: StatBlock, uri: string) => ConditionTracker} init - Callback used to initialize the condition if it doesn't already exist.
-     */
-    getOrAddCondition(uri, init) {
-        if (uri && typeof uri === 'object' && 'uri' in uri) {
-            uri = uri.uri;
-        }
-
-        uri = uri.toLowerCase();
-        let condition = this.#conditions[uri];
-        if (condition == null && typeof init === 'function') {
-            condition = init(this, uri);
-            this.#conditions[uri] = condition;
-        }
-
-        return condition;
-    }
-
     /** A snapshot of the current initiative order in the combat tracker */
     getCurrentInitiative() {
         return StatBlock.getTokenInitiative(this.#token);
@@ -441,12 +410,8 @@ export default class StatBlock {
             this.#refreshSkill(SkillCheck.Stealth, this.#skills.stealth, sheets);
             this.#refreshSkill(SkillCheck.Survival, this.#skills.survival, sheets);
 
-            for(const condition of Object.values(ConditionType)) {
-                if (condition.type === PropertyType.Condition) {
-                    this.#refreshAppliedCondition(condition, sheets);
-                } else if (condition.type === PropertyType.Number) {
-                    this.#refreshLeveledCondition(condition, sheets);
-                }
+            for(const condition of Object.values(this.#conditions)) {
+                this.#refreshCondition(condition, sheets);
             }
 
             delete this.#warnings['rebuild'];
@@ -814,35 +779,26 @@ export default class StatBlock {
 
     /**
      * Determines whether a condition is applied to the stat block.
-     * @param {ConditionType} condition - The condition to update.
+     * @param {ConditionTracker} condition - The condition to update.
      * @param {Object} sheets - The sheet information for the token.
      */
-    #refreshAppliedCondition(condition, sheets) {
-        const srd = (typeof condition.srd === 'string');
+    #refreshCondition(condition, sheets) {
+        const findUri = (condition.srd ?? '').toLowerCase().trim();
+        const fromToken = (sheets.options.conditions?.findIndex(entry => entry?.name?.toLowerCase() === findUri) ?? -1) >= 0;
+        const player = (sheets.player?.conditions?.find((entry) => entry?.name?.toLowerCase() === findUri));
 
-        const findUri = (condition.srd ?? '').toLowerCase();
-        const fromToken = (srd && (sheets.options.conditions?.findIndex(entry => entry?.name?.toLowerCase() === findUri) ?? -1) >= 0);
-        const fromPlayer = (srd && (sheets.player?.conditions?.findIndex((entry) => entry?.name === condition.srd) ?? -1) >= 0);
-
-        let property = this.#conditions[condition.uri];
-        if (property == null) {
-            property = new ConditionTracker(this, condition.uri, fromToken, fromPlayer);
-            this.#conditions[condition.uri] = property;
+        let intensity = player?.level;
+        if (typeof intensity === 'string') {
+            intensity = parseInt(intensity);
         }
 
-        property.setBaseValue(fromToken, fromPlayer);
-    }
+        const immunity = (
+            (sheets.player?.immunities?.find((entry) => entry?.name?.toLowerCase() === findUri)) ??
+            (sheets.monster?.conditionImmunities?.find((entry) => typeof entry === 'number' && entry === condition.dndBeyond)) ??
+            (sheets.open5e?.resistances_and_immunities?.condition_immunities?.find((entry) => entry?.key?.toLowerCase() === findUri))
+        );
 
-    /**
-     * Determines whether a condition is applied to the stat block at a specified level.
-     * @param {ConditionType} condition - The condition to update.
-     * @param {Object} sheets - The sheet information for the token.
-     */
-    #refreshLeveledCondition(condition, sheets) {
-        const srd = (typeof condition.srd === 'string');
-        const fromPlayer = srd ? sheets.player?.conditions?.find((entry) => entry?.name === condition.srd)?.level : null;
-
-        this.#updateNumeric(condition.uri, (fromPlayer ?? 0) * 2);
+        condition.setBaseValue(fromToken, (player != null), intensity, (immunity != null));
     }
 }
 
@@ -874,6 +830,7 @@ class BlockAbilityModifiers {
 
 /** Defines an ability modifier associated with a stat block. */
 class BlockAbilityModifier {
+    /** @param {StatBlock} stats */
     constructor(stats, uri, name) {
         this.value = new NumericStatTracker(stats, `${uri}:modifier`, 0);
 
@@ -888,10 +845,15 @@ class BlockAbilityModifier {
     value;
     /** Performs a d20 test using the ability score modifier.*/
     check;
+    /** The current value of the property adjusted for a snapshot at the time an effect was applied. */
+    get current() { return this.value.current; }
+    /** The base value of the property. */
+    get base() { return this.value.base; }
 }
 
 /** Defines the saving throws associated with a stat block. */
 class BlockSavingThrows {
+    /** @param {StatBlock} stats */
     constructor(stats) {
         this.str = new DiceAction(stats.diceContext, 'str:save', 'Strength Saving Throw', true, 'str', true);
         this.dex = new DiceAction(stats.diceContext, 'dex:save', 'Dexterity Saving Throw', true, 'dex', true);
@@ -919,6 +881,7 @@ class BlockSavingThrows {
 
 /** Defines the skills associated with a stat block. */
 class BlockSkillChecks {
+    /** @param {StatBlock} stats */
     constructor(stats) {
         this.acrobatics = new DiceAction(stats.diceContext, 'acrobatics', 'Acrobatics', true, 'dex', false);
         this.animalHandling = new DiceAction(stats.diceContext, 'animal_handling', 'Animal Handling', true, 'wis', false);
@@ -935,7 +898,7 @@ class BlockSkillChecks {
         this.performance = new DiceAction(stats.diceContext, 'performance', 'Performance', true, 'cha', false);
         this.persuasion = new DiceAction(stats.diceContext, 'persuasion', 'Persuasion', true, 'cha', false);
         this.religion = new DiceAction(stats.diceContext, 'religion', 'Religion', true, 'int', false);
-        this.sleightOfHand = new DiceAction(stats.diceContext, 'Sleight of Hand', 'sleight_of_hand', true, 'dex', false);
+        this.sleightOfHand = new DiceAction(stats.diceContext, 'sleight_of_hand', 'Sleight of Hand', true, 'dex', false);
         this.stealth = new DiceAction(stats.diceContext, 'stealth', 'Stealth', true, 'dex', false);
         this.survival = new DiceAction(stats.diceContext, 'survival', 'Survival', true, 'wis', false);
 
@@ -947,6 +910,30 @@ class BlockSkillChecks {
             stat.tags.addRange([ 'skill', stat.uri ])
             stat.tagFreeze();
         }
+
+        Object.freeze(this);
+    }
+}
+
+/** Defines the standard set of conditions that can be applied to a stat block. */
+class BlockConditions {
+    /** @param {StatBlock} stats */
+    constructor(stats) {
+        this.blinded = new ConditionTracker(stats, 'blinded', 'Blinded', "Blinded", 1, false);
+        this.charmed = new ConditionTracker(stats, 'charmed', 'Charmed', "Charmed", 2, false);
+        this.deafened = new ConditionTracker(stats, 'deafened', 'Deafened', "Deafened", 3, false);
+        this.exhaustion = new ConditionTracker(stats, 'exhaustion', 'Exhaustion', 'Exhaustion', 4, false);
+        this.frightened = new ConditionTracker(stats, 'frightened', 'Frightened', "Frightened", 5, false);
+        this.grappled = new ConditionTracker(stats, 'grappled', 'Grappled', "Grappled", 6, false);
+        this.incapacitated = new ConditionTracker(stats, 'incapacitated', 'Incapacitated', "Incapacitated", 7, true);
+        this.invisible = new ConditionTracker(stats, 'invisible', 'Invisible', "Invisible", 8, false);
+        this.paralyzed = new ConditionTracker(stats, 'paralyzed', 'Paralyzed', "Paralyzed", 9, true);
+        this.petrified = new ConditionTracker(stats, 'petrified', 'Petrified', "Petrified", 10, true);
+        this.poisoned = new ConditionTracker(stats, 'poisoned', 'Poisoned', "Poisoned", 11, false);
+        this.prone = new ConditionTracker(stats, 'prone', 'Prone', "Prone", 12, false);
+        this.restrained = new ConditionTracker(stats, 'restrained', 'Restrained', "Restrained", 13, false);
+        this.stunned = new ConditionTracker(stats, 'stunned', 'Stunned', "Stunned", 14, true);
+        this.unconscious = new ConditionTracker(stats, 'unconscious', 'Unconscious', "Unconscious", 15, true);
 
         Object.freeze(this);
     }

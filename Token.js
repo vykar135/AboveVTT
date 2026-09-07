@@ -480,6 +480,8 @@ class Token {
 			if (!window.all_token_objects[this.options.id].options.custom_conditions.some(d => d.name == conditionName))
 				window.all_token_objects[this.options.id].options.custom_conditions.push(condition);
 	    }
+
+		this.#stats.rebuild();
 	}
 	
 	removeCondition(conditionName) {
@@ -532,6 +534,8 @@ class Token {
 			array_remove_index_by_value(this.options.custom_conditions, conditionName);
 			array_remove_index_by_value(window.all_token_objects[this.options.id].options.custom_conditions, conditionName);
 		}
+
+		this.#stats.rebuild();
 	}
 	isInCombatTracker() {
 		return ct_list_tokens().includes(this.options.id);

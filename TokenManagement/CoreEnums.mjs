@@ -332,44 +332,8 @@ export const ConditionType = new Configuration({
     Restrained: { uri: 'restrained', name: 'Restrained', srd: "Restrained" },
     Stunned: { uri: 'stunned', name: 'Stunned', incapacitates: true, srd: "Stunned" },
     Unconscious: { uri: 'unconscious', name: 'Unconscious', incapacitates: true, srd: "Unconscious" },
-    Exhaustion: { uri: 'exhaustion:srd', name: 'Exhaustion', type: PropertyType.Number, min: 0, max: 11, srd: "Exhaustion" }
+    Exhaustion: { uri: 'exhaustion', name: 'Exhaustion', type: PropertyType.Number, min: 0, max: 11, srd: "Exhaustion" }
 }, { type: PropertyType.Condition });
-
-/**
- * Defines how saving throws for conditions can acquire resistance (advantage), vulnerability (disadvantage), and immunity
- * @type {Configuration & {
- *   Blinded: DiceModifierSettings,
- *   Charmed: DiceModifierSettings,
- *   Deafened: DiceModifierSettings,
- *   Frightened: DiceModifierSettings,
- *   Grappled: DiceModifierSettings,
- *   Incapacitated: DiceModifierSettings,
- *   Paralyzed: DiceModifierSettings,
- *   Petrified: DiceModifierSettings,
- *   Poisoned: DiceModifierSettings,
- *   Prone: DiceModifierSettings,
- *   Restrained: DiceModifierSettings,
- *   Stunned: DiceModifierSettings,
- *   Unconscious: DiceModifierSettings,
- *   Exhaustion: DiceModifierSettings
- * }}
- */
-export const ConditionResistance = new Configuration({
-    Blinded: { uri: 'resistance:blinded', name: 'Blind Resistance', diceTags: [ ConditionType.Blinded.uri ] },
-    Charmed: { uri: 'resistance:charmed', name: 'Charm Resistance', diceTags: [ ConditionType.Charmed.uri ] },
-    Deafened: { uri: 'resistance:deafened', name: 'Deafen Resistance', diceTags: [ ConditionType.Deafened.uri ] },
-    Frightened: { uri: 'resistance:frightened', name: 'Fright Resistance', diceTags: [ ConditionType.Frightened.uri ] },
-    Grappled: { uri: 'resistance:grappled', name: 'Grapple Resistance', diceTags: [ ConditionType.Grappled.uri ] },
-    Incapacitated: { uri: 'resistance:incapacitated', name: 'Incapacitated Resistance', diceTags: [ ConditionType.Incapacitated.uri ] },
-    Paralyzed: { uri: 'resistance:paralyzed', name: 'Paralyze Resistance', diceTags: [ ConditionType.Paralyzed.uri ] },
-    Petrified: { uri: 'resistance:petrified', name: 'Petrify Resistance', diceTags: [ ConditionType.Petrified.uri ] },
-    Poisoned: { uri: 'resistance:poisoned', name: 'Poisoned Resistance', diceTags: [ ConditionType.Poisoned.uri ] },
-    Prone: { uri: 'resistance:prone', name: 'Prone Resistance', diceTags: [ ConditionType.Prone.uri ] },
-    Restrained: { uri: 'resistance:restrained', name: 'Restrained Resistance', diceTags: [ ConditionType.Restrained.uri ] },
-    Stunned: { uri: 'resistance:stunned', name: 'Stunned Resistance', diceTags: [ ConditionType.Stunned.uri ] },
-    Unconscious: { uri: 'resistance:unconscious', name: 'Unconscious Resistance', diceTags: [ ConditionType.Unconscious.uri ] },
-    Exhaustion: { uri: 'resistance:exhaustion', name: 'Exhaustion Resistance', diceTags: [ ConditionType.Exhaustion.uri ] }
-}, { type: PropertyType.Resistance });
 
 /**
  * Defines the top-level ability scores for a token
@@ -609,7 +573,7 @@ function buildPropertyIndex() {
     const review = [
         PropertyType, RollType, DiceType, ProficiencyType,
         ResistanceType, DamageType, AdvantageType,
-        DamageResistance, ConditionType, ConditionResistance,
+        DamageResistance, ConditionType, 
         AbilityScore, AbilityModifier, AbilityCheck,
         HitPoint, SpellTracking, AbilityConstraints, 
         SavingThrow, SkillCheck, Speed

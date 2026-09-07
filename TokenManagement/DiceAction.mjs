@@ -119,7 +119,7 @@ export class DiceAction extends DiceActionFeatures {
         this.#name = name;
         this.#d20test = d20test;
         this.#ability = ability;
-        this.#abilityLocked = (abilityLocked === false);
+        this.#abilityLocked = (abilityLocked === true);
         this.#tags = new DiceTagSet();
         this.#properties = new DiceTagSet();
         this.#resultTags = new DiceTagSet();
@@ -652,7 +652,7 @@ export class DiceTagLookup {
      * Determines whether a normalized tag collection exists in the set.
      * @param {string[]} normalized - The collection of tags that must be present on a modifier */
     #findIndex(normalized) {
-        for (let main = 0; main < this.#sets.length; i++) {
+        for (let main = 0; main < this.#sets.length; main++) {
             const entry = this.#sets[main];
             if (entry.length !== normalized.length) {
                 continue;
@@ -704,7 +704,7 @@ export class DiceTagLookup {
      * @param {(string | string[])[]} sets 
      */
     addRange(sets) {
-        if (!Array.isArray(tags)) {
+        if (!Array.isArray(sets)) {
             throw new Error('Must provide either the array of string to append to the tag set.');
         }
 
@@ -718,7 +718,7 @@ export class DiceTagLookup {
      * @param {(string | string[])[]} sets 
      */
     deleteRange(sets) {
-        if (!Array.isArray(tags)) {
+        if (!Array.isArray(sets)) {
             throw new Error('Must provide either the array of string to append to the tag set.');
         }
 
