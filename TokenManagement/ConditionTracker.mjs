@@ -131,10 +131,18 @@ export default class ConditionTracker {
         }
 
         instance = instance.toLocaleLowerCase();
-        this.#sources.push({
+        const index = this.#sources.findIndex(entry => entry.instance === instance);
+
+        const impact =  {
             instance, intensity, immunity,
             version: this.#stats.statusEffects.version
-        });
+        };
+
+        if (index < 0) {
+            this.#sources.push(impact);
+        } else {
+            this.#sources[index] = impact;
+        }
 
         this.#stats.hasPendingChanges(true);
     }

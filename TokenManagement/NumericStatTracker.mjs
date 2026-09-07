@@ -226,11 +226,18 @@ export default class NumericStatTracker {
         }
 
         instance = instance.toLocaleLowerCase();
+        const index = this.#sources.findIndex(entry => entry.instance === instance);
+
         impact.instance = instance;
         impact.version = this.#stats.statusEffects.version;
         Object.freeze(impact);
         
-        this.#sources.push(impact);
+        if (index < 0) {
+            this.#sources.push(impact);
+        } else {
+            this.#sources[index] = impact;
+        }
+        
         this.#stats.hasPendingChanges(true);
     }
 

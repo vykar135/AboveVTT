@@ -111,10 +111,18 @@ export default class DefenseTracker {
         }
 
         instance = instance.toLowerCase();
-        this.#sources.push({
+        const index = this.#sources.findIndex(entry => entry.instance === instance);
+
+        const impact = {
             instance, immunity, resistance, vulnerability,
             version: this.#stats.statusEffects.version
-        });
+        };
+
+        if (index < 0) {
+            this.#sources.push(impact);
+        } else {
+            this.#sources[index] = impact;
+        }
 
         this.#stats.hasPendingChanges(true);
     }
