@@ -1,7 +1,7 @@
 /** @import { Token } from './Token.types.js' */
 
 import { fetchBeyondSheetForToken, fetchOpen5eSheetForToken, fetchPlayerExtendedSheet } from './StatBlockSources.mjs';
-import { AbilityScore, ConditionType, ProficiencyType, SkillCheck, uriEquals } from './CoreEnums.mjs'
+import { AbilityScore, ConditionType, DamageType, ProficiencyType, SkillCheck, uriEquals } from './CoreEnums.mjs'
 import HitPointBlock from './HitPointBlock.mjs';
 import ConditionTracker from './ConditionTracker.mjs';
 import NumericStatTracker from './NumericStatTracker.mjs';
@@ -9,9 +9,7 @@ import TokenStatusEffects from './TokenStatusEffects.mjs';
 import { DiceAction, DiceActionContext } from './DiceAction.mjs';
 import DefenseTracker from './DefenseTracker.mjs';
 
-/**
- * Manages a normalized stat block for the provided token
- */
+/** Manages a normalized stat block for the provided token by importing details from associated creature stat blocks */
 export default class StatBlock {
     #token;
     #proficiency;
@@ -35,7 +33,7 @@ export default class StatBlock {
 
     /** @type {{ [uri: string]: NumericStatTracker}} */
     #numeric;
-    /** @type {{ [uri: string]: string}} Components within the stat block that failed to complete successuflly */
+    /** @type {{ [uri: string]: { message: string, error: Error }}} Components within the stat block that failed to complete successuflly */
     #warnings;
 
     /** @param {Token} token - The token to normalize the stat block for. */
@@ -127,7 +125,7 @@ export default class StatBlock {
 
     /**
      * Sends the appropriate notification event to the user and mark the stat block with a failure state.
-     * @param {str} eventType - The type of event that failed to complete successfully.
+     * @param {string} eventType - The type of event that failed to complete successfully.
      * @param {string} message - The message to report to the user
      * @param {Error} error - The error that was encountered
      */
@@ -484,6 +482,20 @@ export default class StatBlock {
             this.#refreshCondition(this.#conditions.restrained, ConditionType.Restrained, sheets);
             this.#refreshCondition(this.#conditions.stunned, ConditionType.Stunned, sheets);
             this.#refreshCondition(this.#conditions.unconscious, ConditionType.Unconscious, sheets);
+
+            this.#refreshDefenses(this.#defenses.slashing, DamageType.Slashing, sheets);
+            this.#refreshDefenses(this.#defenses.piercing, DamageType.Piercing, sheets);
+            this.#refreshDefenses(this.#defenses.bludgeoning, DamageType.Bludgeoning, sheets);
+            this.#refreshDefenses(this.#defenses.acid, DamageType.Acid, sheets);
+            this.#refreshDefenses(this.#defenses.cold, DamageType.Cold, sheets);
+            this.#refreshDefenses(this.#defenses.fire, DamageType.Fire, sheets);
+            this.#refreshDefenses(this.#defenses.force, DamageType.Force, sheets);
+            this.#refreshDefenses(this.#defenses.lightning, DamageType.Lightning, sheets);
+            this.#refreshDefenses(this.#defenses.necrotic, DamageType.Necrotic, sheets);
+            this.#refreshDefenses(this.#defenses.poison, DamageType.Poison, sheets);
+            this.#refreshDefenses(this.#defenses.psychic, DamageType.Psychic, sheets);
+            this.#refreshDefenses(this.#defenses.radiant, DamageType.Radiant, sheets);
+            this.#refreshDefenses(this.#defenses.thunder, DamageType.Thunder, sheets);
 
             delete this.#warnings['rebuild'];
         } catch (error) {
@@ -855,7 +867,7 @@ export default class StatBlock {
     /**
      * Determines whether a condition is applied to the stat block.
      * @param {ConditionTracker} condition - The condition to update.
-     * @param {{ srd: string, dndBeyond: number }}} config - Configuration settings for finding the condition on the various sheets
+     * @param {{ srd: string, open5e: string, dndBeyond: number }}} config - Configuration settings for finding the condition on the various sheets
      * @param {Object} sheets - The sheet information for the token.
      */
     #refreshCondition(condition, config, sheets) {
@@ -875,6 +887,66 @@ export default class StatBlock {
         );
 
         condition.setBaseValue(fromToken, (player != null), intensity, (immunity != null));
+    }
+
+    /**
+     * Determines whether a defenses against a damage type is applied to the stat block.
+     * @param {DefenseTracker} defenses - The condition to update.
+     * @param {{ uri: string, srd: string, open5e: string, ddbImmune: number, ddbResist: number, ddbVuln: number }} config
+     * @param {Object} sheets - The sheet information for the token.
+     */
+    #refreshDefenses(defenses, config, sheets) {
+        if (sheets.monster) {
+            const container = sheets.monster.damageAdjustments ?? [];
+            if (container.length === 0) {
+                defenses.setBaseValue(false, false, false);
+                return;
+            }
+
+            let immume = false;
+            let resist = false;
+            let vulnerable = false;
+
+            for (const entry of container) {
+                if (entry === config.ddbImmune || entry === DamageType.All.ddbImmune) {
+                    immume = true;
+                }
+
+                if (entry === config.ddbResist || entry === DamageType.All.ddbResist) {
+                    resist = true;
+                }
+
+                if (entry === config.ddbVuln) {
+                    vulnerable = true;
+                }
+            }
+
+            defenses.setBaseValue(immume, resist, vulnerable);
+            return;
+        }
+
+        if (sheets.open5e) {
+            const findUri = (config.open5e ?? config.srd ?? config.uri ?? '').toLowerCase().trim();
+            const container = sheets.open5e.resistances_and_immunities ?? {};
+            const immunity = container.damage_immunities?.find((entry) => entry?.key?.toLowerCase() === findUri);
+            const resistance = container.damage_resistances?.find((entry) => entry?.key?.toLowerCase() === findUri);
+            const vulnerability = container.damage_vulnerabilities?.find((entry) => entry?.key?.toLowerCase() === findUri);
+
+            defenses.setBaseValue((immunity != null), (resistance != null), (vulnerability != null))
+            return;
+        }
+
+        if (sheets.player) {
+            const findUri = (config.srd ?? config.uri ?? '').toLowerCase().trim();
+            const immunity = sheets.player.immunities?.find((entry) => entry?.name?.toLowerCase() === findUri);
+            const resistance = sheets.player.resistances?.find((entry) => entry?.name?.toLowerCase() === findUri);
+            const vulnerability = sheets.player.vulnerabilities?.find((entry) => entry?.name?.toLowerCase() === findUri);
+
+            defenses.setBaseValue((immunity != null), (resistance != null), (vulnerability != null))
+            return;
+        }
+
+        defenses.setBaseValue(false, false, false);
     }
 }
 

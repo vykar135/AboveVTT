@@ -183,44 +183,11 @@ export const ProficiencyType = new Configuration({
 });
 
 /**
- * Defines the types of resistance that can be granted to a property of a token
- * @type {Configuration & {
- *   None: ConfigurationSettings,
- *   Resistance: ConfigurationSettings,
- *   Immunity: ConfigurationSettings,
- *   Vulnerability: ConfigurationSettings
- * }}
- */
-export const ResistanceType = new Configuration({
-    None: { uri: 'resist:none', name: 'None', apply: (amt) => amt, d20test: 0 },
-    Resistance: { uri: 'resist', name: 'Resistance', apply: (amt) => (amt !== 0 ? Math.floor(amt / 2) : amt), d20test: 1 },
-    Immunity: { uri: 'immune', name: 'Immunity', apply: () => 0, d20test: Infinity },
-    Vulnerability: { uri: 'vulnerable', name: 'Vulnerability', apply: (amt) => (amt * 2), d20test: -1 }
-});
-
-/**
- * Defines whether a property containing a roll has advantage or disadvantage. To support advantage stacking use the following:
- * 1. Track sources of advantage and disadvantage seperately
- * 2. Limit the total number of each source count based on the value of AbilityConstraints.AdvantageLimit
- * 3. (Advantage Sources - Disadvantage Sources) as basis for keep high / low impact
- * Since the default advantage limit is 1, this would enact RAW by default
- * @type {Configuration & {
- *   None: ConfigurationSettings,
- *   Advantage: ConfigurationSettings,
- *   Disadvantage: ConfigurationSettings
- * }}
- */
-export const AdvantageType = new Configuration({
-    None: { uri: 'advantage:none', name: 'None', d20test: 0 },
-    Advantage: { uri: 'advantage', name: 'Advantage', d20test: 1 },
-    Disadvantage: { uri: 'disadvantage', name: 'Disadvantage', d20test: -1 }
-});
-
-/**
  * Defines the types of damage that can be dealt to a token
  * @type {Configuration & {
  *   Magic: ConfigurationSettings,
  *   Physical: ConfigurationSettings,
+ *   All: ConfigurationSettings,
  *   Slashing: ConfigurationSettings,
  *   Piercing: ConfigurationSettings,
  *   Bludgeoning: ConfigurationSettings,
@@ -239,60 +206,22 @@ export const AdvantageType = new Configuration({
 export const DamageType = new Configuration({
     Magic: { uri: 'dmg:magic', name: 'Magic Damage' },
     Physical: { uri: 'dmg:physical', name: 'Physical Damage' },
+    All: { uri: 'dmg:all', name: 'All Damage', srd: 'dmg:all', ddbResist: 53, ddbImmune: 89, ddbVuln: undefined },
 
-    Slashing: { uri: 'slashing', name: 'Slashing' },
-    Piercing: { uri: 'piercing', name: 'Piercing' },
-    Bludgeoning: { uri: 'bludgeoning', name: 'Bludgeoning' },
-    Acid: { uri: 'acid', name: 'Acid' },
-    Cold: { uri: 'cold', name: 'Cold' },
-    Fire: { uri: 'fire', name: 'Fire' },
-    Force: { uri: 'force', name: 'Force' },
-    Lightning: { uri: 'lightning', name: 'Lightning' },
-    Necrotic: { uri: 'necrotic', name: 'Necrotic' },
-    Poison: { uri: 'poison', name: 'Poison' },
-    Psychic: { uri: 'psychic', name: 'Psychic' },
-    Radiant: { uri: 'radiant', name: 'Radiant' },
-    Thunder: { uri: 'thunder', name: 'Thunder' }
+    Bludgeoning: { uri: 'bludgeoning', name: 'Bludgeoning', ddbResist: 1, ddbImmune: 17, ddbVuln: 33 },
+    Piercing: { uri: 'piercing', name: 'Piercing', ddbResist: 2, ddbImmune: 18, ddbVuln: 34 },
+    Slashing: { uri: 'slashing', name: 'Slashing', ddbResist: 3, ddbImmune: 19, ddbVuln: 35 },
+    Acid: { uri: 'acid', name: 'Acid', ddbResist: 11, ddbImmune: 27, ddbVuln: 43 },
+    Cold: { uri: 'cold', name: 'Cold', ddbResist: 7, ddbImmune: 23, ddbVuln: 39 },
+    Fire: { uri: 'fire', name: 'Fire', ddbResist: 9, ddbImmune: 25, ddbVuln: 41 },
+    Force: { uri: 'force', name: 'Force', ddbResist: 47, ddbImmune: 48, ddbVuln: 49 },
+    Lightning: { uri: 'lightning', name: 'Lightning', ddbResist: 4, ddbImmune: 20, ddbVuln: 36 },
+    Necrotic: { uri: 'necrotic', name: 'Necrotic', ddbResist: 10, ddbImmune: 26, ddbVuln: 42 },
+    Poison: { uri: 'poison', name: 'Poison', ddbResist: 6, ddbImmune: 22, ddbVuln: 38 },
+    Psychic: { uri: 'psychic', name: 'Psychic', ddbResist: 12, ddbImmune: 28, ddbVuln: 44 },
+    Radiant: { uri: 'radiant', name: 'Radiant', ddbResist: 8, ddbImmune: 24, ddbVuln: 40 },
+    Thunder: { uri: 'thunder', name: 'Thunder', ddbResist: 5, ddbImmune: 21, ddbVuln: 37 }
 });
-
-/**
- * Defines how resistance can be applied to damage types
- * @type {Configuration & {
- *   Magic: DiceModifierSettings,
- *   Physical: DiceModifierSettings,
- *   Slashing: DiceModifierSettings,
- *   Piercing: DiceModifierSettings,
- *   Bludgeoning: DiceModifierSettings,
- *   Acid: DiceModifierSettings,
- *   Cold: DiceModifierSettings,
- *   Fire: DiceModifierSettings,
- *   Force: DiceModifierSettings,
- *   Lightning: DiceModifierSettings,
- *   Necrotic: DiceModifierSettings,
- *   Poison: DiceModifierSettings,
- *   Psychic: DiceModifierSettings,
- *   Radiant: DiceModifierSettings,
- *   Thunder: DiceModifierSettings
- * }}
- */
-export const DamageResistance = new Configuration({
-    Magic: { uri: 'resistance:dmg:magic', name: 'Magic Damage Resistance', diceTags: [ DamageType.Magic.uri ] },
-    Physical: { uri: 'resistance:dmg:physical', name: 'Physical Damage Resistance', diceTags: [ DamageType.Physical.uri ] },
-
-    Slashing: { uri: 'resistance:slashing', name: 'Slashing Resistance', diceTags: [ DamageType.Slashing.uri ] },
-    Piercing: { uri: 'resistance:piercing', name: 'Piercing Resistance', diceTags: [ DamageType.Piercing.uri ] },
-    Bludgeoning: { uri: 'resistance:bludgeoning', name: 'Bludgeoning Resistance', diceTags: [ DamageType.Bludgeoning.uri ] },
-    Acid: { uri: 'resistance:acid', name: 'Acid Resistance', diceTags: [ DamageType.Acid.uri ] },
-    Cold: { uri: 'resistance:cold', name: 'Cold Resistance', diceTags: [ DamageType.Cold.uri ] },
-    Fire: { uri: 'resistance:fire', name: 'Fire Resistance', diceTags: [ DamageType.Fire.uri ] },
-    Force: { uri: 'resistance:force', name: 'Force Resistance', diceTags: [ DamageType.Force.uri ] },
-    Lightning: { uri: 'resistance:lightning', name: 'Lightning Resistance', diceTags: [ DamageType.Lightning.uri ] },
-    Necrotic: { uri: 'resistance:necrotic', name: 'Necrotic Resistance', diceTags: [ DamageType.Necrotic.uri ] },
-    Poison: { uri: 'resistance:poison', name: 'Poison Resistance', diceTags: [ DamageType.Poison.uri ] },
-    Psychic: { uri: 'resistance:psychic', name: 'Psychic Resistance', diceTags: [ DamageType.Psychic.uri ] },
-    Radiant: { uri: 'resistance:radiant', name: 'Radiant Resistance', diceTags: [ DamageType.Radiant.uri ] },
-    Thunder: { uri: 'resistance:thunder', name: 'Thunder Resistance', diceTags: [ DamageType.Thunder.uri ] }
-}, { type: PropertyType.Resistance });
 
 /**
  * The types of conditions and whether they cause the token to be incapacitated 
@@ -570,8 +499,7 @@ function buildPropertyIndex() {
     /** @type {Configuration[]} */
     const review = [
         PropertyType, RollType, DiceType, ProficiencyType,
-        ResistanceType, DamageType, AdvantageType,
-        DamageResistance, ConditionType, 
+        DamageType, ConditionType,
         AbilityScore, AbilityModifier, AbilityCheck,
         HitPoint, SpellTracking, AbilityConstraints, 
         SavingThrow, SkillCheck, Speed
