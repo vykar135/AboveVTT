@@ -161,11 +161,6 @@ export default class NumericStatTracker {
         return [(base ?? this.#snapshot ?? this.#base), calculated, (multipler ?? 1)];
     }
 
-    /** Snapshots the current base value for the property */
-    takeSnapshot() {
-        this.setSnapshot(this.#base, true);
-    }
-
     /** Removes the current snapshot */
     resetSnapshot() {
         this.setSnapshot(undefined, true);
@@ -177,6 +172,10 @@ export default class NumericStatTracker {
      * @param {boolean} canWrite - Whether the snapshot value can be written back to the stat block as a pending update
      */
     setSnapshot(value, canWrite) {
+        if (!this.stats.isPlayer) {
+            return;
+        }
+
         if (typeof value === "string") {
             value = parseInt(value);
         }
@@ -184,7 +183,7 @@ export default class NumericStatTracker {
         const modified = (this.#snapshot !== value);
         this.#snapshot = value;
 
-        if (!canWrite || !modified || !this.stats.isPlayer) {
+        if (!canWrite || !modified) {
             return;
         }
 
@@ -225,6 +224,9 @@ export default class NumericStatTracker {
             return;
         }
 
+        const snapshot = this.#snapshot ?? this.#base;
+        this.setSnapshot(snapshot, true);
+
         instance = instance.toLocaleLowerCase();
         const index = this.#sources.findIndex(entry => entry.instance === instance);
 
@@ -253,6 +255,11 @@ export default class NumericStatTracker {
 
         instance = instance.toLocaleLowerCase();
         this.#sources = this.#sources.filter(entry => entry.instance !== instance);
+
+        if (this.#sources.length === 0) {
+            this.resetSnapshot();
+        }
+
         this.#stats.hasPendingChanges(true);
     }
 
@@ -261,6 +268,7 @@ export default class NumericStatTracker {
      */
     clearInstances() {
         this.#sources = [];
+        this.resetSnapshot();
         this.#stats.hasPendingChanges(true);
     }
 }
