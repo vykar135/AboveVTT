@@ -8,7 +8,7 @@ export default class ToggleTracker {
     #baseEnabled;
     #enabled;
 
-    /** @type {{ instance: string, version: number, enabled: boolean | undefined }[]} */
+    /** @type {{ instance: string, version: number, fromCondition: boolean, enabled: boolean | undefined }[]} */
     #sources;
 
     /**
@@ -52,7 +52,7 @@ export default class ToggleTracker {
         const version = this.#stats.statusEffects.version;
         let enabled = this.#baseEnabled;
 
-        this.#sources = this.#sources.filter(entry => entry.version === version);
+        this.#sources = this.#sources.filter(entry => entry.version === version || entry.fromCondition === true);
 
         for (const applied of this.#sources) {
             enabled = applied.enabled ?? immunity;
@@ -65,9 +65,10 @@ export default class ToggleTracker {
     /**
      * Appends an instance of the property to enable of the stat block.
      * @param {string} instance - The tracking identifier within the instance of the behavior for the effect impact
+     * @param {boolean} fromCondition - Whether the instance is from a condition.
      * @param {boolean} enabled - Whether the property is enabled.
      */
-    addInstance(instance, enabled) {
+    addInstance(instance, fromCondition, enabled) {
         if (typeof instance !== 'string') {
             console.warn(`Attempting to append an instance of toggle ${this.#uri} without a valid instance identifier`);
             return;
@@ -83,6 +84,7 @@ export default class ToggleTracker {
 
         const impact = {
             instance, enabled,
+            fromCondition: (fromCondition === true),
             version: this.#stats.statusEffects.version
         };
         Object.freeze(impact);

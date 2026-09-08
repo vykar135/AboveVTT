@@ -4,6 +4,7 @@ import StatBlock from "./StatBlock.mjs";
  * @typedef {Object} NumericStatImpact
  * @property {string} instance - The reference to the status effect that produced the change.
  * @property {number} version - The version of the status effect collect at the time the impact was applied.
+ * @property {boolean} fromCondition - Whether the effect is from a condition.
  * @property {number} setTo - The fixed amount to set the value of the property to.
  * @property {number} amount - The fixed amount to change the property by.
  * @property {number} multiplier - The multiplier to apply to the value of the property.
@@ -127,11 +128,13 @@ export default class NumericStatTracker {
         let multipler = undefined;
         let calculated = 0;
 
-        this.#sources = this.#sources.filter(entry => entry.version === version);
+        this.#sources = this.#sources.filter(entry => entry.version === version || entry.fromCondition === true);
         
         for (const applied of this.#sources) {
             if (applied.setTo != null) {
                 base = applied.setTo;
+                multipler = undefined;
+                calculated = 0;
             }
 
             if (applied.multiplier != null) {
@@ -187,13 +190,13 @@ export default class NumericStatTracker {
             return;
         }
 
-        const snapshots = this.#stats.token.options.snapshots;
+        let snapshots = this.#stats.token.options.snapshots;
         if (snapshots == null) {
             snapshots = {};
             this.#stats.token.options.snapshots = snapshots;
         }
 
-        const properties = snapshots.numeric;
+        let properties = snapshots.numeric;
         if (properties == null) {
             properties = {};
             snapshots.numeric = properties;
@@ -230,14 +233,16 @@ export default class NumericStatTracker {
         instance = instance.toLowerCase();
         const index = this.#sources.findIndex(entry => entry.instance === instance);
 
-        impact.instance = instance;
-        impact.version = this.#stats.statusEffects.version;
-        Object.freeze(impact);
+        const applying = { ...impact };
+        applying.instance = instance;
+        applying.version = this.#stats.statusEffects.version;
+        applying.fromCondition = (applying.fromCondition === true);
+        Object.freeze(applying);
         
         if (index < 0) {
-            this.#sources.push(impact);
+            this.#sources.push(applying);
         } else {
-            this.#sources[index] = impact;
+            this.#sources[index] = applying;
         }
     }
 

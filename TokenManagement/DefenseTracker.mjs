@@ -12,7 +12,7 @@ export default class DefenseTracker {
     #resistance;
     #vulnerability;
 
-    /** @type {{ version: number, immunity?: boolean, resistance?: boolean, vulnerability?: boolean }[]} */
+    /** @type {{ instance: string, version: number, fromCondition: boolean, immunity?: boolean, resistance?: boolean, vulnerability?: boolean }[]} */
     #sources;
 
     /**
@@ -69,10 +69,10 @@ export default class DefenseTracker {
         let resistant = this.#baseResistance;
         let vulnerable = this.#baseVulnerability;
 
-        this.#sources = this.#sources.filter(entry => entry.version === version);
+        this.#sources = this.#sources.filter(entry => entry.version === version || entry.fromCondition === true);
 
         for (const applied of this.#sources) {
-            immunity = applied.immunity ?? immunity;
+            immune = applied.immunity ?? immune;
             resistant = applied.resistance ?? resistant;
             vulnerable = applied.vulnerability ?? vulnerable;
         }
@@ -85,11 +85,12 @@ export default class DefenseTracker {
     /**
      * Appends an instance of the damage defenses being applied to the stat block.
      * @param {string} instance - The tracking identifier within the instance of the behavior for the effect impact
+     * @param {boolean} fromCondition - Whether the instance is from a condition.
      * @param {boolean} immunity - Whether the creature is immune to the type of damage.
-     * @param {number} resistance - Whether the creature is resistant to the type of damage.
+     * @param {boolean} resistance - Whether the creature is resistant to the type of damage.
      * @param {boolean} vulnerability - Whether the creature is vulnerable to the type of damage.
      */
-    addInstance(instance, immunity, resistance, vulnerability) {
+    addInstance(instance, fromCondition, immunity, resistance, vulnerability) {
         if (typeof instance !== 'string') {
             console.warn(`Attempting to append an instance of defense against ${this.#damageType} without a valid instance identifier`);
             return;
@@ -115,6 +116,7 @@ export default class DefenseTracker {
 
         const impact = {
             instance, immunity, resistance, vulnerability,
+            fromCondition: (fromCondition === true),
             version: this.#stats.statusEffects.version
         };
         Object.freeze(impact);

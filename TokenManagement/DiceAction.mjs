@@ -158,18 +158,20 @@ export class DiceAction extends DiceActionFeatures {
 
 /** Defines a change in to any dice roll that matches the specified tags */
 export class DiceActionModifier extends DiceActionFeatures {
-    /** @type {DiceTagLookup} */
     #tags;
+    #targetTags;
 
     constructor() {
         super();
-        this.#tags = new DiceTagSet();
+        this.#tags = new DiceTagLookup();
+        this.#targetTags = new DiceTagLookup();
         Object.seal(this);
     }
 
     /** Freezes the current state of the object */
     freeze() {
         this.#tags.freeze();
+        this.#targetTags.freeze();
 
         for (const property of this) {
             if (property instanceof FixedValueModifier) {
@@ -184,10 +186,8 @@ export class DiceActionModifier extends DiceActionFeatures {
     priority;
     /** @type {DiceTagLookup} The set of tags that are used to determine if this modifier qualifies for a dice action; top level entries are OR, collections within the main array are AND */
     get tags() { return this.#tags; }
-    /** @type {boolean} Whether the tag search can occur for the source stat block */
-    fromSelf;
-    /** @type {boolean} Whether the tag search can occur for the target stat block */
-    fromTarget;
+    /** @type {DiceTagLookup} The set of tags that are used to determine if this modifier qualifies for a dice action; top level entries are OR, collections within the main array are AND */
+    get tagsOnTarget() { return this.#targetTags; }
     /** @type {number} The minimum character level or challenge rating required for this modifier to be active. */
     level;
     /** @type {number} The minimum spell slot required for this modifier to be active. */
@@ -210,6 +210,10 @@ class DiceRollFeatures {
     sides;
     /** @type {HitPointEffect} How the result of damage rolls are applied to the target's hit points. */
     hp;
+    /** @type {boolean | undefined} Whether the effect of the dice roll is against the target's hit point pool */
+    hitsTarget;
+    /** @type {boolean | undefined} Whether the effect of the dice roll is against the source's hit point pool */
+    hitsSelf;
     /** @type {number | FixedValueModifier} The fixed amount to include in the roll. */
     fixed;
     /** @type {boolean} Whether the roll is subject to critical hit rules when applicable. */
@@ -294,6 +298,8 @@ class DiceRoll extends DiceRollFeatures {
         super.count = this.#modifyValue(super.count, feature.count);
         super.sides = this.#swapValue(super.sides, feature.sides);
         super.hp = this.#swapValue(super.hp, feature.hp);
+        super.hitsSelf = this.#swapValue(super.hitsSelf, feature.hitsSelf);
+        super.hitsTarget = this.#swapValue(super.hitsTarget, feature.hitsTarget);
         super.fixed = this.#modifyValue(super.fixed, feature.fixed);
         super.critical = this.#swapValue(super.critical, feature.critical);
         super.d20trigger = this.#modifyValue(super.d20trigger, feature.d20trigger);
@@ -388,18 +394,20 @@ export class DiceRollConfig extends DiceRollFeatures {
 
 /** Defines a change in to any dice roll that matches the specified tags */
 export class DiceRollModifier extends DiceRollFeatures {
-    /** @type {DiceTagLookup} */
     #tags;
+    #targetTags;
 
     constructor() {
         super();
         this.#tags = new DiceTagLookup();
+        this.#targetTags = new DiceTagLookup();
         Object.seal(this);
     }
 
     /** Freezes the current state of the object */
     freeze() {
         this.#tags.freeze();
+        this.#targetTags.freeze();
 
         for (const property of this) {
             if (property instanceof FixedValueModifier) {
@@ -412,12 +420,10 @@ export class DiceRollModifier extends DiceRollFeatures {
 
     /** @type {number} The order that the modification will be applied to the rolls relative to other queued modifications; the final result for these properties is LIFO. */
     priority;
-    /** @type {DiceTagLookup} The set of tags used to discover what queued dice rolls this rule applies to; top level entries are OR, collections within the main array are AND */
+    /** @type {DiceTagLookup} The set of tags that are used to determine if this modifier qualifies for a dice action; top level entries are OR, collections within the main array are AND */
     get tags() { return this.#tags; }
-    /** @type {boolean} Whether the tag search can occur for the source stat block */
-    fromSelf;
-    /** @type {boolean} Whether the tag search can occur for the target stat block */
-    fromTarget;
+    /** @type {DiceTagLookup} The set of tags that are used to determine if this modifier qualifies for a dice action; top level entries are OR, collections within the main array are AND */
+    get tagsOnTarget() { return this.#targetTags; }
     /** @type {number} The minimum character level or challenge rating required for this modifier to be active. */
     level;
     /** @type {number} The minimum spell slot required for this modifier to be active. */
@@ -567,17 +573,36 @@ export class DiceTagSet extends Set {
     }
 }
 
-
 /** Manages a set of collection of strings that are normalized to lower case */
 export class DiceTagLookup {
+    #require;
+    #exclude;
+
+    constructor() {
+        this.#require = new DiceTagLookupGroup();
+        this.#exclude = new DiceTagLookupGroup();
+        Object.freeze(this);
+    }
+
+    /** The collection of tags that are required for the dice modifier to be permitted. */
+    get require() { return this.#require; }
+    /** The collection of tags that cannot be found for the dice modifier to be permitted. */
+    get exclude() { return this.#exclude; }
+
+    /** Freezes the tag set. */
+    freeze() {
+        this.#exclude.freeze();
+        this.#exclude.freeze();
+    }
+}
+
+/** Manages a set of collection of strings that are normalized to lower case */
+class DiceTagLookupGroup {
     /** @type {string[][]} */
     #sets;
 
-    constructor(tags) {
+    constructor() {
         this.#sets = [];
-        if (tags != null) {
-            this.addRange(tags);
-        }
     }
 
     /**

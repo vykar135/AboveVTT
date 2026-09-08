@@ -1,30 +1,41 @@
 /** @import { Token } from './Token.types.js' */
-/** @import { GlobalStatusEffectConfig, TokenStatusEffectContainer, Concentration, MaintainedEffect, ActiveStatusEffect, PassiveStatusEffect, StatusEffect } from './TokenStatusEffects.types.js' */
+/** @import { TokenStatusEffectContainer, Concentration, MaintainedEffect, ActiveStatusEffect, PassiveStatusEffect, StatusEffect } from './TokenStatusEffects.types.js' */
 
 import StatBlock from './StatBlock.mjs';
+
+/**
+ * @typedef GlobalStatusEffectConfig
+ * @property {TokenStatusEffectContainer} settings - The configuration for status effects.
+ * @property {TokenStatusEffects} effects - The status effects being modified.
+ * @property {(modified: boolean) => void} hasChanges - Callback used to notify the status effect manager of a change
+ */
 
 /**
  * Manages the active, passive, and maintained (concentration) status effects that are currently effecting to a token.
  */
 export default class TokenStatusEffects {
-    /** @type {StatBlock} */
     #stats;
+    #version;
+    #incapacitated;
+    #concentrating;
+
     /** @type {{ [key: string]: Token}} */
     #pendingSceneTokens;
     /** @type {{ [key: string]: Token}} */
     #pendingCampaignTokens;
-    /** @type {number} */
-    #version;
 
     /**
      * Manages the status effects associated with the provided Token
-     * @param {StatBlock} stats
-     */
+     * @param {StatBlock} stats */
     constructor(stats){
         this.#stats = stats;
         this.#pendingSceneTokens = {};
         this.#pendingCampaignTokens = {};
         this.#version = Date.now();
+        this.#incapacitated = false;
+        this.#concentrating = false;
+
+        Object.freeze(this);
     }
 
     /** Requests a token update message to be dispatched only if there are pending changes that have been observed by this instance */
@@ -123,10 +134,10 @@ export default class TokenStatusEffects {
         const [scene, sceneToken] = TokenStatusEffects.#getGlobalContainer(window.TOKEN_OBJECTS, target);
         const [campaign, campaignToken] = TokenStatusEffects.#getGlobalContainer(window.all_token_objects, target);
 
-        const containers = [ { settings: local, hasChanges: (modified) => this.#stats.hasPendingChanges(modified) }];
+        const containers = [ { settings: local, effects: this, hasChanges: (modified) => this.#stats.hasPendingChanges(modified) }];
 
         if (scene != null && scene !== local) {
-            containers.push({ settings: scene, hasChanges: (modified) => {
+            containers.push({ settings: scene, effects: sceneToken.stats.statusEffects, hasChanges: (modified) => {
                 if (modified === true) {
                     this.#pendingSceneTokens[target] = sceneToken;
                 }
@@ -134,7 +145,7 @@ export default class TokenStatusEffects {
         }
 
         if (campaign != null && campaign !== local && campaign !== scene) {
-            containers.push({ settings: campaign, hasChanges: (modified) => {
+            containers.push({ settings: campaign, effects: campaignToken.stats.statusEffects, hasChanges: (modified) => {
                 if (modified === true) {
                     this.#pendingCampaignTokens[target] = campaignToken;
                 }
@@ -155,7 +166,7 @@ export default class TokenStatusEffects {
 
         const containers = [];
         if (scene != null) {
-            containers.push({ settings: scene, hasChanges: (modified) => {
+            containers.push({ settings: scene, effects: sceneToken.stats.statusEffects, hasChanges: (modified) => {
                 if (modified === true) {
                     this.#pendingSceneTokens[target] = sceneToken;
                 }
@@ -163,7 +174,7 @@ export default class TokenStatusEffects {
         }
 
         if (campaign != null && campaign !== scene) {
-            containers.push({ settings: campaign, hasChanges: (modified) => {
+            containers.push({ settings: campaign, effects: campaignToken.stats.statusEffects, hasChanges: (modified) => {
                 if (modified === true) {
                     this.#pendingCampaignTokens[target] = campaignToken;
                 }
@@ -199,14 +210,10 @@ export default class TokenStatusEffects {
     }
 
     /** Whether the token is currently affected by the Incapacitated state */
-    get incapacitated() {
-        return this.#getContainer().incapacitated ?? false;
-    }
+    get incapacitated() { return this.#incapacitated; }
 
     /** Whether the token is currently concentrating on one or more effects */
-    get concentrating() {
-        return this.#getContainer().concentrating ?? false;
-    }
+    get concentrating() { return this.#concentrating; }
 
     /** Whether the token is permitted to concentrate */
     get concentrationAllowed() {
@@ -234,18 +241,14 @@ export default class TokenStatusEffects {
      * */
     isIncapacitated(affected) {
         const callback = (target) => {
-            const settings = target.settings;
-            const previous = (settings.incapacitated ?? false);
-            settings.incapacitated = (affected ?? false);
-            target.hasChanges(settings.incapacitated !== previous);
+            target.effects.#incapacitated = (affected ?? false);
         }
 
         const containers = this.#getMyContainers();
         TokenStatusEffects.#applyContainerChanges(containers, callback);
 
-        const settings = this.#getContainer();
-        if (settings.incapacitated === true) {
-            this.dropConcentration(settings);
+        if (this.#incapacitated === true) {
+            this.dropConcentration();
         }
     }
 
@@ -449,10 +452,16 @@ export default class TokenStatusEffects {
         }
     }
 
-    /** Removes the concentration flag from the target */
+    /**
+     * Removes the concentration flag from the target
+     * @param {GlobalStatusEffectConfig} target 
+    */
     static #dropConcentrationCallback(target) {
-        if ((target.settings.concentrating ?? false) !== false) {
-            target.settings.concentrating = false;
+        target.effects.#concentrating = false;
+        
+        if ('concentrating' in target.settings || 'incapacitated' in target.settings) {
+            delete target.settings['incapacitated']
+            delete target.settings['concentrating']
             target.hasChanges(true);
         }
     }
@@ -598,7 +607,7 @@ export default class TokenStatusEffects {
         const settings = this.#getContainer();
         const concentration = TokenStatusEffects.#initConcentration(settings);
 
-        if ((settings.incapacitated ?? false) === true || (concentration.allowed ?? true) === false) {
+        if (this.#incapacitated === true || (concentration.allowed ?? true) === false) {
             this.dropConcentration();
             return 0;
         }
@@ -606,7 +615,7 @@ export default class TokenStatusEffects {
         const maintaining = TokenStatusEffects.#initMaintaining(settings);
         const current = maintaining.filter(item => this.requiresConcentration(item));
         if (current.length === 0) {
-            if ((settings.concentrating ?? false) !== false) {
+            if (this.#concentrating !== false) {
                 this.dropConcentration();
             }
 

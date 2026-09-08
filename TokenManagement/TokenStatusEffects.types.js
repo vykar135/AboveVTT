@@ -1,10 +1,6 @@
 /** @import { EffectInitiativeSnapshot, EffectResolutionRules } from './EffectDefinition.types.js' */
 
 /**
- * @typedef GlobalStatusEffectConfig
- * @property {TokenStatusEffectContainer} settings - The configuration for status effects.
- * @property {(modified: boolean) => void} hasChanges - Callback used to notify the status effect manager of a change
- * 
  * @typedef TokenStatusEffectContainer
  * @property {boolean} incapacitated - Whether the token is currently affected by the Incapacitated state
  * @property {boolean} concentrating - Whether the token is currently concentrating on one or more effects

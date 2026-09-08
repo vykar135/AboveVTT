@@ -3,7 +3,7 @@
 import { fetchBeyondSheetForToken, fetchOpen5eSheetForToken, fetchPlayerExtendedSheet } from './StatBlockSources.mjs';
 import { DiceActionsEnabled, AbilityScore, ConditionType, DamageType, ProficiencyType, SkillCheck, uriEquals, Movement } from './CoreEnums.mjs'
 import HitPointBlock from './HitPointBlock.mjs';
-import ConditionTracker from './ConditionTracker.mjs';
+import ConditionTracker, { BlindedDice, CharmedDice, DeafenedDice, ExhaustionDice, FrightenedDice, GrappledDice, IncapacitatedDice, InvisibleDice, ParalyzedDice, PetrifiedDice, PoisonedDice, ProneDice, RestrainedDice, StunnedDice, UnconsciousDice } from './ConditionTracker.mjs';
 import NumericStatTracker from './NumericStatTracker.mjs';
 import TokenStatusEffects from './TokenStatusEffects.mjs';
 import { DiceAction, DiceActionContext } from './DiceAction.mjs';
@@ -29,11 +29,12 @@ export default class StatBlock {
     #wellKnownNumerics;
     #wellKnownToggles;
     #level;
-    #pendingChanges;
     #player;
     #contributor;
     #hasSheet;
 
+    /** @type {number | undefined} Timestamp when the stat block was notified of a pending change */
+    #pendingChanges;
     /** @type {{ [uri: string]: NumericStatTracker}} */
     #numeric;
     /** @type {{ [uri: string]: { message: string, error: Error }}} Components within the stat block that failed to complete successuflly */
@@ -79,7 +80,7 @@ export default class StatBlock {
         this.#numeric = {};
 
         this.#level = 0;
-        this.#pendingChanges = false;
+        this.#pendingChanges = undefined;
         this.#player = false;
         this.#contributor = false;
         this.#hasSheet = false;
@@ -94,9 +95,15 @@ export default class StatBlock {
      * @returns Whether the stat block requested to be synced.
     */
     sync() {
-        if (this.#pendingChanges === true) {
-            this.#pendingChanges = false;
+        if (this.#pendingChanges !== undefined) {
+            const current = this.#pendingChanges;
+            this.#pendingChanges = undefined;
 
+            if ((this.#token.options.lastModified ?? 0) >= current) {
+                return false;
+            }
+
+            console.log(`Syncing ${current} > ${this.#token.options.lastModified}`);
             try {
                 this.#token.sync();
                 delete this.#warnings['sync'];
@@ -116,8 +123,13 @@ export default class StatBlock {
      * @returns Whether the stat block requested to be synced.
      */
     update_and_sync() {
-        if (this.#pendingChanges === true) {
-            this.#pendingChanges = false;
+        if (this.#pendingChanges !== undefined) {
+            const current = this.#pendingChanges;
+            this.#pendingChanges = undefined;
+
+            if ((this.#token.options.lastModified ?? 0) >= current) {
+                return false;
+            }
 
             try {
                 this.#token.update_and_sync();
@@ -163,7 +175,7 @@ export default class StatBlock {
         }
 
         if (modified === true) {
-            this.#pendingChanges = true;
+            this.#pendingChanges = Date.now();
         }
     }
 
@@ -918,7 +930,7 @@ export default class StatBlock {
      */
     #refreshCondition(condition, config, sheets) {
         const findUri = (config.srd ?? '').toLowerCase().trim();
-        const fromToken = (sheets.options.conditions?.findIndex(entry => entry?.name?.toLowerCase() === findUri) ?? -1) >= 0;
+        const fromToken = (sheets.player == null && (sheets.options.conditions?.findIndex(entry => entry?.name?.toLowerCase() === findUri) ?? -1) >= 0);
         const player = (sheets.player?.conditions?.find((entry) => entry?.name?.toLowerCase() === findUri));
 
         let intensity = player?.level;
@@ -1191,21 +1203,21 @@ class BlockSkillChecks {
 class BlockConditions {
     /** @param {StatBlock} stats */
     constructor(stats) {
-        this.blinded = new ConditionTracker(stats, 'blinded', 'Blinded', false);
-        this.charmed = new ConditionTracker(stats, 'charmed', 'Charmed', false);
-        this.deafened = new ConditionTracker(stats, 'deafened', 'Deafened', false);
-        this.exhaustion = new ConditionTracker(stats, 'exhaustion', 'Exhaustion', false);
-        this.frightened = new ConditionTracker(stats, 'frightened', 'Frightened', false);
-        this.grappled = new ConditionTracker(stats, 'grappled', 'Grappled', false);
-        this.incapacitated = new ConditionTracker(stats, 'incapacitated', 'Incapacitated', true);
-        this.invisible = new ConditionTracker(stats, 'invisible', 'Invisible', false);
-        this.paralyzed = new ConditionTracker(stats, 'paralyzed', 'Paralyzed', true);
-        this.petrified = new ConditionTracker(stats, 'petrified', 'Petrified', true);
-        this.poisoned = new ConditionTracker(stats, 'poisoned', 'Poisoned', false);
-        this.prone = new ConditionTracker(stats, 'prone', 'Prone', false);
-        this.restrained = new ConditionTracker(stats, 'restrained', 'Restrained', false);
-        this.stunned = new ConditionTracker(stats, 'stunned', 'Stunned', true);
-        this.unconscious = new ConditionTracker(stats, 'unconscious', 'Unconscious', true);
+        this.blinded = new ConditionTracker(stats, 'blinded', 'Blinded', BlindedDice);
+        this.charmed = new ConditionTracker(stats, 'charmed', 'Charmed', CharmedDice);
+        this.deafened = new ConditionTracker(stats, 'deafened', 'Deafened', DeafenedDice);
+        this.exhaustion = new ConditionTracker(stats, 'exhaustion', 'Exhaustion', ExhaustionDice);
+        this.frightened = new ConditionTracker(stats, 'frightened', 'Frightened', FrightenedDice);
+        this.grappled = new ConditionTracker(stats, 'grappled', 'Grappled', GrappledDice);
+        this.incapacitated = new ConditionTracker(stats, 'incapacitated', 'Incapacitated', IncapacitatedDice);
+        this.invisible = new ConditionTracker(stats, 'invisible', 'Invisible', InvisibleDice);
+        this.paralyzed = new ConditionTracker(stats, 'paralyzed', 'Paralyzed', ParalyzedDice);
+        this.petrified = new ConditionTracker(stats, 'petrified', 'Petrified', PetrifiedDice);
+        this.poisoned = new ConditionTracker(stats, 'poisoned', 'Poisoned', PoisonedDice);
+        this.prone = new ConditionTracker(stats, 'prone', 'Prone', ProneDice);
+        this.restrained = new ConditionTracker(stats, 'restrained', 'Restrained', RestrainedDice);
+        this.stunned = new ConditionTracker(stats, 'stunned', 'Stunned', StunnedDice);
+        this.unconscious = new ConditionTracker(stats, 'unconscious', 'Unconscious', UnconsciousDice);
 
         Object.freeze(this);
     }

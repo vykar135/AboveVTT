@@ -975,7 +975,8 @@ class Token {
 		window.MB.sendMessage('custom/myVTT/token', options, false, forcedSceneId);
 	}, 300);
 	sync(forcedSceneId = undefined) {
-		const options = $.extend(true, {}, this.options)
+		this.options.lastModified = Date.now();
+		const options = $.extend(true, {}, this.options);
 		this.debounceSyncMessage(options, forcedSceneId);
 	}
 	place_sync_persist(animationDuration) {
