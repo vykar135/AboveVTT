@@ -1,13 +1,14 @@
 /** @import { Token } from './Token.types.js' */
 
 import { fetchBeyondSheetForToken, fetchOpen5eSheetForToken, fetchPlayerExtendedSheet } from './StatBlockSources.mjs';
-import { DiceActionsEnabled, AbilityScore, ConditionType, DamageType, ProficiencyType, SkillCheck, uriEquals } from './CoreEnums.mjs'
+import { DiceActionsEnabled, AbilityScore, ConditionType, DamageType, ProficiencyType, SkillCheck, uriEquals, Movement } from './CoreEnums.mjs'
 import HitPointBlock from './HitPointBlock.mjs';
 import ConditionTracker from './ConditionTracker.mjs';
 import NumericStatTracker from './NumericStatTracker.mjs';
 import TokenStatusEffects from './TokenStatusEffects.mjs';
 import { DiceAction, DiceActionContext } from './DiceAction.mjs';
 import DefenseTracker from './DefenseTracker.mjs';
+import ToggleTracker from './ToggleTracker.mjs';
 
 /** Manages a normalized stat block for the provided token by importing details from associated creature stat blocks */
 export default class StatBlock {
@@ -21,10 +22,12 @@ export default class StatBlock {
     #skills;
     #conditions;
     #defenses;
+    #movement;
     #hitPoints;
     #diceContext;
     #effects;
     #wellKnownNumerics;
+    #wellKnownToggles;
     #level;
     #pendingChanges;
     #player;
@@ -40,16 +43,17 @@ export default class StatBlock {
     constructor(token){
         this.#token = token;
 
-        this.#proficiency = new NumericStatTracker(this, 'pb', 2);
+        this.#proficiency = new NumericStatTracker(this, 'pb', 2, 'Proficiency Bonus');
         this.#diceContext = new BlockDiceContext(this);
 
-        this.#ac = new NumericStatTracker(this, 'ac', 10);
+        this.#ac = new NumericStatTracker(this, 'ac', 10, 'Armor Class');
         this.#scores = new BlockAbilityScores(this);
         this.#modifiers = new BlockAbilityModifiers(this);
         this.#saves = new BlockSavingThrows(this);
         this.#skills = new BlockSkillChecks(this);
         this.#conditions = new BlockConditions(this);
         this.#defenses = new BlockDefenses(this);
+        this.#movement = new BlockMovement(this);
         this.#hitPoints = new HitPointBlock(this);
         this.#effects = new TokenStatusEffects(this);
 
@@ -59,15 +63,18 @@ export default class StatBlock {
 
         const score = this.#scores;
         const modifiers = this.#modifiers;
+        const movement = this.#movement;
 
         this.#wellKnownNumerics = [
             this.#proficiency,
             score.str, score.dex, score.con, score.wis, score.int, score.cha,
             modifiers.str.value, modifiers.dex.value, modifiers.con.value, modifiers.wis.value, modifiers.int.value, modifiers.cha.value,
-            this.#ac,
-            this.#hitPoints.maximumChanges
+            this.#ac, this.#hitPoints.maximumChanges,
+            movement.walk, movement.crawl, movement.climb, movement.swim, movement.fly, movement.burrow
         ];
         
+        this.#wellKnownToggles = [ movement.hover ];
+
         this.#warnings = {};
         this.#numeric = {};
 
@@ -214,6 +221,9 @@ export default class StatBlock {
     /** The current state of defenses against the various types of damage for the stat block. */
     get defenses() { return this.#defenses; }
 
+    /** The current state of movement speeds. */
+    get movement() { return this.#movement; }
+
     /** The manager for active, passive, and maintained token status effects. */
     get statusEffects() { return this.#effects; }
 
@@ -335,6 +345,15 @@ export default class StatBlock {
                 psychic: getDefense(this.#defenses.psychic),
                 radiant: getDefense(this.#defenses.radiant),
                 thunder: getDefense(this.#defenses.thunder)
+            },
+            movement: {
+                walk: this.#movement.walk.current,
+                crawl: this.#movement.crawl.current,
+                climb: this.#movement.climb.current,
+                swim: this.#movement.swim.current,
+                burrow: this.#movement.burrow.current,
+                fly: this.#movement.fly.current,
+                hover: this.#movement.hover.enabled
             }
         };
     }
@@ -508,6 +527,14 @@ export default class StatBlock {
             this.#refreshDefenses(this.#defenses.radiant, DamageType.Radiant, sheets);
             this.#refreshDefenses(this.#defenses.thunder, DamageType.Thunder, sheets);
 
+            this.#refreshMovement(this.#movement.walk, Movement.Walk, sheets);
+            this.#refreshMovement(this.#movement.crawl, Movement.Crawl, sheets);
+            this.#refreshMovement(this.#movement.climb, Movement.Climb, sheets);
+            this.#refreshMovement(this.#movement.swim, Movement.Swim, sheets);
+            this.#refreshMovement(this.#movement.burrow, Movement.Burrow, sheets);
+            this.#refreshMovement(this.#movement.fly, Movement.Fly, sheets);
+            this.#refreshMovement(this.#movement.hover, Movement.Hover, sheets);
+
             delete this.#warnings['rebuild'];
         } catch (error) {
             this.reportFailure('rebuild', `Failed to rebuild character sheet`, error);
@@ -537,6 +564,10 @@ export default class StatBlock {
 
             for (const numeric of Object.values(this.#numeric)) {
                 numeric.recalculate();
+            }
+
+            for (const wellKnown of this.#wellKnownToggles) {
+                wellKnown.recalculate();
             }
 
             this.#hitPoints.checkMaximum();
@@ -963,17 +994,95 @@ export default class StatBlock {
 
         defenses.setBaseValue(false, false, false);
     }
+
+    /**
+     * Determines whether a defenses against a damage type is applied to the stat block.
+     * @param {NumericStatTracker | ToggleTracker} movement - The moevment to update.
+     * @param {{ open5e: string, player: string, monster: number, default: number }} config
+     * @param {Object} sheets - The sheet information for the token.
+     */
+    #refreshMovement(movement, config, sheets) {
+        let baseline = config.default ??  0;
+        if (baseline > 0 && baseline <= 1) {
+            const walking = this.#movement.walk.base;
+            baseline = Math.floor(walking * baseline);
+        }
+
+        if (sheets.open5e) {
+            const findUri = (config.open5e ?? '').toLowerCase().trim();
+            const speed = sheets.open5e.speed_all[findUri];
+
+            if (movement instanceof ToggleTracker) {
+                movement.setBaseValue(speed === true);
+            } else if (movement instanceof NumericStatTracker) {
+                movement.setBaseValue(speed ?? baseline);
+            }
+
+            return;
+        }
+
+        if (movement instanceof ToggleTracker) {
+            // D&D Beyond does not support hovering
+            movement.setBaseValue(false);
+            return;
+        }
+
+        if (!(movement instanceof NumericStatTracker)) {
+            return;
+        }
+
+        if (sheets.monster && config.monster != null) {
+            const container = sheets.monster.movements ?? [];
+            if (container.length === 0) {
+                movement.setBaseValue(baseline);
+                return;
+            }
+
+            let speed = baseline;
+            for (const entry of container) {
+                if (entry.movementId === config.monster) {
+                    speed = entry.speed;
+                    break;
+                }
+            }
+
+            movement.setBaseValue(speed);
+            return;
+        }
+
+        if (sheets.player && config.player != null) {
+            const container = sheets.player.speeds ?? [];
+            if (container.length === 0) {
+                movement.setBaseValue(baseline);
+                return;
+            }
+
+            const findUri = config.player.toLowerCase();
+            let speed = baseline;
+            for (const entry of container) {
+                if (entry.name?.toLowerCase() === findUri) {
+                    speed = entry.distance;
+                    break;
+                }
+            }
+
+            movement.setBaseValue(speed);
+            return;
+        }
+
+        movement.setBaseValue(baseline);
+    }
 }
 
 /** Defines the ability scores associated with a stat block. */
 class BlockAbilityScores {
     constructor(stats) {
-        this.str = new NumericStatTracker(stats, 'str', 10);
-        this.dex = new NumericStatTracker(stats, 'dex', 10);
-        this.con = new NumericStatTracker(stats, 'con', 10);
-        this.wis = new NumericStatTracker(stats, 'wis', 10);
-        this.int = new NumericStatTracker(stats, 'int', 10);
-        this.cha = new NumericStatTracker(stats, 'cha', 10);
+        this.str = new NumericStatTracker(stats, 'str', 10, 'Strength');
+        this.dex = new NumericStatTracker(stats, 'dex', 10, 'Dexterity');
+        this.con = new NumericStatTracker(stats, 'con', 10, 'Constitution');
+        this.wis = new NumericStatTracker(stats, 'wis', 10, 'Wisdom');
+        this.int = new NumericStatTracker(stats, 'int', 10, 'Intellegence');
+        this.cha = new NumericStatTracker(stats, 'cha', 10, 'Charisma');
         Object.freeze(this);
     }
 }
@@ -995,7 +1104,7 @@ class BlockAbilityModifiers {
 class BlockAbilityModifier {
     /** @param {StatBlock} stats */
     constructor(stats, uri, name) {
-        this.value = new NumericStatTracker(stats, `${uri}:modifier`, 0);
+        this.value = new NumericStatTracker(stats, `${uri}:modifier`, 0, name);
 
         this.check = new DiceAction(stats.diceContext, `${uri}:check`, name, true, uri, true);
         this.check.tags.addRange([ 'ability', uri ]);
@@ -1119,6 +1228,22 @@ class BlockDefenses {
         this.psychic = new DefenseTracker(stats, 'psychic', 'Psychic');
         this.radiant = new DefenseTracker(stats, 'radiant', 'Radiant');
         this.thunder = new DefenseTracker(stats, 'thunder', 'Thunder');
+
+        Object.freeze(this);
+    }
+}
+
+/** Defines the standard set of movement options that can be applied to a stat block. */
+class BlockMovement {
+    /** @param {StatBlock} stats */
+    constructor(stats) {
+        this.walk = new NumericStatTracker(stats, 'speed:walk', 30, 'Walk');
+        this.crawl = new NumericStatTracker(stats, 'speed:crawl', 15, 'Crawl');
+        this.climb = new NumericStatTracker(stats, 'speed:climb', 15, 'Climb');
+        this.swim = new NumericStatTracker(stats, 'speed:swim', 15, 'Swim');
+        this.burrow = new NumericStatTracker(stats, 'speed:burrow', 0, 'Burrow');
+        this.fly = new NumericStatTracker(stats, 'speed:fly', 0, 'Fly');
+        this.hover = new ToggleTracker(stats, 'speed:toggle', 'Hover');
 
         Object.freeze(this);
     }

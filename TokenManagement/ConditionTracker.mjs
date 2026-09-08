@@ -130,21 +130,20 @@ export default class ConditionTracker {
             intensity = undefined;
         }
 
-        instance = instance.toLocaleLowerCase();
+        instance = instance.toLowerCase();
         const index = this.#sources.findIndex(entry => entry.instance === instance);
 
         const impact = {
             instance, intensity, immunity,
             version: this.#stats.statusEffects.version
         };
+        Object.freeze(impact);
 
         if (index < 0) {
             this.#sources.push(impact);
         } else {
             this.#sources[index] = impact;
         }
-
-        this.#stats.hasPendingChanges(true);
     }
 
     /**
@@ -159,14 +158,14 @@ export default class ConditionTracker {
 
         instance = instance.toLowerCase();
         this.#sources = this.#sources.filter(entry => entry.instance !== instance);
-        this.#stats.hasPendingChanges(true);
     }
 
-    /**
-     * Removes all instances of the condition
-     */
+    /** Removes all instances of the condition */
     clearInstances() {
+        if (this.#sources.length === 0) {
+            return;
+        }
+        
         this.#sources = [];
-        this.#stats.hasPendingChanges(true);
     }
 }

@@ -11,16 +11,13 @@ import StatBlock from "./StatBlock.mjs";
  * @property {boolean} importPenalty - Whether the imported value is treated as a penalty against the requesting property.
  */
 
-/**
- * Manages a numberic property value that can have status effects applied to it.
- */
+/** Manages a numberic property value that can have status effects applied to it. */
 export default class NumericStatTracker {
-    /** @type {StatBlock} */
     #stats
-    /** @type {string} */
     #uri;
-    /** @type {number} */
+    #name;
     #base;
+
     /** @type {number} */
     #baseOverride;
     /** @type {number} */
@@ -36,9 +33,11 @@ export default class NumericStatTracker {
      * @param {StatBlock} stats - The stat block that this property is for.
      * @param {string} uri - The identifier of the property.
      * @param {number} value - The initial value for the property.
+     * @param {string} name - The name of the property.
      */
-    constructor(stats, uri, value){
+    constructor(stats, uri, value, name){
         this.#uri = uri;
+        this.#name = name;
         this.#stats = stats;
         this.#base = value;
         this.#sources = [];
@@ -48,10 +47,11 @@ export default class NumericStatTracker {
         this.#snapshot = undefined;
     }
 
+    /** The name of the property. */
+    get name() { return this.#name; }
+
     /** The base value of the property. */
-    get base() {
-        return this.#base;
-    }
+    get base() { return this.#base; }
 
     /** The effective base value of the property adjusted for a snapshot at the time an effect was applied. */
     get baseEffective() {
@@ -172,7 +172,7 @@ export default class NumericStatTracker {
      * @param {boolean} canWrite - Whether the snapshot value can be written back to the stat block as a pending update
      */
     setSnapshot(value, canWrite) {
-        if (!this.stats.isPlayer) {
+        if (!this.#stats.isPlayer) {
             return;
         }
 
@@ -227,7 +227,7 @@ export default class NumericStatTracker {
         const snapshot = this.#snapshot ?? this.#base;
         this.setSnapshot(snapshot, true);
 
-        instance = instance.toLocaleLowerCase();
+        instance = instance.toLowerCase();
         const index = this.#sources.findIndex(entry => entry.instance === instance);
 
         impact.instance = instance;
@@ -239,8 +239,6 @@ export default class NumericStatTracker {
         } else {
             this.#sources[index] = impact;
         }
-        
-        this.#stats.hasPendingChanges(true);
     }
 
     /**
@@ -253,22 +251,21 @@ export default class NumericStatTracker {
             return;
         }
 
-        instance = instance.toLocaleLowerCase();
+        instance = instance.toLowerCase();
         this.#sources = this.#sources.filter(entry => entry.instance !== instance);
 
         if (this.#sources.length === 0) {
             this.resetSnapshot();
         }
-
-        this.#stats.hasPendingChanges(true);
     }
 
-    /**
-     * Removes all modification instances
-     */
+    /** Removes all modification instances */
     clearInstances() {
+        if (this.#sources.length === 0) {
+            return;
+        }
+        
         this.#sources = [];
         this.resetSnapshot();
-        this.#stats.hasPendingChanges(true);
     }
 }

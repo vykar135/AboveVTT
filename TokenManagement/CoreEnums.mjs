@@ -495,6 +495,7 @@ export const SkillCheck = new Configuration({
 /**
  * @type {Configuration & {
  *     Walk: ConfigurationSettings,
+ *     Crawl: ConfigurationSettings,
  *     Fly: ConfigurationSettings,
  *     Climb: ConfigurationSettings,
  *     Swim: ConfigurationSettings,
@@ -502,13 +503,14 @@ export const SkillCheck = new Configuration({
  *     Hover: ConfigurationSettings
  * }}
  */
-export const Speed = new Configuration({
-    Walk: { uri: 'speed:walk', name: 'Walk', open5e: 'walk' },
-    Fly: { uri: 'speed:fly', name: 'Fly', open5e: 'fly' },
-    Climb: { uri: 'speed:climb', name: 'Climb', open5e: 'climb' },
-    Swim: { uri: 'speed:swim', name: 'Swim', open5e: 'swim' },
-    Burrow: { uri: 'speed:burrow', name: 'Burrow', open5e: 'burrow' },
-    Hover: { uri: 'speed:hover', name: 'Hover', type: PropertyType.Toggle, open5e: 'hover' }
+export const Movement = new Configuration({
+    Walk: { uri: 'speed:walk', name: 'Walk', open5e: 'walk', player: 'Walking', monster: 1, default: 30 },
+    Fly: { uri: 'speed:fly', name: 'Fly', open5e: 'fly', player: 'Flying', monster: 4, default: 0 },
+    Climb: { uri: 'speed:climb', name: 'Climb', open5e: 'climb', player: 'Climbing', monster: 3, default: 0.5 },
+    Swim: { uri: 'speed:swim', name: 'Swim', open5e: 'swim', player: 'Swimming', monster: 5, default: 0.5 },
+    Burrow: { uri: 'speed:burrow', name: 'Burrow', open5e: 'burrow', player: 'Burrowing', monster: 2, default: 0 },
+    Crawl: { uri: 'speed:crawl', name: 'Crawl', open5e: 'crawl', default: 0.5 },
+    Hover: { uri: 'speed:hover', name: 'Hover', type: PropertyType.Toggle, open5e: 'hover', default: false }
 }, { type: PropertyType.Number });
 
 /** @returns {{ [uri: string] : TypedConfigurationSettings }} */
@@ -519,7 +521,7 @@ function buildPropertyIndex() {
         DamageType, ConditionType,
         AbilityScore, AbilityModifier, AbilityCheck,
         HitPoint, SpellTracking, AbilityConstraints, 
-        SavingThrow, SkillCheck, Speed
+        SavingThrow, SkillCheck, Movement
     ];
 
     const index = {};

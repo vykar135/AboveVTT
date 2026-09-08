@@ -117,36 +117,35 @@ export default class DefenseTracker {
             instance, immunity, resistance, vulnerability,
             version: this.#stats.statusEffects.version
         };
+        Object.freeze(impact);
 
         if (index < 0) {
             this.#sources.push(impact);
         } else {
             this.#sources[index] = impact;
         }
-
-        this.#stats.hasPendingChanges(true);
     }
 
     /**
-     * Removes an instance of the condition being applied to the stat block.
+     * Removes an instance of the defenses being applied to the stat block.
      * @param {string} instance - The tracking identifier within the instance of the behavior for the effect impact
      */
     removeInstance(instance) {
         if (typeof instance !== 'string') {
-            console.warn(`Attempting to remove an instance of condition ${this.#damageType} without a valid instance identifier`);
+            console.warn(`Attempting to remove an instance of ${this.#damageType} defense without a valid instance identifier`);
             return;
         }
 
         instance = instance.toLowerCase();
         this.#sources = this.#sources.filter(entry => entry.instance !== instance);
-        this.#stats.hasPendingChanges(true);
     }
 
-    /**
-     * Removes all instances of the condition
-     */
+    /** Removes all instances of the defense effects */
     clearInstances() {
+        if (this.#sources.length === 0) {
+            return;
+        }
+        
         this.#sources = [];
-        this.#stats.hasPendingChanges(true);
     }
 }
