@@ -11,6 +11,8 @@ import StatBlock from "./StatBlock.mjs";
  * @property {number} multiplier - The multiplier to apply to the value of the property.
  * @property {string} imports - The URI of the numeric property to import the current value for and apply to the requesting property.
  * @property {boolean} importPenalty - Whether the imported value is treated as a penalty against the requesting property.
+ * 
+ * @typedef {'manual' | 'initiative' | 'long_rest' | 'short_rest' | 'dawn'} ChargeReset
  */
 
 /** Manages a numberic property value that can have status effects applied to it. */
@@ -18,6 +20,7 @@ export default class NumericStatTracker {
     #stats
     #uri;
     #name;
+    #chargesReset;
     #base;
 
     /** @type {number} */
@@ -30,21 +33,26 @@ export default class NumericStatTracker {
     #sources;
     /** @type {number} */
     #calculated;
+    /** @type {number | undefined} */
+    #chargesUsed;
 
     /**
      * @param {StatBlock} stats - The stat block that this property is for.
      * @param {string} uri - The identifier of the property.
      * @param {number} value - The initial value for the property.
      * @param {string} name - The name of the property.
+     * @param {ChargeReset} chargesReset - When charges associated with the tracker reset.
      */
-    constructor(stats, uri, value, name){
+    constructor(stats, uri, value, name, chargesReset){
         this.#uri = uri;
         this.#name = name;
         this.#stats = stats;
         this.#base = value;
+        this.#chargesReset = chargesReset;
         this.#sources = [];
         this.#calculated = 0;
         this.#multiplier = 1;
+        this.#chargesUsed = 0;
         this.#baseOverride = undefined;
         this.#snapshot = undefined;
     }
@@ -70,19 +78,22 @@ export default class NumericStatTracker {
     }
 
     /** @returns {number | undefined} The snapshot of the value taken before effects were applied. */
-    get snapshot() {
-        return this.#snapshot;
-    }
+    get snapshot() { return this.#snapshot; }
 
     /** @returns {number} The amount that was calculated based on the effects that are applied to the stat block. */
-    get calculated() {
-        return this.#calculated;
-    }
+    get calculated() { return this.#calculated; }
 
     /** @returns {number} The multiplier on the base + calculated amount on the effects that are applied to the stat block. */
-    get multiplier() {
-        return this.#multiplier ?? 1;
-    }
+    get multiplier() { return this.#multiplier ?? 1; }
+
+    /** When charges associated with the tracker reset. */
+    get chargesReset() { return this.#chargesReset; }
+
+    /** The number of changes that have been used. */
+    get chargesUsed() { return this.#chargesUsed ?? 0; }
+
+    /** The number of changes that are reminaing. */
+    get chargesRemaining() { return this.current - this.chargesUsed; }
 
     /** @returns {boolean} Whether the player's character sheet is not synced with the campaign. */
     isNotSynced() {

@@ -1,51 +1,42 @@
 import { DiceActionsEnabled, uriEquals } from "./CoreEnums.mjs";
+import { ListStatBlocks } from "./StatBlock.mjs";
 
-/** Forces any tokens from all global token stores for the specified identifier to rebuild */
-export function refreshStatBlock(id) {
+/** @param {() => boolean} filter  */
+function refreshFilteredStatBlocks(filter) {
     if (!DiceActionsEnabled) {
         return;
     }
 
+    const available = ListStatBlocks();
+    for (const stats of available) {
+        if (stats.token?.options == null) {
+            continue;
+        }
+
+        if (filter(stats) === true) {
+            stats.rebuild();
+        }
+    }
+}
+
+/** Forces any tokens from all global token stores for the specified identifier to rebuild */
+export function refreshStatBlock(id) {
     if (id == null) {
         return;
     }
 
-    refreshGlobalStatBlock(window.TOKEN_OBJECTS, id);
-    refreshGlobalStatBlock(window.all_token_objects, id);
-}
-
-/** Forces any tokens for the specified identifier to rebuild */
-function refreshGlobalStatBlock(tokens, id) {
-    for (const token of Object.values(tokens)) {
-        if (token.options.id === id) {
-            token.stats.rebuild();
-        }
-    }
+    refreshFilteredStatBlocks((stats) => (stats.token.options.id === id));
 }
 
 // #region Player Character Sheets
 
 /** Forces any tokens from all global token stores that implement the specified player character sheet to rebuild */
 export function refreshPlayerSheets(player) {
-    if (!DiceActionsEnabled) {
-        return;
-    }
-
     if (player == null) {
         return;
     }
 
-    refreshGlobalPlayerSheets(window.TOKEN_OBJECTS, player);
-    refreshGlobalPlayerSheets(window.all_token_objects, player);
-}
-
-/** Forces any tokens that implement the specified player character sheet to rebuild */
-function refreshGlobalPlayerSheets(tokens, player) {
-    for (const token of Object.values(tokens)) {
-        if (token.options.sheet === player) {
-            token.stats.rebuild();
-        }
-    }
+    refreshFilteredStatBlocks((stats) => (stats.token.options.sheet === player));
 }
 
 /** Forces any tokens from all global token stores that implement the specified extended player character sheet to rebuild */
@@ -61,17 +52,7 @@ export function refreshPlayerExtended(player) {
     const asNumber = (typeof player === 'number') ? player : parseInt(player);
     const asString = player.toString();
 
-    refreshGlobalPlayerExtended(window.TOKEN_OBJECTS, asNumber, asString);
-    refreshGlobalPlayerExtended(window.all_token_objects, asNumber, asString);
-}
-
-/** Forces any tokens that implement the specified extended player character sheet to rebuild */
-function refreshGlobalPlayerExtended(tokens, asNumber, asString) {
-    for (const token of Object.values(tokens)) {
-        if (token.options.characterId === asNumber || token.options.characterId === asString) {
-            token.stats.rebuild();
-        }
-    }
+    refreshFilteredStatBlocks((stats) => (stats.token.options.characterId === asNumber || stats.token.options.characterId === asString));
 }
 
 /** Cache of v5 character sheets */
@@ -123,26 +104,12 @@ export function fetchPlayerExtendedSheet(id) {
 
 /** Forces any tokens from all global token stores that implement the specified D&D Beyond monster stat block to rebuild */
 export function refreshOpen5eStatBlocks(monster) {
-    if (!DiceActionsEnabled) {
-        return;
-    }
-
     if (monster == null) {
         return;
     }
     
     monster = monster.toLowerCase();
-    refreshOpen5eMonsterStats(window.TOKEN_OBJECTS, monster);
-    refreshOpen5eMonsterStats(window.all_token_objects, monster);
-}
-
-/** Forces any tokens that implement the specified Beyond monster stat block to rebuild */
-function refreshOpen5eMonsterStats(tokens, monster) {
-    for (const token of Object.values(tokens)) {
-        if (uriEquals(token.options.itemType, 'open5e') && uriEquals(token.options.itemId, monster)) {
-            token.stats.rebuild();
-        }
-    }
+    refreshFilteredStatBlocks((stats) => (uriEquals(stats.token.options.itemType, 'open5e') && uriEquals(stats.token.options.itemId, monster)));
 }
 
 const open5eCreatures = {};
@@ -212,25 +179,11 @@ const beyondCreatures = {
 
 /** Forces any tokens from all global token stores that implement the specified D&D Beyond monster stat block to rebuild */
 export function refreshMonsterStatBlocks(monster) {
-    if (!DiceActionsEnabled) {
-        return;
-    }
-
     if (monster == null) {
         return;
     }
 
-    refreshGlobalMonsterStats(window.TOKEN_OBJECTS, monster);
-    refreshGlobalMonsterStats(window.all_token_objects, monster);
-}
-
-/** Forces any tokens that implement the specified Beyond monster stat block to rebuild */
-function refreshGlobalMonsterStats(tokens, monster) {
-    for (const token of Object.values(tokens)) {
-        if (token.options.monster === monster) {
-            token.stats.rebuild();
-        }
-    }
+    refreshFilteredStatBlocks((stats) => (stats.token.options.monster === monster));
 }
 
 /**

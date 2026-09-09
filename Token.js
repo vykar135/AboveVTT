@@ -165,14 +165,16 @@ class Token {
 		delete this.options.hp;
 		delete this.options.temp_hp;
 
-		this.#stats = window.initStatBlock(this);
-		this.#stats.rebuild();
+		this.#stats = window.initStatBlock(options.id);
 	}
 
 	/** @return {StatBlock} The normalized stat block for the token */
 	get stats() {
 		if (this.#stats == null) {
-			this.#stats = window.initStatBlock(this);
+			this.#stats = window.initStatBlock(this.options.id);
+		}
+
+		if (this.#stats.needsRebuild) {
 			this.#stats.rebuild();
 		}
 

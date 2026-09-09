@@ -1,4 +1,4 @@
-/** @import { Token } from './Token.types.js' */
+/** @import { Token, TokenOptions } from './Token.types.js' */
 
 import { fetchBeyondSheetForToken, fetchOpen5eSheetForToken, fetchPlayerExtendedSheet } from './StatBlockSources.mjs';
 import { DiceActionsEnabled, AbilityScore, ConditionType, DamageType, ProficiencyType, SkillCheck, uriEquals, Movement } from './CoreEnums.mjs'
@@ -10,9 +10,50 @@ import { DiceAction, DiceActionContext } from './DiceAction.mjs';
 import DefenseTracker from './DefenseTracker.mjs';
 import ToggleTracker from './ToggleTracker.mjs';
 
+/** @type {{ [id: string]: StatBlock }} */
+const StatBlockCache = {};
+
+/**
+ * Gets or adds the stat block from the central store
+ * @param {string} id - The identifier of the character or creature to build the stat block for. */
+export function GetStatBlock(id){
+    if (id == null) {
+        return undefined;
+    }
+
+    if (id in StatBlockCache) {
+        return StatBlockCache[id];
+    }
+
+    const stats = new StatBlock(id);
+    StatBlockCache[stats.id] = stats;
+
+    stats.rebuild();
+    return stats;
+}
+
+/**
+ * Gets the stat block from the central store
+ * @param {string} id - The identifier of the character or creature. */
+export function LookupStatBlock(id){
+    if (id != null && id in StatBlockCache) {
+        return StatBlockCache[id];
+    }
+
+    return undefined;
+}
+
+/** Provides an enumeration of all available stat blocks. */
+export function ListStatBlocks() {
+    return Object.values(StatBlockCache);
+}
+
 /** Manages a normalized stat block for the provided token by importing details from associated creature stat blocks */
 export default class StatBlock {
-    #token;
+    #id;
+    #needsRebuild;
+    #pendingRebuild;
+
     #proficiency;
     #ac;
     #scores;
@@ -40,9 +81,10 @@ export default class StatBlock {
     /** @type {{ [uri: string]: { message: string, error: Error }}} Components within the stat block that failed to complete successuflly */
     #warnings;
 
-    /** @param {Token} token - The token to normalize the stat block for. */
-    constructor(token){
-        this.#token = token;
+    /** @param {string} id - The identifier of the character or creature to build the stat block for. */
+    constructor(id){
+        this.#id = id;
+        this.#needsRebuild = true;
 
         this.#proficiency = new NumericStatTracker(this, 'pb', 2, 'Proficiency Bonus');
         this.#diceContext = new BlockDiceContext(this);
@@ -86,23 +128,51 @@ export default class StatBlock {
         this.#hasSheet = false;
 
         Object.freeze(this);
+
+        // Force a rebuild once the scene is loaded.
+        this.#pendingRebuild = window.setTimeout(this.#checkRebuild.bind(this), 1000);
     }
 
-    /** Whether the token is currently stored within the global tokens container. */
-    get fromAllTokens() { return (window.all_token_objects[this.#token.options.id] === this.#token); }
+    /** Checks if the stat block is still waiting for the scene to finish loading, then triggers a rebuild. */
+    #checkRebuild(){
+        if (!this.#needsRebuild) {
+            this.#pendingRebuild = undefined;
+            return;
+        }
 
-    /** Whether the token is currently stored within the local tokens container. */
-    get fromLocalTokens() { return (window.TOKEN_OBJECTS[this.#token.options.id] === this.#token); }
+        if (window.LOADING === true || this.token == null) {
+            this.#pendingRebuild = window.setTimeout(this.rebuild, 1000);
+            return;
+        }
 
-    /** Whether the token is currently stored within the global tokens container and there is a local token active. */
-    get hasLocalToken() { return this.fromAllTokens && (window.TOKEN_OBJECTS[this.#token.options.id] != null); }
+        this.#pendingRebuild = undefined;
+        this.rebuild();
+    }
+
+    /** Whether the stat block has active rebuild warnings */
+    get hasWarnings() { return (Object.keys(this.#warnings ?? {}).length > 0); }
+
+    /** Whether or not this stat block is waiting for the game state to reach a point it can rebuild. */
+    get needsRebuild() { return this.#needsRebuild; }
+
+    /** The identifier of the character or creature to normalize the stat block for. */
+    get id() { return this.#id; }
+
+    /** The best token to normalize based on. */
+    get token() { return this.tokenLocal ?? this.tokenGlobal; }
+
+    /** @type {Token | undefined} The token from the global token store being managed. */
+    get tokenGlobal() { return window.all_token_objects[this.#id]; }
+
+    /** @type {Token | undefined} The token from the local token store being managed. */
+    get tokenLocal() { return window.TOKEN_OBJECTS[this.#id]; }
 
     /**
      * Requests a token update message to be dispatched only if there are pending changes that have been observed by this instance
      * @returns Whether the stat block requested to be synced.
     */
     sync() {
-        return this.#syncWithCallback('sync', () => this.#token.sync());
+        return this.#syncWithCallback('sync', (target) => target.sync());
     }
 
     /**
@@ -111,35 +181,60 @@ export default class StatBlock {
      * @returns Whether the stat block requested to be synced.
      */
     update_and_sync() {
-        return this.#syncWithCallback('update_and_sync', () => this.#token.update_and_sync());
+        return this.#syncWithCallback('update_and_sync', (target) => target.update_and_sync());
     }
 
     /**
      * Performs the sync operation using the provided callback.
      * @param {string} failureUri - The URI to put into the warnings collection if the sync process fails.
-     * @param {() => void} callback - The callback made to sync the stat block
+     * @param {(target: Token) => void} callback - The callback made to sync the stat block
      */
     #syncWithCallback(failureUri, callback) {
-        if (this.#pendingChanges !== undefined) {
-            const current = this.#pendingChanges;
-            this.#pendingChanges = undefined;
-
-            // Supress the update process if the main token sync already fired or if we are a global token with a local token active
-            if ((this.#token.options.lastModified ?? 0) >= current || this.hasLocalToken) {
-                return false;
-            }
-
-            try {
-                callback();
-                delete this.#warnings[failureUri];
-            } catch (error) {
-                this.reportFailure(failureUri, `Failed to sync options data`, error);
-            }
-
-            return true;
+        if (this.#pendingChanges === undefined) {
+            return false;
         }
 
-        return false;
+        const fromLocal = this.tokenLocal;
+        const fromGlobal = this.tokenGlobal;
+        const target = fromLocal ?? fromGlobal;
+    
+        if (target == null) {
+            return false;
+        }
+
+        const current = this.#pendingChanges;
+        this.#pendingChanges = undefined;
+
+        // Supress the update process if the main token sync already fired.
+        if ((target.options.lastModified ?? 0) >= current) {
+            return false;
+        }
+
+        this.#cloneOptionData(fromLocal, fromGlobal);
+
+        try {
+            callback(target);
+            delete this.#warnings[failureUri];
+        } catch (error) {
+            this.reportFailure(failureUri, `Failed to sync options data`, error);
+        }
+
+        return true;
+    }
+
+    /**
+     * Creates a structured clone of stat block related information on the source and sets the appropriate properties on the destination.
+     * @param {Token} source - The instance to clone information from.
+     * @param {Token} destination - The instance to clone information to.
+     */
+    #cloneOptionData(source, destination) {
+        if (source == null || destination == null || source === destination) {
+            return;
+        }
+
+        destination.status_effects = structuredClone(source.status_effects);
+        destination.hpSnapshot = structuredClone(source.hpSnapshot);
+        destination.snapshots = structuredClone(source.snapshots);
     }
 
     /**
@@ -149,7 +244,8 @@ export default class StatBlock {
      * @param {Error} error - The error that was encountered
      */
     reportFailure(eventType, message, error) {
-        message = `${message ?? 'Unknown exception encountered'} for ${this.#token?.options?.name ?? 'Unnamed Token'} => ${this.#token?.options?.id ?? ''}`;
+        const target = this.token;
+        message = `${message ?? 'Unknown exception encountered'} for ${target?.options?.name ?? 'Unnamed Token'} => ${target?.options?.id ?? ''}`;
 
         this.#warnings[eventType] = {
             message: message,
@@ -177,12 +273,6 @@ export default class StatBlock {
         }
     }
 
-    /** Whether the stat block has active rebuild warnings */
-    get hasWarnings() { return (Object.keys(this.#warnings ?? {}).length > 0); }
-
-    /** The token that is being managed */
-    get token() { return this.#token; }
-
     /** Whether the stat block is for a player */
     get isPlayer() { return this.#player; }
 
@@ -196,7 +286,7 @@ export default class StatBlock {
     get diceContext() { return this.#diceContext; }
 
     /** Gets the name of the token */
-    get name() { return this.#token.options.name ?? 'Unknown Token'; }
+    get name() { return this.token?.options?.name ?? 'Unknown Token'; }
 
     /** Details about the current state of the creature's hit points and associated controls. */
     get hp() { return this.#hitPoints; }
@@ -403,7 +493,7 @@ export default class StatBlock {
 
     /** A snapshot of the current initiative order in the combat tracker */
     getCurrentInitiative() {
-        return StatBlock.getTokenInitiative(this.#token);
+        return StatBlock.getTokenInitiative(this.token);
     }
 
     /** @returns {{ round: number, token?: Token, initiative?: number }} A snapshot of the current initiative order in the combat tracker */
@@ -451,7 +541,13 @@ export default class StatBlock {
         }
 
         try {
-            const options = this.#token.options;
+            const options = this.token?.options;
+            if (options == null) {
+                this.#needsRebuild = true;
+                return;
+            }
+
+            this.#needsRebuild = false;
             const player = this.getPlayerSheet();
 
             this.#player = (player != null || (options.characterId != null && options.itemType === 'pc'));
@@ -555,7 +651,7 @@ export default class StatBlock {
 
     /** Recalculates the values for the properties within the stat block after changes have been applied. */
     recalculate() {
-        if (!DiceActionsEnabled) {
+        if (!DiceActionsEnabled || this.#needsRebuild) {
             return;
         }
 
@@ -592,27 +688,28 @@ export default class StatBlock {
 
     /** Retrieves the character sheet information from D&D Beyond */
     getPlayerSheet() {
-        if (this.#token.options.sheet == null) {
+        const target = this.token;
+        if (target?.options?.sheet == null) {
             return null;
         }
 
-        const expected = this.#token.options.sheet.toLowerCase();
+        const expected = target.options.sheet.toLowerCase();
         return window.pcs.find((entry) => uriEquals(entry.sheet, expected));
     }
 
     /** Retrieves the extended player character sheet information from D&D Beyond */
     getPlayerExtended() {
-        return fetchPlayerExtendedSheet(this.#token.options.characterId);
+        return fetchPlayerExtendedSheet(this.token?.options?.characterId);
     }
 
     /** Retrieves the common D&D Beyond monster stat block if the token is an instance of one */
     getBeyondMonster() {
-        return fetchBeyondSheetForToken(this.#token);
+        return fetchBeyondSheetForToken(this.token);
     }
 
     /** Retrieves the common Open 5E stat block if the token is an instance of one */
     getOpen5e() {
-        return fetchOpen5eSheetForToken(this.#token);
+        return fetchOpen5eSheetForToken(this.token);
     }
 
     /**
@@ -637,7 +734,7 @@ export default class StatBlock {
 
         tracker.setBaseValue(value);
 
-        const snapshots = this.#token.options.snapshots?.numeric;
+        const snapshots = this.token?.options?.snapshots?.numeric;
         if (snapshots != null) {
             if (this.#player) {
                 tracker.setSnapshot(snapshots[tracker.uri], false);
@@ -1310,5 +1407,5 @@ class BlockDiceContext extends DiceActionContext {
 }
 
 // Addressing compatibility issues
-window.initStatBlock = (token) => new StatBlock(token);
+window.initStatBlock = GetStatBlock;
 window.statNormalizationEnabled = DiceActionsEnabled;

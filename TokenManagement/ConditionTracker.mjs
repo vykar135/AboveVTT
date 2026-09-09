@@ -338,7 +338,7 @@ export const UnconsciousDice = Object.freeze({
  * @param {StatBlock} stats - The stat block being modified */
 function SetIncapacitated(condition, stats) {
     const instance = condition.uri;
-    stats.statusEffects.isIncapacitated(condition.isActive);
+    stats.statusEffects.isIncapacitated(instance, condition.isActive);
 
     if (!condition.isActive) {
         return;
