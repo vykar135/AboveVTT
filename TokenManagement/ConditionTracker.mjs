@@ -7,10 +7,15 @@ import StatBlock from "./StatBlock.mjs";
  * @param {ConditionTracker} condition - The condition being tracked on the stat block.
  * @param {StatBlock} stats - The stat block being modified.
  * 
+ * @callback ConditionDiceEffectCallback
+ * @param {ConditionTracker} condition - The condition being tracked on the stat block.
+ * @param {StatBlock} stats - The stat block being modified.
+ * @returns {DiceActionModifier | DiceActionModifier[]}
+ * 
  * @typedef {Object} ConditionEffects
  * @property {ConditionEffectCallback} changes - The method used to apply changes from the condition into the stat block.
- * @property {DiceActionModifier} actionDice - The dice action modifier that is applied when taking an action.
- * @property {DiceActionModifier} targetedDice - The dice action modifier that is applied when targetted for an action.
+ * @property {ConditionDiceEffectCallback} actionDice - The dice action modifier that is applied when taking an action.
+ * @property {ConditionDiceEffectCallback} targetedDice - The dice action modifier that is applied when targetted for an action.
  */
 
 /** Tracks whether a condition should be applied to a stat block. */
@@ -30,7 +35,7 @@ export default class ConditionTracker {
     #actionDice;
     #targetedDice;
 
-    /** @type {{ instance: string, version: number, fromCondition: boolean, intensity: number, immunity: boolean | undefined }[]} */
+    /** @type {{ instance: string, version: number, fromCondition: boolean, priority: number, intensity: number, immunity: boolean | undefined }[]} */
     #sources;
 
     /**
@@ -75,10 +80,31 @@ export default class ConditionTracker {
     get immune() { return this.#immunity; }
 
     /** The dice action modifier that is applied when taking an action. */
-    get actionDice() { return this.#actionDice; }
+    getActionDice() { return this.#getDiceModifier(this.#actionDice); }
 
     /** The dice action modifier that is applied when targetted for an action. */
-    get targetedDice() { return this.#targetedDice; }
+    getTargetedDice() { return this.#getDiceModifier(this.#targetedDice); }
+
+    /** @param {(ConditionDiceEffectCallback | DiceActionModifier | DiceActionModifier[])} callback */
+    #getDiceModifier(callback) {
+        if (callback == null) {
+            return undefined;
+        }
+
+        if (typeof callback === 'function') {
+            return callback(this, this.#stats);
+        }
+
+        if (callback instanceof DiceActionModifier) {
+            return callback;
+        }
+
+        if (Array.isArray(callback)) {
+            return callback;
+        }
+
+        return undefined;
+    }
 
     /** @returns {boolean} Whether the player's character sheet is not synced with the campaign. */
     isNotSynced() {
@@ -114,6 +140,7 @@ export default class ConditionTracker {
         let immunity = this.#baseImmunity;
 
         this.#sources = this.#sources.filter(entry => entry.version === version || entry.fromCondition === true);
+        this.#sources.sort((a, b) => (a.priority ?? 0) - (b.priority ?? 0));
 
         for (const applied of this.#sources) {
             active = true;
@@ -134,12 +161,11 @@ export default class ConditionTracker {
 
     /**
      * Appends an instance of the condition being applied to the stat block.
-     * @param {string} instance - The tracking identifier within the instance of the behavior for the effect impact
-     * @param {boolean} fromCondition - Whether the instance is from a condition.
-     * @param {number} intensity - The numeric value representing the intensity of the effects from the condition
-     * @param {boolean} immunity - Whether the creature is immune to the effects of the condition.
+     * @param {{ instance: string, fromCondition: boolean, priority: number, intensity: number, immunity: boolean }} settings
      */
-    addInstance(instance, fromCondition, intensity, immunity) {
+    addInstance(settings) {
+        let { instance, fromCondition, priority, intensity, immunity } = settings;
+
         if (typeof instance !== 'string') {
             console.warn(`Attempting to append an instance of condition ${this.#uri} without a valid instance identifier`);
             return;
@@ -150,17 +176,22 @@ export default class ConditionTracker {
             immunity = undefined;
         }
 
-        if (typeof intensity !== 'number') {
+        if (typeof intensity !== 'number' && intensity != null) {
             console.warn(`Attempting to append intensity to ${this.#uri} without a valid numeric value`);
             intensity = undefined;
+        }
+
+        if (typeof priority !== 'number' && priority != null) {
+            console.warn(`Attempting to append priority to ${this.#uri} without a valid numeric value`);
+            priority = undefined;
         }
 
         instance = instance.toLowerCase();
         const index = this.#sources.findIndex(entry => entry.instance === instance);
 
         const impact = {
-            instance, intensity, immunity,
             fromCondition: (fromCondition === true),
+            instance, intensity, immunity, priority,
             version: this.#stats.statusEffects.version
         };
         Object.freeze(impact);
@@ -269,7 +300,7 @@ export const PetrifiedDice = Object.freeze({
 /** @type {ConditionEffects} Dice action modifier for the poisoned condition. */
 export const PoisonedDice = Object.freeze({
     changes: undefined,
-    action: ApplyPoisoned(),
+    action: ApplyPoisoned,
     targeted: undefined
 });
 
@@ -283,8 +314,8 @@ export const ProneDice = Object.freeze({
 /** @type {ConditionEffects} Dice action modifier for the restrained condition. */
 export const RestrainedDice = Object.freeze({
     changes: CannotMove,
-    action: ApplyRestrained(),
-    targeted: AsRestrainedTarget()
+    action: ApplyRestrained,
+    targeted: AsRestrainedTarget
 });
 
 /** @type {ConditionEffects} Dice action modifier for the Stunned condition. */
@@ -328,11 +359,12 @@ function SetPetrified(condition, stats) {
     CannotMove(condition, stats);
 
     if (condition.isActive) {
-        stats.conditions.poisoned.addInstance(instance, true, 0, true);
+        stats.conditions.poisoned.addInstance({ instance, fromCondition: true, priority: 999999999, immunity: true });
 
+        const settings = { instance, fromCondition: true, priority: 999999999, resistance: true };
         for (const defense of Object.values(stats.defenses)) {
             if (defense instanceof DefenseTracker) {
-                defense.addInstance(instance, true, undefined, true, undefined);
+                defense.addInstance(settings);
             }
         }
 
@@ -364,14 +396,14 @@ export function CannotMove(condition, stats) {
         return;
     }
 
-    const impact = { setTo: 0, priority: 999999999, fromCondition: true };
+    const impact = { instance, fromCondition: true, priority: 999999999, setTo: 0 };
 
-    stats.movement.walk.addInstance(instance, impact);
-    stats.movement.crawl.addInstance(instance, impact);
-    stats.movement.climb.addInstance(instance, impact);
-    stats.movement.burrow.addInstance(instance, impact);
-    stats.movement.swim.addInstance(instance, impact);
-    stats.movement.fly.addInstance(instance, impact);
+    stats.movement.walk.addInstance(impact);
+    stats.movement.crawl.addInstance(impact);
+    stats.movement.climb.addInstance(impact);
+    stats.movement.burrow.addInstance(impact);
+    stats.movement.swim.addInstance(impact);
+    stats.movement.fly.addInstance(impact);
 }
 
 /** Generates the dice action modifier for the poisoned condition. */

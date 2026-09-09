@@ -5,6 +5,7 @@ import StatBlock from "./StatBlock.mjs";
  * @property {string} instance - The reference to the status effect that produced the change.
  * @property {number} version - The version of the status effect collect at the time the impact was applied.
  * @property {boolean} fromCondition - Whether the effect is from a condition.
+ * @property {number} priority - The priority of the effect.
  * @property {number} setTo - The fixed amount to set the value of the property to.
  * @property {number} amount - The fixed amount to change the property by.
  * @property {number} multiplier - The multiplier to apply to the value of the property.
@@ -129,6 +130,7 @@ export default class NumericStatTracker {
         let calculated = 0;
 
         this.#sources = this.#sources.filter(entry => entry.version === version || entry.fromCondition === true);
+        this.#sources.sort((a, b) => (a.priority ?? 0) - (b.priority ?? 0));
         
         for (const applied of this.#sources) {
             if (applied.setTo != null) {
@@ -213,17 +215,13 @@ export default class NumericStatTracker {
 
     /**
      * Appends an instance of a modification being applied to the stat block.
-     * @param {string} instance - The tracking identifier within the instance of the behavior for the effect impact
-     * @param {NumericStatImpact} impact - The changes to apply to the property.
+     * @param {NumericStatImpact} settings - The changes to apply to the property.
      */
-    addInstance(instance, impact) {
+    addInstance(settings) {
+        let { instance, fromCondition, priority, setTo, amount, multiplier, imports, importPenalty } = settings;
+
         if (typeof instance !== 'string') {
             console.warn(`Attempting to append an effect impact to numeric stat ${this.#uri} without a valid instance identifier`);
-            return;
-        }
-
-        if (typeof impact !== 'object') {
-            console.warn(`Attempting to append an effect impact to numeric stat ${this.#uri} without a valid configuration`);
             return;
         }
 
@@ -233,10 +231,9 @@ export default class NumericStatTracker {
         instance = instance.toLowerCase();
         const index = this.#sources.findIndex(entry => entry.instance === instance);
 
-        const applying = { ...impact };
-        applying.instance = instance;
+        const applying = { instance, priority, setTo, amount, multiplier, imports, importPenalty };
         applying.version = this.#stats.statusEffects.version;
-        applying.fromCondition = (applying.fromCondition === true);
+        applying.fromCondition = (fromCondition === true);
         Object.freeze(applying);
         
         if (index < 0) {

@@ -166,12 +166,14 @@ class Token {
 		delete this.options.temp_hp;
 
 		this.#stats = window.initStatBlock(this);
+		this.#stats.rebuild();
 	}
 
 	/** @return {StatBlock} The normalized stat block for the token */
 	get stats() {
 		if (this.#stats == null) {
 			this.#stats = window.initStatBlock(this);
+			this.#stats.rebuild();
 		}
 
 		return this.#stats;
@@ -179,7 +181,7 @@ class Token {
 
 	/** @return {TokenStatusEffects} The manager for active, passive, and maintained status effects applied to the token */
 	get statusEffects() {
-		return this.#stats.statusEffects;
+		return this.stats.statusEffects;
 	}
 
 	/** @return {number} the total of this token's HP and temp HP */
@@ -481,7 +483,7 @@ class Token {
 				window.all_token_objects[this.options.id].options.custom_conditions.push(condition);
 	    }
 
-		this.#stats.rebuild();
+		this.stats.rebuild();
 	}
 	
 	removeCondition(conditionName) {
@@ -535,7 +537,7 @@ class Token {
 			array_remove_index_by_value(window.all_token_objects[this.options.id].options.custom_conditions, conditionName);
 		}
 
-		this.#stats.rebuild();
+		this.stats.rebuild();
 	}
 	isInCombatTracker() {
 		return ct_list_tokens().includes(this.options.id);

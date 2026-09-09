@@ -12,7 +12,7 @@ export default class DefenseTracker {
     #resistance;
     #vulnerability;
 
-    /** @type {{ instance: string, version: number, fromCondition: boolean, immunity?: boolean, resistance?: boolean, vulnerability?: boolean }[]} */
+    /** @type {{ instance: string, version: number, fromCondition: boolean, priority: number, immunity?: boolean, resistance?: boolean, vulnerability?: boolean }[]} */
     #sources;
 
     /**
@@ -70,6 +70,7 @@ export default class DefenseTracker {
         let vulnerable = this.#baseVulnerability;
 
         this.#sources = this.#sources.filter(entry => entry.version === version || entry.fromCondition === true);
+        this.#sources.sort((a, b) => (a.priority ?? 0) - (b.priority ?? 0));
 
         for (const applied of this.#sources) {
             immune = applied.immunity ?? immune;
@@ -84,16 +85,19 @@ export default class DefenseTracker {
 
     /**
      * Appends an instance of the damage defenses being applied to the stat block.
-     * @param {string} instance - The tracking identifier within the instance of the behavior for the effect impact
-     * @param {boolean} fromCondition - Whether the instance is from a condition.
-     * @param {boolean} immunity - Whether the creature is immune to the type of damage.
-     * @param {boolean} resistance - Whether the creature is resistant to the type of damage.
-     * @param {boolean} vulnerability - Whether the creature is vulnerable to the type of damage.
+     * @param {{ instance: string, fromCondition: boolean, priority: number, immunity: boolean, resistance: boolean, vulnerability: boolean }} settings
      */
-    addInstance(instance, fromCondition, immunity, resistance, vulnerability) {
+    addInstance(settings) {
+        let { instance, fromCondition, priority, immunity, resistance, vulnerability } = settings;
+
         if (typeof instance !== 'string') {
             console.warn(`Attempting to append an instance of defense against ${this.#damageType} without a valid instance identifier`);
             return;
+        }
+
+        if (typeof priority !== 'number' && priority != null) {
+            console.warn(`Attempting to append priority to ${this.#damageType} without a valid numeric value`);
+            priority = undefined;
         }
 
         if (typeof immunity !== 'boolean' && immunity != null) {
@@ -115,8 +119,8 @@ export default class DefenseTracker {
         const index = this.#sources.findIndex(entry => entry.instance === instance);
 
         const impact = {
-            instance, immunity, resistance, vulnerability,
             fromCondition: (fromCondition === true),
+            instance, priority, immunity, resistance, vulnerability,
             version: this.#stats.statusEffects.version
         };
         Object.freeze(impact);

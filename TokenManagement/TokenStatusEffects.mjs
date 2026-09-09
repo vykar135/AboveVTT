@@ -61,7 +61,7 @@ export default class TokenStatusEffects {
         this.#pendingSceneTokens = {};
         this.#pendingCampaignTokens = {};
 
-        this.reapply();
+        this.#stats.recalculate();
         if (callback(this.#stats) === true) {
             const target = this.id;
             delete scene[target];
@@ -73,12 +73,12 @@ export default class TokenStatusEffects {
         }
 
         for (const target of Object.values(scene)) {
-            target.stats.statusEffects.reapply();
+            target.stats.recalculate();
             callback(target.stats);
         }
 
         for (const target of Object.values(campaign)) {
-            target.stats.statusEffects.reapply();
+            target.stats.recalculate();
             callback(target.stats);
         }
     }
@@ -202,7 +202,7 @@ export default class TokenStatusEffects {
      */
     static #getGlobalContainer(tokens, target) {
         const token = tokens[target];
-        if (token == null) {
+        if (token?.options == null) {
             return [null, null];
         }
 
@@ -226,13 +226,10 @@ export default class TokenStatusEffects {
     }
 
     /**
-     * Applies all of the active status effects to the stat block and 
-     * requests a recalculation of all properties after the changes are applied
+     * Applies all of the active status effects to the stat block
      */
     reapply() {
         this.#version = Date.now();
-
-        this.#stats.recalculate();
     }
 
     /**

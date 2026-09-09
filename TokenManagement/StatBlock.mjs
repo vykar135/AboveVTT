@@ -86,35 +86,23 @@ export default class StatBlock {
         this.#hasSheet = false;
 
         Object.freeze(this);
-
-        this.rebuild();
     }
+
+    /** Whether the token is currently stored within the global tokens container. */
+    get fromAllTokens() { return (window.all_token_objects[this.#token.options.id] === this.#token); }
+
+    /** Whether the token is currently stored within the local tokens container. */
+    get fromLocalTokens() { return (window.TOKEN_OBJECTS[this.#token.options.id] === this.#token); }
+
+    /** Whether the token is currently stored within the global tokens container and there is a local token active. */
+    get hasLocalToken() { return this.fromAllTokens && (window.TOKEN_OBJECTS[this.#token.options.id] != null); }
 
     /**
      * Requests a token update message to be dispatched only if there are pending changes that have been observed by this instance
      * @returns Whether the stat block requested to be synced.
     */
     sync() {
-        if (this.#pendingChanges !== undefined) {
-            const current = this.#pendingChanges;
-            this.#pendingChanges = undefined;
-
-            if ((this.#token.options.lastModified ?? 0) >= current) {
-                return false;
-            }
-
-            console.log(`Syncing ${current} > ${this.#token.options.lastModified}`);
-            try {
-                this.#token.sync();
-                delete this.#warnings['sync'];
-            } catch (error) {
-                this.reportFailure('sync', `Failed to sync options data`, error);
-            }
-
-            return true;
-        }
-
-        return false;
+        return this.#syncWithCallback('sync', () => this.#token.sync());
     }
 
     /**
@@ -123,19 +111,29 @@ export default class StatBlock {
      * @returns Whether the stat block requested to be synced.
      */
     update_and_sync() {
+        return this.#syncWithCallback('update_and_sync', () => this.#token.update_and_sync());
+    }
+
+    /**
+     * Performs the sync operation using the provided callback.
+     * @param {string} failureUri - The URI to put into the warnings collection if the sync process fails.
+     * @param {() => void} callback - The callback made to sync the stat block
+     */
+    #syncWithCallback(failureUri, callback) {
         if (this.#pendingChanges !== undefined) {
             const current = this.#pendingChanges;
             this.#pendingChanges = undefined;
 
-            if ((this.#token.options.lastModified ?? 0) >= current) {
+            // Supress the update process if the main token sync already fired or if we are a global token with a local token active
+            if ((this.#token.options.lastModified ?? 0) >= current || this.hasLocalToken) {
                 return false;
             }
 
             try {
-                this.#token.update_and_sync();
-                delete this.#warnings['update_and_sync'];
+                callback();
+                delete this.#warnings[failureUri];
             } catch (error) {
-                this.reportFailure('update_and_sync', `Failed to sync options data`, error);
+                this.reportFailure(failureUri, `Failed to sync options data`, error);
             }
 
             return true;
@@ -562,9 +560,9 @@ export default class StatBlock {
         }
 
         try {
-            for (const condition of Object.values(this.#conditions)) {
-                condition.recalculate();
-            }
+            this.#effects.reapply();
+
+            this.#conditions.recalculate();
 
             for (const defense of Object.values(this.#defenses)) {
                 defense.recalculate();
@@ -1220,6 +1218,27 @@ class BlockConditions {
         this.unconscious = new ConditionTracker(stats, 'unconscious', 'Unconscious', UnconsciousDice);
 
         Object.freeze(this);
+    }
+
+    recalculate() {
+        // Start with conditions that can affect other conditions
+        this.petrified.recalculate();
+        this.unconscious.recalculate();
+
+        // Process conditions with stand alone effects
+        this.blinded.recalculate();
+        this.charmed.recalculate();
+        this.deafened.recalculate();
+        this.exhaustion.recalculate();
+        this.frightened.recalculate();
+        this.grappled.recalculate();
+        this.incapacitated.recalculate();
+        this.invisible.recalculate();
+        this.paralyzed.recalculate();
+        this.poisoned.recalculate();
+        this.prone.recalculate();
+        this.restrained.recalculate();
+        this.stunned.recalculate();
     }
 }
 

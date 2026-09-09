@@ -8,7 +8,7 @@ export default class ToggleTracker {
     #baseEnabled;
     #enabled;
 
-    /** @type {{ instance: string, version: number, fromCondition: boolean, enabled: boolean | undefined }[]} */
+    /** @type {{ instance: string, version: number, fromCondition: boolean, priority: number, enabled: boolean | undefined }[]} */
     #sources;
 
     /**
@@ -53,6 +53,7 @@ export default class ToggleTracker {
         let enabled = this.#baseEnabled;
 
         this.#sources = this.#sources.filter(entry => entry.version === version || entry.fromCondition === true);
+        this.#sources.sort((a, b) => (a.priority ?? 0) - (b.priority ?? 0));
 
         for (const applied of this.#sources) {
             enabled = applied.enabled ?? immunity;
@@ -64,14 +65,19 @@ export default class ToggleTracker {
 
     /**
      * Appends an instance of the property to enable of the stat block.
-     * @param {string} instance - The tracking identifier within the instance of the behavior for the effect impact
-     * @param {boolean} fromCondition - Whether the instance is from a condition.
-     * @param {boolean} enabled - Whether the property is enabled.
+     * @param {{ instance: string , fromCondition: boolean, priority: number, enabled: boolean }} settings 
      */
-    addInstance(instance, fromCondition, enabled) {
+    addInstance(settings) {
+        let { instance, fromCondition, priority, enabled } = settings;
+        
         if (typeof instance !== 'string') {
             console.warn(`Attempting to append an instance of toggle ${this.#uri} without a valid instance identifier`);
             return;
+        }
+
+        if (typeof priority !== 'number' && priority != null) {
+            console.warn(`Attempting to append priority to ${this.#uri} without a valid numeric value`);
+            priority = undefined;
         }
 
         if (typeof enabled !== 'boolean' && enabled != null) {
@@ -83,7 +89,7 @@ export default class ToggleTracker {
         const index = this.#sources.findIndex(entry => entry.instance === instance);
 
         const impact = {
-            instance, enabled,
+            instance, enabled, priority,
             fromCondition: (fromCondition === true),
             version: this.#stats.statusEffects.version
         };
