@@ -1,7 +1,7 @@
 /** @import { Token } from './Token.types.js' */
 /** @import { TokenStatusEffectContainer, Concentration, MaintainedEffect, ActiveStatusEffect, PassiveStatusEffect, StatusEffect } from './TokenStatusEffects.types.js' */
 
-import StatBlock, { GetStatBlock, ListStatBlocks, LookupStatBlock } from './StatBlock.mjs';
+import StatBlock, { ListStatBlocks, LookupStatBlock } from './StatBlock.mjs';
 
 /**
  * @typedef GlobalStatusEffectConfig
@@ -19,18 +19,15 @@ export default class TokenStatusEffects {
     #incapacitatedSources;
     #concentrating;
 
-    /** @type {{ [key: string]: Token}} */
-    #pendingSceneTokens;
-    /** @type {{ [key: string]: Token}} */
-    #pendingCampaignTokens;
+    /** @type {{ [key: string]: StatBlock}} */
+    #affectedTokens;
 
     /**
      * Manages the status effects associated with the provided Token
      * @param {StatBlock} stats */
     constructor(stats){
         this.#stats = stats;
-        this.#pendingSceneTokens = {};
-        this.#pendingCampaignTokens = {};
+        this.#affectedTokens = {};
         this.#version = Date.now();
         this.#incapacitatedSources = new Set();
         this.#concentrating = false;
@@ -55,31 +52,19 @@ export default class TokenStatusEffects {
      * @param {(stats: StatBlock) => boolean} callback - The callback made to sync the stat block
      */
     #syncWithCallback(callback) {
-        const scene = {...this.#pendingSceneTokens};
-        const campaign = {...this.#pendingCampaignTokens};
+        const affected = {...this.#affectedTokens};
         
-        this.#pendingSceneTokens = {};
-        this.#pendingCampaignTokens = {};
+        this.#affectedTokens = {};
 
         this.#stats.recalculate();
         if (callback(this.#stats) === true) {
             const target = this.id;
-            delete scene[target];
-            delete campaign[target];
+            delete affected[target];
         }
 
-        for (const key in scene) {
-            delete campaign[key]
-        }
-
-        for (const target of Object.values(scene)) {
-            target.stats.recalculate();
-            callback(target.stats);
-        }
-
-        for (const target of Object.values(campaign)) {
-            target.stats.recalculate();
-            callback(target.stats);
+        for (const target of Object.values(affected)) {
+            target.recalculate();
+            callback(target);
         }
     }
 
@@ -124,17 +109,17 @@ export default class TokenStatusEffects {
     }
     
     /**
-     * Retrieves the main status effects container for the targeted token within a global token stores with the ability to notify of a change.
+     * Retrieves the main stat block for the targeted token.
      * @param {string} target - The identifier of the token to update
-     * @returns {TokenStatusEffects | undefined}
+     * @returns {StatBlock | undefined}
      */
-    #getTargetEffects(target) {
+    #getTargetStatBlock(target) {
         const cached = LookupStatBlock(target);
         if (cached == null) {
             return undefined;
         }
 
-        return cached.statusEffects;
+        return cached;
     }
 
     /**
@@ -361,16 +346,17 @@ export default class TokenStatusEffects {
         }
 
         for (const id of targets) {
-            const target = this.#getTargetEffects(id);
+            const target = this.#getTargetStatBlock(id);
             if (target == null) {
                 continue;
             }
 
             for (const effect of spreading) {
-                const active = target.getActive();
+                const active = target.statusEffects.getActive();
                 const find = active.findIndex((check) => check.tracking === id);
                 if (find === -1) {
-                    target.#applyEffect(active, effect);
+                    target.statusEffects.#applyEffect(active, effect);
+                    this.#affectedTokens[target.id] = target;
                 }
             }
         }
@@ -393,7 +379,11 @@ export default class TokenStatusEffects {
 
         const available = ListStatBlocks();
         for (const target of available) {
-            removed = target.dropActiveEffect(tracking) || removed;
+            const localRemove = target.dropActiveEffect(tracking);
+            if (localRemove) {
+                this.#affectedTokens[target.id] = target;
+                removed = true;
+            }
         }
         
         return removed;
