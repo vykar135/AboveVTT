@@ -203,10 +203,11 @@ export default class NumericStatTracker {
             return;
         }
 
-        let snapshots = this.#stats.token.options.snapshots;
+        const options = this.#stats.getOptions();
+        let snapshots = options.snapshots;
         if (snapshots == null) {
             snapshots = {};
-            this.#stats.token.options.snapshots = snapshots;
+            options.snapshots = snapshots;
         }
 
         let properties = snapshots.numeric;

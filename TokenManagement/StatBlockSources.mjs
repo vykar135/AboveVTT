@@ -1,8 +1,22 @@
 import { DiceActionsEnabled, uriEquals } from "./CoreEnums.mjs";
-import { ListStatBlocks } from "./StatBlock.mjs";
+import StatBlock, { ListStatBlocks } from "./StatBlock.mjs";
 
-/** @param {() => boolean} filter  */
+/** @param {(stats: StatBlock) => boolean} filter  */
 function refreshFilteredStatBlocks(filter) {
+    if (!DiceActionsEnabled) {
+        return;
+    }
+
+    const available = ListStatBlocks();
+    for (const stats of available) {
+        if (filter(stats) === true) {
+            stats.rebuild();
+        }
+    }
+}
+
+/** @param {(stats: StatBlock) => boolean} filter  */
+function refreshFilteredTokens(filter) {
     if (!DiceActionsEnabled) {
         return;
     }
@@ -19,27 +33,27 @@ function refreshFilteredStatBlocks(filter) {
     }
 }
 
-/** Forces any tokens from all global token stores for the specified identifier to rebuild */
+/** Forces any stat blocks within the global cache with the specified identifier to rebuild */
 export function refreshStatBlock(id) {
     if (id == null) {
         return;
     }
 
-    refreshFilteredStatBlocks((stats) => (stats.token.options.id === id));
+    refreshFilteredStatBlocks((stats) => (stats.id === id));
 }
 
 // #region Player Character Sheets
 
-/** Forces any tokens from all global token stores that implement the specified player character sheet to rebuild */
+/** Forces any stat blocks within the global cache that implement the specified player character sheet to rebuild */
 export function refreshPlayerSheets(player) {
     if (player == null) {
         return;
     }
 
-    refreshFilteredStatBlocks((stats) => (stats.token.options.sheet === player));
+    refreshFilteredStatBlocks((stats) => (stats.characterUri === player));
 }
 
-/** Forces any tokens from all global token stores that implement the specified extended player character sheet to rebuild */
+/** Forces any stat blocks within the global cache that implement the specified extended player character sheet to rebuild */
 export function refreshPlayerExtended(player) {
     if (!DiceActionsEnabled) {
         return;
@@ -52,7 +66,7 @@ export function refreshPlayerExtended(player) {
     const asNumber = (typeof player === 'number') ? player : parseInt(player);
     const asString = player.toString();
 
-    refreshFilteredStatBlocks((stats) => (stats.token.options.characterId === asNumber || stats.token.options.characterId === asString));
+    refreshFilteredStatBlocks((stats) => (stats.characterId === asNumber || stats.characterId === asString));
 }
 
 /** Cache of v5 character sheets */
@@ -102,14 +116,14 @@ export function fetchPlayerExtendedSheet(id) {
 
 // #region Open 5e
 
-/** Forces any tokens from all global token stores that implement the specified D&D Beyond monster stat block to rebuild */
+/** Forces any stat blocks within the global cache that implement the specified D&D Beyond monster stat block to rebuild */
 export function refreshOpen5eStatBlocks(monster) {
     if (monster == null) {
         return;
     }
     
     monster = monster.toLowerCase();
-    refreshFilteredStatBlocks((stats) => (uriEquals(stats.token.options.itemType, 'open5e') && uriEquals(stats.token.options.itemId, monster)));
+    refreshFilteredTokens((stats) => (uriEquals(stats.token.options.itemType, 'open5e') && uriEquals(stats.token.options.itemId, monster)));
 }
 
 const open5eCreatures = {};
@@ -120,7 +134,7 @@ export function fetchOpen5eSheetForToken(token) {
         return;
     }
 
-    if (!uriEquals(token.options?.itemType, 'open5e') || token.options?.itemId == null){
+    if (!uriEquals(token?.options?.itemType, 'open5e') || token?.options?.itemId == null){
         return null;
     }
 
@@ -177,13 +191,13 @@ const beyondCreatures = {
     delay: 2000 // Initial wait delay while the VTT loads
 };
 
-/** Forces any tokens from all global token stores that implement the specified D&D Beyond monster stat block to rebuild */
+/** Forces any stat blocks within the global cache that implement the specified D&D Beyond monster stat block to rebuild */
 export function refreshMonsterStatBlocks(monster) {
     if (monster == null) {
         return;
     }
 
-    refreshFilteredStatBlocks((stats) => (stats.token.options.monster === monster));
+    refreshFilteredTokens((stats) => (stats.token.options.monster === monster));
 }
 
 /**

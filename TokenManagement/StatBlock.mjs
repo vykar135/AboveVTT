@@ -1,4 +1,4 @@
-/** @import { Token, TokenOptions } from './Token.types.js' */
+/** @import { Token } from './Token.types.js' */
 
 import { fetchBeyondSheetForToken, fetchOpen5eSheetForToken, fetchPlayerExtendedSheet } from './StatBlockSources.mjs';
 import { DiceActionsEnabled, AbilityScore, ConditionType, DamageType, ProficiencyType, SkillCheck, uriEquals, Movement } from './CoreEnums.mjs'
@@ -48,7 +48,13 @@ export function ListStatBlocks() {
     return Object.values(StatBlockCache);
 }
 
-/** Manages a normalized stat block for the provided token by importing details from associated creature stat blocks */
+/**
+ * Manages a normalized stat block for the associated player or creature stat blocks
+ * 
+ * - Tracking information for creature stat blocks will only ever exist within tokens,
+ * - Tracking information for players will exists within the campaign data, 
+ *     allowing us to affect player rolls even when a token is not present.
+*/
 export default class StatBlock {
     #id;
     #needsRebuild;
@@ -74,6 +80,11 @@ export default class StatBlock {
     #contributor;
     #hasSheet;
 
+    /** @type {string | undefined} The URI for for the player character when applicable */
+    #characterUri;
+    /** @type {string | undefined} The identifier for the player character within D&D Beyond when applicable */
+    #characterId;
+
     /** @type {number | undefined} Timestamp when the stat block was notified of a pending change */
     #pendingChanges;
     /** @type {{ [uri: string]: NumericStatTracker}} */
@@ -85,6 +96,8 @@ export default class StatBlock {
     constructor(id){
         this.#id = id;
         this.#needsRebuild = true;
+        this.#characterUri = undefined;
+        this.#characterId = undefined;
 
         this.#proficiency = new NumericStatTracker(this, 'pb', 2, 'Proficiency Bonus');
         this.#diceContext = new BlockDiceContext(this);
@@ -155,8 +168,23 @@ export default class StatBlock {
     /** Whether or not this stat block is waiting for the game state to reach a point it can rebuild. */
     get needsRebuild() { return this.#needsRebuild; }
 
+    /** Whether the user can contribute to the token. */
+    get isContributor() { return (window.DM === true || this.#contributor === true); }
+
+    /** Whether a backing character or monster stat block was found for the token */
+    get hasSheet() { return this.#hasSheet; }
+
     /** The identifier of the character or creature to normalize the stat block for. */
     get id() { return this.#id; }
+
+    /** Whether the stat block is for a player */
+    get isPlayer() { return this.#player; }
+
+    /** The identifier for the player character within D&D Beyond when applicable */
+    get characterId() { return this.#characterId; }
+
+    /** The URI for for the player character when applicable */
+    get characterUri() { return this.#characterUri; }
 
     /** The best token to normalize based on. */
     get token() { return this.tokenLocal ?? this.tokenGlobal; }
@@ -166,6 +194,77 @@ export default class StatBlock {
 
     /** @type {Token | undefined} The token from the local token store being managed. */
     get tokenLocal() { return window.TOKEN_OBJECTS[this.#id]; }
+
+    /** The context used for any dice actions performed from this stat block. */
+    get diceContext() { return this.#diceContext; }
+
+    /** Gets the name of the token */
+    get name() { return this.token?.options?.name ?? 'Unknown Token'; }
+
+    /** Details about the current state of the creature's hit points and associated controls. */
+    get hp() { return this.#hitPoints; }
+
+    /** Details about the current armor class for the creature.*/
+    get ac() { return this.#ac.current ?? 10; }
+
+    /** The character level or creature challenge rating for the stat block. */
+    get level() { return this.#level; }
+
+    /** The proficiency bonus for the stat block. */
+    get proficiencyBonus() { return this.#proficiency; }
+
+    /** Details about the initiative for the creature. */
+    get initiative() { return this.#initiative; }
+
+    /** The ability scores for the stat block. */
+    get scores() { return this.#scores; }
+
+    /** The ability scores for the stat block. */
+    get modifiers() { return this.#modifiers; }
+
+    /** The ability scores for the stat block. */
+    get saves() { return this.#saves; }
+
+    /** The skill checks for the stat block. */
+    get skills() { return this.#skills; }
+
+    /** The current state of condition for the stat block. */
+    get conditions() { return this.#conditions; }
+
+    /** The current state of defenses against the various types of damage for the stat block. */
+    get defenses() { return this.#defenses; }
+
+    /** The current state of movement speeds. */
+    get movement() { return this.#movement; }
+
+    /** The manager for active, passive, and maintained token status effects. */
+    get statusEffects() { return this.#effects; }
+
+    /** Gets the best options container for the stat block. */
+    getOptions() {
+        return this.#getPlayerOptions() ?? this.token?.options;
+    }
+
+    /** Gets the player metadata stored at the campaign level. */
+    #getPlayerOptions() {
+        if (this.#characterId == null) {
+            return undefined;
+        }
+
+        let container = window.AVTT_CAMPAIGN_INFO.characters;
+        if (container == null) {
+            container = { };
+            window.AVTT_CAMPAIGN_INFO.characters = container;
+        }
+
+        let options = container[this.#characterId];
+        if (options == null) {
+            options = { };
+            container[this.#characterId] = options;
+        }
+
+        return options;
+    }
 
     /**
      * Requests a token update message to be dispatched only if there are pending changes that have been observed by this instance
@@ -272,60 +371,6 @@ export default class StatBlock {
             this.#pendingChanges = Date.now();
         }
     }
-
-    /** Whether the stat block is for a player */
-    get isPlayer() { return this.#player; }
-
-    /** Whether the user can contribute to the token. */
-    get isContributor() { return (window.DM === true || this.#contributor === true); }
-
-    /** Whether a backing character or monster stat block was found for the token */
-    get hasSheet() { return this.#hasSheet; }
-
-    /** The context used for any dice actions performed from this stat block. */
-    get diceContext() { return this.#diceContext; }
-
-    /** Gets the name of the token */
-    get name() { return this.token?.options?.name ?? 'Unknown Token'; }
-
-    /** Details about the current state of the creature's hit points and associated controls. */
-    get hp() { return this.#hitPoints; }
-
-    /** Details about the current armor class for the creature.*/
-    get ac() { return this.#ac.current ?? 10; }
-
-    /** The character level or creature challenge rating for the stat block. */
-    get level() { return this.#level; }
-
-    /** The proficiency bonus for the stat block. */
-    get proficiencyBonus() { return this.#proficiency; }
-
-    /** Details about the initiative for the creature. */
-    get initiative() { return this.#initiative; }
-
-    /** The ability scores for the stat block. */
-    get scores() { return this.#scores; }
-
-    /** The ability scores for the stat block. */
-    get modifiers() { return this.#modifiers; }
-
-    /** The ability scores for the stat block. */
-    get saves() { return this.#saves; }
-
-    /** The skill checks for the stat block. */
-    get skills() { return this.#skills; }
-
-    /** The current state of condition for the stat block. */
-    get conditions() { return this.#conditions; }
-
-    /** The current state of defenses against the various types of damage for the stat block. */
-    get defenses() { return this.#defenses; }
-
-    /** The current state of movement speeds. */
-    get movement() { return this.#movement; }
-
-    /** The manager for active, passive, and maintained token status effects. */
-    get statusEffects() { return this.#effects; }
 
     /** Generates a snapshot of the creature stat block using the current calculated values. */
     getNormalizedSheet() {
@@ -534,6 +579,32 @@ export default class StatBlock {
         return { token: token, round: round, initiative: initiative };
     }
 
+    /** Retrieves the character sheet information from D&D Beyond */
+    getPlayerSheet() {
+        if (window.pcs == null) {
+            return undefined;
+        }
+
+        const expected = this.#id.toLowerCase();
+        return window.pcs.find((entry) => uriEquals(entry.sheet, expected));
+    }
+
+    /** Retrieves the extended player character sheet information from D&D Beyond */
+    getPlayerExtended() {
+        const main = this.getPlayerSheet();
+        if (main == null) {
+            return undefined;
+        }
+
+        return fetchPlayerExtendedSheet(main.characterId);
+    }
+
+    /** Retrieves the common D&D Beyond monster stat block if the token is an instance of one */
+    getBeyondMonster() { return fetchBeyondSheetForToken(this.token); }
+
+    /** Retrieves the common Open 5E stat block if the token is an instance of one */
+    getOpen5e() { return fetchOpen5eSheetForToken(this.token); }
+
     /** Rebuilds the stat block for the token */
     rebuild() {
         if (!DiceActionsEnabled) {
@@ -541,26 +612,38 @@ export default class StatBlock {
         }
 
         try {
-            const options = this.token?.options;
-            if (options == null) {
+            const player = this.getPlayerSheet();
+            const tokenOptions = this.token?.options;
+            if (player == null && tokenOptions == null) {
                 this.#needsRebuild = true;
                 return;
             }
 
             this.#needsRebuild = false;
-            const player = this.getPlayerSheet();
 
-            this.#player = (player != null || (options.characterId != null && options.itemType === 'pc'));
+            this.#characterId = player?.characterId?.toString();
+            this.#characterUri = player?.sheet;
+            this.#player = (player != null || (tokenOptions.characterId != null && tokenOptions.itemType === 'pc'));
             this.#contributor = (
-                window.DM === true || options.player_owned === true ||
-                (window.PLAYER_ID != null && options.characterId?.toString() === window.PLAYER_ID.toString())
+                window.DM === true || tokenOptions?.player_owned === true ||
+                (window.PLAYER_ID != null && tokenOptions?.characterId?.toString() === window.PLAYER_ID.toString())
             );
 
-            const sheets = { options, player };
+            const sheets = { tokenOptions, player, playerExt: undefined, playerOptions: undefined };
+
+            if (this.#player) {
+                sheets.playerOptions = this.#getPlayerOptions();
+
+                if (player?.hitPointInfo != null) {
+                    // Snapshotting the base total HP because some messages are removing.
+                    sheets.playerOptions.baseTotalHp = player.hitPointInfo.baseTotalHp ?? sheets.playerOptions.baseTotalHp;
+                    sheets.playerOptions.hitPointInfo = { ...player.hitPointInfo };
+                }
+            }
 
             if (this.#contributor) {
                 if (this.#player) {
-                    sheets.playerExt = this.getPlayerExtended();
+                    sheets.playerExt = fetchPlayerExtendedSheet(player.characterId);
                 } else {
                     sheets.open5e = this.getOpen5e();
                     sheets.monster = this.getBeyondMonster();
@@ -570,11 +653,11 @@ export default class StatBlock {
             this.#hasSheet = ((sheets.player ?? sheets.playerExt ?? sheets.open5e ?? sheets.monster) != null);
             sheets.pb = this.#refreshLevel(sheets);
 
-            const ac = options.armorClass ?? player?.armorClass ?? monster?.armorClass ?? 
+            const ac = player?.armorClass ?? tokenOptions?.armorClass ?? monster?.armorClass ?? 
                 open5e?.armor_class ?? open5e?.armorClass ?? 10;
             this.#updateNumeric(this.#ac, ac);
 
-            const totalHp = options.hitPointInfo?.maximum ?? player?.hitPointInfo?.maximum ?? 0;
+            const totalHp = player?.hitPointInfo?.maximum ?? tokenOptions?.hitPointInfo?.maximum ?? 0;
             this.#updateNumeric(this.#hitPoints.maximumChanges, totalHp);
 
             this.#refreshAbility(AbilityScore.STR, this.#scores.str, this.#modifiers.str, this.#saves.str, sheets);
@@ -686,32 +769,6 @@ export default class StatBlock {
         this.sync();
     }
 
-    /** Retrieves the character sheet information from D&D Beyond */
-    getPlayerSheet() {
-        const target = this.token;
-        if (target?.options?.sheet == null) {
-            return null;
-        }
-
-        const expected = target.options.sheet.toLowerCase();
-        return window.pcs.find((entry) => uriEquals(entry.sheet, expected));
-    }
-
-    /** Retrieves the extended player character sheet information from D&D Beyond */
-    getPlayerExtended() {
-        return fetchPlayerExtendedSheet(this.token?.options?.characterId);
-    }
-
-    /** Retrieves the common D&D Beyond monster stat block if the token is an instance of one */
-    getBeyondMonster() {
-        return fetchBeyondSheetForToken(this.token);
-    }
-
-    /** Retrieves the common Open 5E stat block if the token is an instance of one */
-    getOpen5e() {
-        return fetchOpen5eSheetForToken(this.token);
-    }
-
     /**
      * Updates the specified numeric property for the stat block.
      * @param {string | NumericStatTracker} tracker 
@@ -765,8 +822,8 @@ export default class StatBlock {
             let pb = 2;
 
             const ratings = window.ddbConfigJson?.["challengeRatings"] ?? []
-            if (id >= 0 && id < ratings.length) {
-                const rating = ratings[id];
+            const rating = ratings.find(entry => entry.id === id);
+            if (rating != null) {
                 cr = rating.value;
                 pb = rating.proficiencyBonus;
             }
@@ -825,10 +882,10 @@ export default class StatBlock {
      */
     #refreshAbilityScore(config, score, sheets) {
         const expected = config.uri.toLowerCase();
-        let value = sheets.options.abilities?.find((entry) => uriEquals(entry?.name, expected))?.score ??
-            sheets.player?.abilities?.find((entry) => uriEquals(entry?.name, expected))?.score ??
+        let value = sheets.player?.abilities?.find((entry) => uriEquals(entry?.name, expected))?.score ??
             sheets.monster?.stats?.find((entry) => (entry.statId === config.dndBeyond))?.value ??
             sheets.open5e?.ability_scores?.[config.open5e] ??
+            sheets.tokenOptions.abilities?.find((entry) => uriEquals(entry?.name, expected))?.score ??
             10;
 
         this.#updateNumeric(score, value);
@@ -843,9 +900,9 @@ export default class StatBlock {
      */
     #refreshAbilityModifier(config, score, modifier, sheets) {
         const expected = config.uri.toLowerCase();
-        let value = sheets.options.abilities?.find((entry) => uriEquals(entry?.name, expected))?.modifier ??
-            sheets.player?.abilities?.find((entry) => uriEquals(entry?.name, expected))?.modifier ??
-            sheets.open5e?.modifiers?.[config.open5e];
+        let value = sheets.player?.abilities?.find((entry) => uriEquals(entry?.name, expected))?.modifier ??
+            sheets.open5e?.modifiers?.[config.open5e] ??
+            sheets.tokenOptions.abilities?.find((entry) => uriEquals(entry?.name, expected))?.modifier;
 
         if (value == null) {
             value = Math.floor((score.base - 10) / 2);
@@ -894,7 +951,7 @@ export default class StatBlock {
 
         const expected = config.uri.toLowerCase();
         let bonus = sheets.player?.abilities?.find((entry) => uriEquals(entry?.name, expected))?.save ??
-            sheets.options.abilities?.find((entry) => uriEquals(entry?.name, expected))?.save ??
+            sheets.tokenOptions.abilities?.find((entry) => uriEquals(entry?.name, expected))?.save ??
             abilityMod;
 
         // Tear down the full save value to get to the total bonus
@@ -917,29 +974,49 @@ export default class StatBlock {
 
         const profUri = `${config.uri}:save`;
         if (sheets.playerExt == null) {
-            return sheets.options.proficiency_ext?.[profUri] === true;
+            return sheets.playerOptions?.proficiency?.[profUri] === true;
         }
 
-        let proficient = false;
-        for (const group of Object.values(sheets.playerExt.modifiers ?? {})) {
-            for (const entry of group) {
-                if (entry.type?.toLowerCase() === 'proficiency' && entry.subType?.toLowerCase() === config.playerSaveExt) {
-                    proficient = true;
-                    break;
+        if (sheets.playerSaves == null) {
+            const starter = new Set();
+            const unrestricted = new Set();
+
+            sheets.playerSaves = {
+                starter,
+                unrestricted
+            };
+
+            for (const [key, group] of Object.entries(sheets.playerExt.modifiers ?? {})) {
+                const forClass = key.toLowerCase() === 'class';
+                for (const entry of group) {
+                    if (entry.type?.toLowerCase() !== 'proficiency' || entry.subType?.toLowerCase()?.endsWith('-saving-throws') !== true) {
+                        continue;
+                    }
+
+                    if (entry.availableToMulticlass === true || !forClass) {
+                        unrestricted.add(entry.subType.toLowerCase())
+
+                    } else if (starter.size < 2) {
+                        // Classes only get 2 starter saves and multiclass saves are not allowed.
+                        // There is probably a better way to determine this but D&D Beyond likes to be difficult.
+                        starter.add(entry.subType.toLowerCase())
+                    }
                 }
             }
         }
+        
+        let proficient = sheets.playerSaves.starter.has(config.playerSaveExt) || sheets.playerSaves.unrestricted.has(config.playerSaveExt);
 
-        const current = sheets.options.proficiency_ext?.[profUri] ?? false;
+        const current = sheets.playerOptions.proficiency?.[profUri] ?? false;
         if (current !== proficient) {
-            if (sheets.options.proficiency_ext == null) {
-                sheets.options.proficiency_ext = {};
+            if (sheets.playerOptions.proficiency == null) {
+                sheets.playerOptions.proficiency = {};
             }
 
             if (proficient === true) {
-                sheets.options.proficiency_ext[profUri] = true;
+                sheets.playerOptions.proficiency[profUri] = true;
             } else {
-                delete sheets.options.proficiency_ext[profUri];
+                delete sheets.playerOptions.proficiency[profUri];
             }
 
             this.hasPendingChanges(true);
@@ -1025,7 +1102,7 @@ export default class StatBlock {
      */
     #refreshCondition(condition, config, sheets) {
         const findUri = (config.srd ?? '').toLowerCase().trim();
-        const fromToken = (sheets.player == null && (sheets.options.conditions?.findIndex(entry => entry?.name?.toLowerCase() === findUri) ?? -1) >= 0);
+        const fromToken = (sheets.player == null && (sheets.tokenOptions.conditions?.findIndex(entry => entry?.name?.toLowerCase() === findUri) ?? -1) >= 0);
         const player = (sheets.player?.conditions?.find((entry) => entry?.name?.toLowerCase() === findUri));
 
         let intensity = player?.level;

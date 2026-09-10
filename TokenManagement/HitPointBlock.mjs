@@ -1,8 +1,13 @@
 /** @import { TokenHitPointInfo } from './Token.types.js' */
 
-import { HitPoint } from "./CoreEnums.mjs";
 import NumericStatTracker from "./NumericStatTracker.mjs";
 import StatBlock from "./StatBlock.mjs";
+
+/**
+ * Player API call
+ * PUT https://character-service.dndbeyond.com/character/v5/life/hp/damage-taken
+ * {"characterId":100920342,"removedHitPoints":10,"temporaryHitPoints":0}
+ */
 
 /** Assists with the management of the various types of hit points for a token */
 export default class HitPointBlock {
@@ -17,50 +22,35 @@ export default class HitPointBlock {
         this.#maximum = new NumericStatTracker(stats, 'hp:max', 0);
     }
 
+    /** Provides the numeric stat tracker for the maximum hit point. */
+    get maximumChanges() { return this.#maximum; }
+
+    /** The calculated maximum hit points of the creature or object */
+    get maximum() { return this.#maximum.current ?? 0; }
+
+    /** @returns {number} The remaining number of hit points that the creature or object has before it will either die or begin making death saving throws  */
+    get remaining() { return this.#getCurrent().current ?? 0; }
+
+    /** The total number of hit points the creature or object has including temporary hit hpoints */
+    get total() { return this.remaining + this.temp; }
+
+    /** @returns {number} The number of temporary hit hpoints that the creature or object has */
+    get temp() { return this.#getCurrent().temp ?? 0; }
+
     /** @returns {TokenHitPointInfo} The hit point information that is stored on the token */
     #getCurrent() {
-        if (this.#statBlock.token.options.hitPointInfo == null) {
-            this.#statBlock.token.options.hitPointInfo = {
+        const options = this.#statBlock.getOptions();
+        if (options.hitPointInfo == null) {
+            options.hitPointInfo = {
                 maximum: 0,
                 current: 0,
                 temp: 0
             };
         }
 
-        const info = this.#statBlock.token.options.hitPointInfo;
+        const info = options.hitPointInfo;
         HitPointBlock.fix(info);
         return info;
-    }
-
-    /** @returns {TokenHitPointInfo} The snapshot of hit point information being tracked by the token outside of the player's character sheet */
-    #getSnapshot() {
-        if (!this.#statBlock.isPlayer) {
-            if ('hpSnapshot' in this.#statBlock.token.options) {
-                delete this.#statBlock.token.options.hpSnapshot;
-            }
-
-            return null;
-        }
-
-        let snapshot = this.#statBlock.token.options.hpSnapshot;
-
-        if (snapshot == null) {
-            // We omit max HP from this because it is snapshot by the numeric property collection of the stat block
-            snapshot = {
-                current: info.current,
-                temp: info.temp
-            };
-
-            this.#statBlock.token.options.hpSnapshot = snapshot;
-        }
-
-        return snapshot;
-    }
-
-    /** Removes the snapshot hit point information. */
-    resetSnapshot() {
-        delete this.#statBlock.token.options.hpSnapshot;
-        this.#statBlock.hasPendingChanges(true);
     }
 
     /**
@@ -90,54 +80,6 @@ export default class HitPointBlock {
         return info;
     }
 
-    /** Provides the numeric stat tracker for the maximum hit point. */
-    get maximumChanges() { return this.#maximum; }
-
-    /** The calculated maximum hit points of the creature or object */
-    get maximum() { return this.#maximum.current ?? 0; }
-
-    /** @returns {number} The remaining number of hit points that the creature or object has before it will either die or begin making death saving throws  */
-    get remaining() { return this.#getCurrent().current ?? 0; }
-
-    /** The total number of hit points the creature or object has including temporary hit hpoints */
-    get total() { return this.remaining + this.temp; }
-
-    /** @returns {number} The number of temporary hit hpoints that the creature or object has */
-    get temp() { return this.#getCurrent().temp ?? 0; }
-
-    /** Review the reported values for the player sheet when available against the expected amounts. */
-    isPlayerNotSynced() {
-        const outcome = {
-            maximum: false,
-            remaining: false,
-            temp: false
-        };
-
-        if (!this.#statBlock.isPlayer) {
-            return outcome;
-        }
-
-        const expected = this.#getSnapshot();
-        if (expected == null) {
-            return outcome;
-        }
-
-        const reported = this.#statBlock.reportedHp;
-        if (reported == null) {
-            return outcome;
-        }
-
-        outcome.maximum = (reported.maximum !== this.maximum);
-        outcome.remaining = (reported.current !== expected.current);
-        outcome.temp = (reported.temp !== expected.temp);
-
-        if (!outcome.maximum && !outcome.remaining && !outcome.temp) {
-            this.resetSnapshot();
-        }
-
-        return outcome;
-    }
-
     /**
      * @param {number} amount - The amount of damage dealt.
      * @param {string[]} tags - Tags that describe how the damage was dealt so that we can apply resistances and other effects.
@@ -148,30 +90,18 @@ export default class HitPointBlock {
             return this.total;
         }
 
-        const snapshot = this.#getSnapshot();
-        if (snapshot != null) {
-            this.#statBlock.hasPendingChanges(true);
-        }
-
         const info = this.#getCurrent();
+
         let temp = info.temp;
         if (temp >= amount) {
             temp = temp - amount;
             info.temp = temp;
-
-            if (snapshot != null) {
-                snapshot.temp = temp;
-            }
             
             return this.total;
 
         } else if (temp > 0) {
             amount = amount - temp;
             info.temp = 0;
-
-            if (snapshot != null) {
-                snapshot.temp = 0;
-            }
         }
 
         let remaining = info.current - amount;
@@ -180,10 +110,6 @@ export default class HitPointBlock {
         }
 
         info.current = remaining;
-
-        if (snapshot != null) {
-            snapshot.current = remaining;
-        }
 
         return this.total;
     }
@@ -198,11 +124,6 @@ export default class HitPointBlock {
             return this.total;
         }
 
-        const snapshot = this.#getSnapshot();
-        if (snapshot != null) {
-            this.#statBlock.hasPendingChanges(true);
-        }
-
         const info = this.#getCurrent();
         const max = this.maximum;
 
@@ -212,10 +133,6 @@ export default class HitPointBlock {
         }
 
         info.current = remaining;
-
-        if (snapshot != null) {
-            snapshot.current = remaining;
-        }
 
         return this.total;
     }
@@ -230,12 +147,6 @@ export default class HitPointBlock {
         }
 
         info.current = max;
-
-        const snapshot = this.#getSnapshot();
-        if (snapshot != null) {
-            snapshot.current = max;
-            this.#statBlock.hasPendingChanges(true);
-        }
     }
 
     /**
@@ -248,19 +159,10 @@ export default class HitPointBlock {
         const info = this.#getCurrent();
         const current = info.temp;
         if (current != null && current >= amount) {
-            if (this.#statBlock.isPlayer) {
-                this.#getSnapshot().temp = current;
-                this.#statBlock.hasPendingChanges(true);
-            }
-
             return current;
         }
 
         info.temp = amount;
-        if (this.#statBlock.isPlayer) {
-            this.#getSnapshot().temp = amount;
-            this.#statBlock.hasPendingChanges(true);
-        }
 
         return amount;
     }
@@ -280,10 +182,6 @@ export default class HitPointBlock {
         }
 
         info.current = amount;
-        if (this.#statBlock.isPlayer) {
-            this.#getSnapshot().current = amount;
-            this.#statBlock.hasPendingChanges(true);
-        }
 
         return amount;
     }
@@ -298,10 +196,6 @@ export default class HitPointBlock {
         }
 
         this.#getCurrent().temp = amount;
-        if (this.#statBlock.isPlayer) {
-            this.#getSnapshot().temp = amount;
-            this.#statBlock.hasPendingChanges(true);
-        }
         
         return amount;
     }

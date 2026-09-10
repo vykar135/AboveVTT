@@ -1,4 +1,3 @@
-/** @import { Token } from './Token.types.js' */
 /** @import { TokenStatusEffectContainer, Concentration, MaintainedEffect, ActiveStatusEffect, PassiveStatusEffect, StatusEffect } from './TokenStatusEffects.types.js' */
 
 import StatBlock, { ListStatBlocks, LookupStatBlock } from './StatBlock.mjs';
@@ -74,7 +73,7 @@ export default class TokenStatusEffects {
     }
 
     /** @returns {string} The identifier of the token being managed */
-    get id() { return this.#stats.token?.options?.id; }
+    get id() { return this.#stats.id; }
 
     /** @returns {number} The current version of the status effects */
     get version() { return this.#version; }
@@ -100,12 +99,12 @@ export default class TokenStatusEffects {
      * @returns {TokenStatusEffectContainer}
      */
     #getContainer() {
-        const token = this.#stats.token;
-        if (token.options.status_effects == null) {
-            token.options.status_effects = {};
+        const options = this.#stats.getOptions();
+        if (options.status_effects == null) {
+            options.status_effects = {};
         }
 
-        return token.options.status_effects;
+        return options.status_effects;
     }
     
     /**
