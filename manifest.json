@@ -103,6 +103,7 @@
 			"TokenManagement/DefenseTracker.mjs",
 			"TokenManagement/ToggleTracker.mjs",
 			"TokenManagement/StatBlock.mjs",
+        	"TokenManagement/StatNormalization.mjs",
         	"TokenManagement/StatBlockSources.mjs",
 			"TokenManagement/TokenStatusEffects.mjs",
 			"MessageBroker.js",
