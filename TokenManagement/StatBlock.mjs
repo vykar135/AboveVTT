@@ -1,7 +1,7 @@
 /** @import { Token } from './Token.types.js' */
 
 import { fetchBeyondSheetForToken, fetchOpen5eSheetForToken, fetchPlayerExtendedSheet } from './StatBlockSources.mjs';
-import { DiceActionsEnabled, AbilityScore, ConditionType, DamageType, SkillCheck, uriEquals, Movement } from './CoreEnums.mjs'
+import { DiceActionsEnabled, uriEquals } from './CoreEnums.mjs'
 import HitPointBlock from './HitPointBlock.mjs';
 import ConditionTracker, { BlindedDice, CharmedDice, DeafenedDice, ExhaustionDice, FrightenedDice, GrappledDice, IncapacitatedDice, InvisibleDice, ParalyzedDice, PetrifiedDice, PoisonedDice, ProneDice, RestrainedDice, StunnedDice, UnconsciousDice } from './ConditionTracker.mjs';
 import NumericStatTracker from './NumericStatTracker.mjs';
@@ -49,9 +49,13 @@ export function ListStatBlocks() {
     return Object.values(StatBlockCache);
 }
 
+export function WaitingForScene() {
+    return (window.LOADING === true || window.pcs == null || window.TOKEN_OBJECTS == null || window.all_token_objects == null);
+}
+
 /** Waits for the scene to load then initializes any */
 function LoadPlayerCharacterBlocks() {
-    if (window.LOADING === true || window.pcs == null || window.TOKEN_OBJECTS == null || window.all_token_objects == null) {
+    if (WaitingForScene()) {
         window.setTimeout(LoadPlayerCharacterBlocks, 1000);
         return;
     }
@@ -62,6 +66,75 @@ function LoadPlayerCharacterBlocks() {
             character.rebuild();
         }
     }
+}
+
+/** @type {{ pending: Set<StatBlock>, allowed: Set<string>, delay: number, timer?: number }} */
+const pendingPlayers = {
+    pending: new Set(),
+    allowed: new Set(["proficiency", "snapshots", "status_effects"]),
+    timer: undefined,
+    delay: 2000
+};
+
+/**
+ * Queues the sync for a player stat block
+ * @param {StatBlock} stats - The player character to update
+*/
+function queuePlayerSync(stats) {
+    pendingPlayers.pending.add(stats);
+
+    if (pendingPlayers.timer === undefined) {
+        pendingPlayers.timer = window.setTimeout(syncPendingPlayerOptions, pendingPlayers.delay);
+    }
+}
+
+/** Commits the queued players into the campaign data. */
+function syncPendingPlayerOptions() {
+    if (WaitingForScene()) {
+        pendingPlayers.timer = window.setTimeout(syncPendingPlayerOptions, pendingPlayers.delay);
+        return;
+    }
+
+    const campaign = structuredClone(window.AVTT_CAMPAIGN_INFO);
+    const characters = campaign.characters;
+    if (characters == null) {
+        console.error('Attempting to sync player data without anything in the campaign.')
+        return;
+    }
+
+    for (const [key, options] of Object.entries(characters)) {
+        if (options == null) {
+            delete characters[key];
+            continue;
+        }
+
+        for (const property of Object.keys(options)) {
+            if (!pendingPlayers.allowed.has(property)) {
+                delete options[property];
+            }
+        }
+    }
+
+    if (!window.DM) {
+        console.log('TODO: Send pending changes to DM to let them manage the full update.');
+        console.log(campaign);
+        return;
+    }
+
+    // Update the campaign data in the API.
+    AboveApi.setCampaignData(campaign).then(() => {
+        console.log('Synced characters to campaign');
+        console.log([...pendingPlayers.pending.values()]);
+        console.log(campaign);
+        pendingPlayers.pending.clear();
+
+    }).catch((error) => {
+        console.error('Failed to sync character data to campaign', error);
+        console.log(campaign);
+        
+    }).finally(() => {
+        pendingPlayers.timer = undefined;
+    });
 }
 
 /**
@@ -170,7 +243,7 @@ export default class StatBlock {
             return;
         }
 
-        if (window.LOADING === true || this.token == null) {
+        if (WaitingForScene() || this.token == null) {
             this.#pendingRebuild = window.setTimeout(this.#checkRebuild.bind(this), 1000);
             return;
         }
@@ -306,11 +379,17 @@ export default class StatBlock {
     /**
      * Performs the sync operation using the provided callback.
      * @param {string} failureUri - The URI to put into the warnings collection if the sync process fails.
-     * @param {(target: Token) => void} callback - The callback made to sync the stat block
+     * @param {(target: Token) => void} callback - The callback made to sync the token associated with the stat block
      */
     #syncWithCallback(failureUri, callback) {
         if (this.#pendingChanges === undefined) {
             return false;
+        }
+
+        if (this.#player) {
+            this.#pendingChanges = undefined;
+            queuePlayerSync(this);
+            return true;
         }
 
         const fromLocal = this.tokenLocal;
@@ -513,10 +592,10 @@ export default class StatBlock {
             this.#name = player?.name ?? tokenOptions?.name;
             this.#characterId = player?.characterId?.toString();
             this.#characterUri = player?.sheet;
-            this.#player = (player != null || (tokenOptions.characterId != null && tokenOptions.itemType === 'pc'));
+            this.#player = (player != null);
             this.#contributor = (
                 window.DM === true || tokenOptions?.player_owned === true ||
-                (player != null && window.PLAYER_ID != null && player?.characterId?.toString() === window.PLAYER_ID.toString())
+                (this.#player && window.PLAYER_ID != null && player.characterId?.toString() === window.PLAYER_ID.toString())
             );
 
             const sheets = { tokenOptions, player, playerExt: undefined, playerOptions: undefined };

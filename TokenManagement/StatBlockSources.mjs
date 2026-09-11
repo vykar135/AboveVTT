@@ -1,5 +1,5 @@
 import { DiceActionsEnabled, uriEquals } from "./CoreEnums.mjs";
-import StatBlock, { ListStatBlocks } from "./StatBlock.mjs";
+import StatBlock, { ListStatBlocks, WaitingForScene } from "./StatBlock.mjs";
 
 /** @param {(stats: StatBlock) => boolean} filter  */
 function refreshFilteredStatBlocks(filter) {
@@ -280,7 +280,7 @@ function appendPendingBeyondMonster(monster) {
 
 /** Loads the cache of D&D Beyond creature stat blocks for any currently pending keys */
 function fetchPendingBeyondSheets() {
-    if (window.LOADING === true) {
+    if (WaitingForScene()) {
         beyondCreatures.timer = window.setTimeout(fetchPendingBeyondSheets, beyondCreatures.delay);
         return;
     }

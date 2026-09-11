@@ -173,7 +173,8 @@ export default class TokenStatusEffects {
         settings.allowed = (allowed ?? true);
         settings.limit = (limit ?? 1);
 
-        this.#stats.hasPendingChanges(settings.allowed !== wasAllowed || settings.limit !== previousLimit);
+        const changed = (settings.allowed !== wasAllowed || settings.limit !== previousLimit);
+        this.#stats.hasPendingChanges(changed);
 
         this.reviewConcentration();
     }

@@ -216,13 +216,15 @@ export default class NumericStatTracker {
             snapshots.numeric = properties;
         }
 
+        const current = properties[this.#uri];
         if (value == null) {
             delete properties[this.#uri];
         } else {
             properties[this.#uri] = value;
         }
         
-        this.#stats.hasPendingChanges(true);
+        const changed = (value !== current);
+        this.#stats.hasPendingChanges(changed);
     }
 
     /**
