@@ -49,6 +49,21 @@ export function ListStatBlocks() {
     return Object.values(StatBlockCache);
 }
 
+/** Waits for the scene to load then initializes any */
+function LoadPlayerCharacterBlocks() {
+    if (window.LOADING === true || window.pcs == null || window.TOKEN_OBJECTS == null || window.all_token_objects == null) {
+        window.setTimeout(LoadPlayerCharacterBlocks, 1000);
+        return;
+    }
+
+    for (const entry of window.pcs) {
+        const character = GetStatBlock(entry.sheet);
+        if (character != null && character.level === 0) {
+            character.rebuild();
+        }
+    }
+}
+
 /**
  * Manages a normalized stat block for the associated player or creature stat blocks
  * 
@@ -156,12 +171,15 @@ export default class StatBlock {
         }
 
         if (window.LOADING === true || this.token == null) {
-            this.#pendingRebuild = window.setTimeout(this.rebuild, 1000);
+            this.#pendingRebuild = window.setTimeout(this.#checkRebuild.bind(this), 1000);
             return;
         }
 
         this.#pendingRebuild = undefined;
-        this.rebuild();
+
+        if (this.#level === 0) {
+            this.rebuild();
+        }
     }
 
     /** Whether the stat block has active rebuild warnings */
@@ -374,6 +392,205 @@ export default class StatBlock {
         }
     }
 
+    /**
+     * Retrieves a property from the stat block that implements a numeric value.
+     * @param {string} uri - The identifier of the property on the stat block that implements a numeric value.
+     */
+    getNumeric(uri) {
+        if (uri && typeof uri === 'object' && 'uri' in uri) {
+            uri = uri.uri;
+        }
+
+        uri = uri.toLowerCase();
+        return this.#numeric[uri];
+    }
+
+    /**
+     * Retrieves a property from the stat block that implements a numeric value or adds it if it doesn't exist.
+     * @param {string} uri - The identifier of the property on the stat block that implements a numeric value.
+     * @param {(stats: StatBlock, uri: string) => NumericStatTracker} init - Callback used to initialize the condition if it doesn't already exist.
+     */
+    getOrAddNumeric(uri, init) {
+        if (uri && typeof uri === 'object' && 'uri' in uri) {
+            uri = uri.uri;
+        }
+
+        uri = uri.toLowerCase();
+        let property = this.#numeric[uri];
+        if (property == null && typeof init === 'function') {
+            property = init(this, uri);
+            this.#numeric[uri] = property;
+        }
+
+        return property;
+    }
+
+    /** A snapshot of the current initiative order in the combat tracker */
+    getCurrentInitiative() {
+        return StatBlock.getTokenInitiative(this.token);
+    }
+
+    /** @returns {{ round: number, token?: Token, initiative?: number }} A snapshot of the current initiative order in the combat tracker */
+    static getActiveInitiative() {
+        for (const token of Object.values(window.all_token_objects)) {
+            if (token.options.current === true && (token.options.ct_show === true || (window.DM && token.options.ct_show !== undefined))) {
+                return StatBlock.getTokenInitiative(token);
+            }
+        }
+
+        let round = window.ROUND_NUMBER ?? 1;
+        if (typeof round === 'string') {
+            round = parseFloat(round);
+        }
+
+        return { token: undefined, round: round, initiative: undefined };
+    }
+
+    /**
+     * @param {Token} token - The details of the token to retrieve the current initiative for.
+     * @returns {{ round: number, token?: Token, initiative?: number }} A snapshot of the current initiative order for the token in the combat tracker
+     */
+    static getTokenInitiative(token) {
+        let round = window.ROUND_NUMBER ?? 1;
+        if (typeof round === 'string') {
+            round = parseInt(round);
+        }
+
+        if (token.options.ct_show !== true) {
+            return { token: token, round: round, initiative: undefined };
+        }
+
+        let initiative = token.options.init ?? 0;
+        if (typeof initiative === 'string') {
+            initiative = parseFloat(initiative);
+        }
+
+        return { token: token, round: round, initiative: initiative };
+    }
+
+    /** Retrieves the character sheet information from D&D Beyond */
+    getPlayerSheet() {
+        if (window.pcs == null) {
+            return undefined;
+        }
+
+        const expected = this.#id.toLowerCase();
+        return window.pcs.find((entry) => uriEquals(entry.sheet, expected));
+    }
+
+    /** Retrieves the extended player character sheet information from D&D Beyond */
+    getPlayerExtended() {
+        const main = this.getPlayerSheet();
+        if (main == null) {
+            return undefined;
+        }
+
+        return fetchPlayerExtendedSheet(main.characterId);
+    }
+
+    /** Retrieves the common D&D Beyond monster stat block if the token is an instance of one */
+    getBeyondMonster() { return fetchBeyondSheetForToken(this.token); }
+
+    /** Retrieves the common Open 5E stat block if the token is an instance of one */
+    getOpen5e() { return fetchOpen5eSheetForToken(this.token); }
+
+    /** Rebuilds the stat block for the token */
+    rebuild() {
+        if (!DiceActionsEnabled) {
+            return;
+        }
+
+        try {
+            const player = this.getPlayerSheet();
+            const tokenOptions = this.token?.options;
+            if (player == null && tokenOptions == null) {
+                this.#needsRebuild = true;
+                return;
+            }
+
+            this.#needsRebuild = false;
+
+            this.#name = player?.name ?? tokenOptions?.name;
+            this.#characterId = player?.characterId?.toString();
+            this.#characterUri = player?.sheet;
+            this.#player = (player != null || (tokenOptions.characterId != null && tokenOptions.itemType === 'pc'));
+            this.#contributor = (
+                window.DM === true || tokenOptions?.player_owned === true ||
+                (player != null && window.PLAYER_ID != null && player?.characterId?.toString() === window.PLAYER_ID.toString())
+            );
+
+            const sheets = { tokenOptions, player, playerExt: undefined, playerOptions: undefined };
+
+            if (this.#player) {
+                sheets.playerOptions = this.#getPlayerOptions();
+
+                if (player?.hitPointInfo != null) {
+                    // Snapshotting the base total HP because some messages are removing.
+                    sheets.playerOptions.baseTotalHp = player.hitPointInfo.baseTotalHp ?? sheets.playerOptions.baseTotalHp;
+                    sheets.playerOptions.hitPointInfo = { ...player.hitPointInfo };
+                }
+            }
+
+            if (this.#contributor) {
+                if (this.#player) {
+                    sheets.playerExt = fetchPlayerExtendedSheet(player.characterId);
+                } else {
+                    sheets.open5e = this.getOpen5e();
+                    sheets.monster = this.getBeyondMonster();
+                }
+            }
+
+            this.#hasSheet = ((sheets.player ?? sheets.playerExt ?? sheets.open5e ?? sheets.monster) != null);
+
+            const normalize = new StatNormalization(this, sheets, this.#player);
+            normalize.rebuild();
+            this.#level = normalize.level;
+
+            delete this.#warnings['rebuild'];
+        } catch (error) {
+            this.reportFailure('rebuild', `Failed to rebuild character sheet`, error);
+        }
+
+        this.recalculate();
+    }
+
+    /** Recalculates the values for the properties within the stat block after changes have been applied. */
+    recalculate() {
+        if (!DiceActionsEnabled || this.#needsRebuild) {
+            return;
+        }
+
+        try {
+            this.#effects.reapply();
+
+            this.#conditions.recalculate();
+
+            for (const defense of Object.values(this.#defenses)) {
+                defense.recalculate();
+            }
+
+            for (const wellKnown of this.#wellKnownNumerics) {
+                wellKnown.recalculate();
+            }
+
+            for (const numeric of Object.values(this.#numeric)) {
+                numeric.recalculate();
+            }
+
+            for (const wellKnown of this.#wellKnownToggles) {
+                wellKnown.recalculate();
+            }
+
+            this.#hitPoints.checkMaximum();
+
+            delete this.#warnings['recalculate'];
+        } catch (error) {
+            this.reportFailure('recalculate', `Failed to recalculate status efforts`, error);
+        }
+
+        this.sync();
+    }
+
     /** Generates a snapshot of the creature stat block using the current calculated values. */
     getNormalizedSheet() {
         const pb = this.#proficiency.current ?? 2;
@@ -503,205 +720,6 @@ export default class StatBlock {
                 hover: this.#movement.hover.enabled
             }
         };
-    }
-
-    /**
-     * Retrieves a property from the stat block that implements a numeric value.
-     * @param {string} uri - The identifier of the property on the stat block that implements a numeric value.
-     */
-    getNumeric(uri) {
-        if (uri && typeof uri === 'object' && 'uri' in uri) {
-            uri = uri.uri;
-        }
-
-        uri = uri.toLowerCase();
-        return this.#numeric[uri];
-    }
-
-    /**
-     * Retrieves a property from the stat block that implements a numeric value or adds it if it doesn't exist.
-     * @param {string} uri - The identifier of the property on the stat block that implements a numeric value.
-     * @param {(stats: StatBlock, uri: string) => NumericStatTracker} init - Callback used to initialize the condition if it doesn't already exist.
-     */
-    getOrAddNumeric(uri, init) {
-        if (uri && typeof uri === 'object' && 'uri' in uri) {
-            uri = uri.uri;
-        }
-
-        uri = uri.toLowerCase();
-        let property = this.#numeric[uri];
-        if (property == null && typeof init === 'function') {
-            property = init(this, uri);
-            this.#numeric[uri] = property;
-        }
-
-        return property;
-    }
-
-    /** A snapshot of the current initiative order in the combat tracker */
-    getCurrentInitiative() {
-        return StatBlock.getTokenInitiative(this.token);
-    }
-
-    /** @returns {{ round: number, token?: Token, initiative?: number }} A snapshot of the current initiative order in the combat tracker */
-    static getActiveInitiative() {
-        for (const token of Object.values(window.all_token_objects)) {
-            if (token.options.current === true && (token.options.ct_show === true || (window.DM && token.options.ct_show !== undefined))) {
-                return StatBlock.getTokenInitiative(token);
-            }
-        }
-
-        let round = window.ROUND_NUMBER ?? 1;
-        if (typeof round === 'string') {
-            round = parseFloat(round);
-        }
-
-        return { token: undefined, round: round, initiative: undefined };
-    }
-
-    /**
-     * @param {Token} token - The details of the token to retrieve the current initiative for.
-     * @returns {{ round: number, token?: Token, initiative?: number }} A snapshot of the current initiative order for the token in the combat tracker
-     */
-    static getTokenInitiative(token) {
-        let round = window.ROUND_NUMBER ?? 1;
-        if (typeof round === 'string') {
-            round = parseInt(round);
-        }
-
-        if (token.options.ct_show !== true) {
-            return { token: token, round: round, initiative: undefined };
-        }
-
-        let initiative = token.options.init ?? 0;
-        if (typeof initiative === 'string') {
-            initiative = parseFloat(initiative);
-        }
-
-        return { token: token, round: round, initiative: initiative };
-    }
-
-    /** Retrieves the character sheet information from D&D Beyond */
-    getPlayerSheet() {
-        if (window.pcs == null) {
-            return undefined;
-        }
-
-        const expected = this.#id.toLowerCase();
-        return window.pcs.find((entry) => uriEquals(entry.sheet, expected));
-    }
-
-    /** Retrieves the extended player character sheet information from D&D Beyond */
-    getPlayerExtended() {
-        const main = this.getPlayerSheet();
-        if (main == null) {
-            return undefined;
-        }
-
-        return fetchPlayerExtendedSheet(main.characterId);
-    }
-
-    /** Retrieves the common D&D Beyond monster stat block if the token is an instance of one */
-    getBeyondMonster() { return fetchBeyondSheetForToken(this.token); }
-
-    /** Retrieves the common Open 5E stat block if the token is an instance of one */
-    getOpen5e() { return fetchOpen5eSheetForToken(this.token); }
-
-    /** Rebuilds the stat block for the token */
-    rebuild() {
-        if (!DiceActionsEnabled) {
-            return;
-        }
-
-        try {
-            const player = this.getPlayerSheet();
-            const tokenOptions = this.token?.options;
-            if (player == null && tokenOptions == null) {
-                this.#needsRebuild = true;
-                return;
-            }
-
-            this.#needsRebuild = false;
-
-            this.#name = player?.name ?? tokenOptions?.name;
-            this.#characterId = player?.characterId?.toString();
-            this.#characterUri = player?.sheet;
-            this.#player = (player != null || (tokenOptions.characterId != null && tokenOptions.itemType === 'pc'));
-            this.#contributor = (
-                window.DM === true || tokenOptions?.player_owned === true ||
-                (window.PLAYER_ID != null && tokenOptions?.characterId?.toString() === window.PLAYER_ID.toString())
-            );
-
-            const sheets = { tokenOptions, player, playerExt: undefined, playerOptions: undefined };
-
-            if (this.#player) {
-                sheets.playerOptions = this.#getPlayerOptions();
-
-                if (player?.hitPointInfo != null) {
-                    // Snapshotting the base total HP because some messages are removing.
-                    sheets.playerOptions.baseTotalHp = player.hitPointInfo.baseTotalHp ?? sheets.playerOptions.baseTotalHp;
-                    sheets.playerOptions.hitPointInfo = { ...player.hitPointInfo };
-                }
-            }
-
-            if (this.#contributor) {
-                if (this.#player) {
-                    sheets.playerExt = fetchPlayerExtendedSheet(player.characterId);
-                } else {
-                    sheets.open5e = this.getOpen5e();
-                    sheets.monster = this.getBeyondMonster();
-                }
-            }
-
-            this.#hasSheet = ((sheets.player ?? sheets.playerExt ?? sheets.open5e ?? sheets.monster) != null);
-
-            const normalize = new StatNormalization(this, sheets, this.#player);
-            normalize.rebuild();
-            this.#level = normalize.level;
-
-            delete this.#warnings['rebuild'];
-        } catch (error) {
-            this.reportFailure('rebuild', `Failed to rebuild character sheet`, error);
-        }
-
-        this.recalculate();
-    }
-
-    /** Recalculates the values for the properties within the stat block after changes have been applied. */
-    recalculate() {
-        if (!DiceActionsEnabled || this.#needsRebuild) {
-            return;
-        }
-
-        try {
-            this.#effects.reapply();
-
-            this.#conditions.recalculate();
-
-            for (const defense of Object.values(this.#defenses)) {
-                defense.recalculate();
-            }
-
-            for (const wellKnown of this.#wellKnownNumerics) {
-                wellKnown.recalculate();
-            }
-
-            for (const numeric of Object.values(this.#numeric)) {
-                numeric.recalculate();
-            }
-
-            for (const wellKnown of this.#wellKnownToggles) {
-                wellKnown.recalculate();
-            }
-
-            this.#hitPoints.checkMaximum();
-
-            delete this.#warnings['recalculate'];
-        } catch (error) {
-            this.reportFailure('recalculate', `Failed to recalculate status efforts`, error);
-        }
-
-        this.sync();
     }
 }
 
@@ -933,3 +951,6 @@ class BlockDiceContext extends DiceActionContext {
 // Addressing compatibility issues
 window.initStatBlock = GetStatBlock;
 window.statNormalizationEnabled = DiceActionsEnabled;
+
+// Lets wait for the scene to load and setup any player characters that don't have active tokens.
+LoadPlayerCharacterBlocks();
