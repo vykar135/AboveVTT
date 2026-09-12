@@ -26,6 +26,8 @@
  * @property {number | string} maximum - The token's maximum hit points.
  * @property {number | string} current - The token's current hit points, excluding temporary hit points.
  * @property {number | string} temp - The token's temporary hit points.
+ * @property {number | string} baseTotalHp - The token's base maximum hit points before modifiers and overrides.
+ * @property {number | string} removedHp - The amount of hit points that have been lost by the token; allows for current to be correctly determined by a change to max HP.
  */
 
 /**
