@@ -2,15 +2,15 @@ import StatBlock from "./StatBlock.mjs";
 
 /**
  * @typedef {Object} NumericStatImpact
- * @property {string} instance - The reference to the status effect that produced the change.
- * @property {number} version - The version of the status effect collect at the time the impact was applied.
- * @property {boolean} fromCondition - Whether the effect is from a condition.
- * @property {number} priority - The priority of the effect.
- * @property {number} setTo - The fixed amount to set the value of the property to.
- * @property {number} amount - The fixed amount to change the property by.
- * @property {number} multiplier - The multiplier to apply to the value of the property.
- * @property {string} imports - The URI of the numeric property to import the current value for and apply to the requesting property.
- * @property {boolean} importPenalty - Whether the imported value is treated as a penalty against the requesting property.
+ * @property {string} [instance] - The reference to the status effect that produced the change.
+ * @property {number} [version] - The version of the status effect collect at the time the impact was applied.
+ * @property {boolean} [fromCondition] - Whether the effect is from a condition.
+ * @property {number} [priority] - The priority of the effect.
+ * @property {number} [setTo] - The fixed amount to set the value of the property to.
+ * @property {number} [amount] - The fixed amount to change the property by.
+ * @property {number} [multiplier] - The multiplier to apply to the value of the property.
+ * @property {string} [imports] - The URI of the numeric property to import the current value for and apply to the requesting property.
+ * @property {boolean} [importPenalty] - Whether the imported value is treated as a penalty against the requesting property.
  * 
  * @typedef {'manual' | 'initiative' | 'long_rest' | 'short_rest' | 'dawn'} ChargeReset
  */
@@ -23,9 +23,9 @@ export default class NumericStatTracker {
     #chargesReset;
     #base;
 
-    /** @type {number} */
+    /** @type {number | undefined} */
     #baseOverride;
-    /** @type {number} */
+    /** @type {number | undefined} */
     #multiplier;
     /** @type {number | undefined} */
     #snapshot;
@@ -41,7 +41,7 @@ export default class NumericStatTracker {
      * @param {string} uri - The identifier of the property.
      * @param {number} value - The initial value for the property.
      * @param {string} name - The name of the property.
-     * @param {ChargeReset} chargesReset - When charges associated with the tracker reset.
+     * @param {ChargeReset} [chargesReset] - When charges associated with the tracker reset.
      */
     constructor(stats, uri, value, name, chargesReset){
         this.#uri = uri;
@@ -74,7 +74,7 @@ export default class NumericStatTracker {
 
     /** The current value of the property adjusted for a snapshot at the time an effect was applied. */
     get current() {
-        return (this.baseEffective + this.#calculated) * this.#multiplier;
+        return (this.baseEffective + this.#calculated) * this.multiplier;
     }
 
     /** @returns {number | undefined} The snapshot of the value taken before effects were applied. */
@@ -132,8 +132,7 @@ export default class NumericStatTracker {
     /**
      * Recalculates the current value of the property after effects are applied.
      * @param {number} version - The version of the status effects being applied.
-     * @param {Set} visited - The collection of properties that have already been imported within a given effect.
-     * @returns {number} The calculated value for the property
+     * @param {Set<string> | undefined} visited - The collection of properties that have already been imported within a given effect.
     */
     #recalculateGraph(version, visited) {
         let base = undefined;
@@ -245,6 +244,7 @@ export default class NumericStatTracker {
         instance = instance.toLowerCase();
         const index = this.#sources.findIndex(entry => entry.instance === instance);
 
+        /** @type {NumericStatImpact} */ 
         const applying = { instance, priority, setTo, amount, multiplier, imports, importPenalty };
         applying.version = this.#stats.statusEffects.version;
         applying.fromCondition = (fromCondition === true);

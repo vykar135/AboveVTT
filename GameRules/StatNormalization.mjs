@@ -1,15 +1,22 @@
+// @ts-nocheck
+
 /**
+ * @import { ConfigurationSettings } from './CoreEnums.mjs'
+ * 
  * @typedef {Object} AvailableSheets
- * @property {import("./Token.types").TokenOptions} tokenOptions
- * @property {Object} playerOptions
- * @property {Object} player
- * @property {Object} playerExt
- * @property {Object} open5e
- * @property {Object} monster
- * @property {number} pb
+ * @property {import("../types/Token.types.js").TokenOptions | undefined} tokenOptions
+ * @property {any} [playerOptions]
+ * @property {any} [player]
+ * @property {any} [playerExt]
+ * @property {any} [open5e]
+ * @property {any} [monster]
+ * @property {number} [pb]
  */
 
+import ConditionTracker from './ConditionTracker.mjs';
 import { DiceActionsEnabled, AbilityScore, ConditionType, DamageType, ProficiencyType, SkillCheck, uriEquals, Movement } from './CoreEnums.mjs'
+import DefenseTracker from './DefenseTracker.mjs';
+import { DiceAction } from './DiceAction.mjs';
 import NumericStatTracker from './NumericStatTracker.mjs';
 import StatBlock from "./StatBlock.mjs";
 import ToggleTracker from './ToggleTracker.mjs';
@@ -239,7 +246,7 @@ export default class StatNormalization {
 
     /**
      * Determines the best ability modifier value to use for the stat block.
-     * @param {Object} config - The configuration for the ability score.
+     * @param {ConfigurationSettings} config - The configuration for the ability score.
      * @param {DiceAction} save - The ability modifier to update.
      * @param {BlockAbilityModifier} modifier - The ability modifier that can be used to determine any bonus values.
      */

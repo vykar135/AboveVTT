@@ -1,5 +1,16 @@
 import StatBlock from "./StatBlock.mjs";
 
+/**
+ * @typedef {Object} DefenseImpact
+ * @property {string} [instance] - The reference to the status effect that produced the change.
+ * @property {number} [version] - The version of the status effect collect at the time the impact was applied.
+ * @property {boolean} [fromCondition] - Whether the effect is from a condition.
+ * @property {number} [priority] - The priority of the effect.
+ * @property {boolean} [immunity] - Whether immunity to the damage type is being granted or denied.
+ * @property {boolean} [resistance] - Whether resistance to the damage type is being granted or denied.
+ * @property {boolean} [vulnerability] - Whether vulnerability to the damage type is being granted or denied.
+ */
+
 /** Tracks whether a form of defenses for the specified damage type should be applied to a stat block. */
 export default class DefenseTracker {
     #stats
@@ -12,7 +23,7 @@ export default class DefenseTracker {
     #resistance;
     #vulnerability;
 
-    /** @type {{ instance: string, version: number, fromCondition: boolean, priority: number, immunity?: boolean, resistance?: boolean, vulnerability?: boolean }[]} */
+    /** @type {DefenseImpact[]} */
     #sources;
 
     /**
@@ -53,7 +64,7 @@ export default class DefenseTracker {
     /**
      * Updates the base values for the creature's defenses.
      * @param {boolean} immunity - Whether the creature is immune to the type of damage.
-     * @param {number} resistance - Whether the creature is resistant to the type of damage.
+     * @param {boolean} resistance - Whether the creature is resistant to the type of damage.
      * @param {boolean} vulnerability - Whether the creature is vulnerable to the type of damage.
      */
     setBaseValue(immunity, resistance, vulnerability) {
@@ -85,7 +96,7 @@ export default class DefenseTracker {
 
     /**
      * Appends an instance of the damage defenses being applied to the stat block.
-     * @param {{ instance: string, fromCondition: boolean, priority: number, immunity: boolean, resistance: boolean, vulnerability: boolean }} settings
+     * @param {DefenseImpact} settings
      */
     addInstance(settings) {
         let { instance, fromCondition, priority, immunity, resistance, vulnerability } = settings;
@@ -118,7 +129,7 @@ export default class DefenseTracker {
         instance = instance.toLowerCase();
         const index = this.#sources.findIndex(entry => entry.instance === instance);
 
-        const impact = {
+        const impact = /** @type {DefenseImpact} */ {
             fromCondition: (fromCondition === true),
             instance, priority, immunity, resistance, vulnerability,
             version: this.#stats.statusEffects.version

@@ -3,6 +3,8 @@
  * 
  * @typedef {'heal' | 'temp' | 'true_heal' | 'true_temp' | 'true_damage' | 'slashing' | 'piercing' | 'bludgeoning' | 'acid' | 'cold' | 'fire' | 'force' | 
  *  'lightning' | 'necrotic' | 'poison' | 'psychic' | 'radiant' | 'thunder'} HitPointEffect
+ * 
+ * @typedef {number | FixedValueModifier | undefined} NumericDiceSetting
 */
 
 /** Defines the information from a creature stat block that is needed for a dice action to be executed. */
@@ -13,7 +15,10 @@ export class DiceActionContext {
         }
     }
 
-    /** The level of the creature performing the action. */
+    /**
+     * The level of the creature performing the action.
+     * @returns {number}
+    */
     get level() {
         throw new Error('The level getter for the derivied type based on DiceActionContext must be overridden');
     }
@@ -59,25 +64,25 @@ class DiceActionFeatures {
     get die() { return this.#die; }
     /** The set of dice roll modifiers that are specific to this action. */
     get rollModifiers() { return this.#rollModifiers; }
-    /** @type {number | FixedValueModifier} The multiplier for the proficiency bonus to apply to the roll and rounded down. */
+    /** @type {NumericDiceSetting} The multiplier for the proficiency bonus to apply to the roll and rounded down. */
     proficiency;
-    /** @type {number | FixedValueModifier} The fixed bonus to apply to the base roll */
+    /** @type {NumericDiceSetting} The fixed bonus to apply to the base roll */
     bonus;
-    /** @type {HitPointEffect} Default method used for to apply the result of damage rolls to the target's hit points; ignored for d20 tests */
+    /** @type {HitPointEffect | undefined} Default method used for to apply the result of damage rolls to the target's hit points; ignored for d20 tests */
     hp;
-    /** @type {boolean?} Defines whether advantage (true) or disadvantage (false) is active for d20 tests; otherwise undefined for neither. Will automatically cancel if both are seen for a roll. */
+    /** @type {boolean | undefined} Defines whether advantage (true) or disadvantage (false) is active for d20 tests; otherwise undefined for neither. Will automatically cancel if both are seen for a roll. */
     advantage;
-    /** @type {number | FixedValueModifier} Defines the total number of additional dice to use if advantage is triggered. */
+    /** @type {NumericDiceSetting} Defines the total number of additional dice to use if advantage is triggered. */
     advantageSize;
-    /** @type {number | FixedValueModifier} Defines the total number of additional dice to use if disadvantage is triggered. */
+    /** @type {NumericDiceSetting} Defines the total number of additional dice to use if disadvantage is triggered. */
     disadvantageSize;
-    /** @type {boolean} Whether the dice action is permitted to be execute critical rolls. */
+    /** @type {boolean | undefined} Whether the dice action is permitted to be execute critical rolls. */
     canCritical;
-    /** @type {'standard' | 'double' | 'perfect'} The method used to calculate the effect of a critical dice action. */
+    /** @type {'standard' | 'double' | 'perfect' | undefined} The method used to calculate the effect of a critical dice action. */
     criticalStyle;
-    /** @type {number | FixedValueModifier} For a d20 test, if the roll is at or over this amount, it is considered a critical success. */
+    /** @type {NumericDiceSetting} For a d20 test, if the roll is at or over this amount, it is considered a critical success. */
     criticalThreshold;
-    /** @type {number | FixedValueModifier} For a d20 test, if the roll is at or under this amount, it is considered a critical failure. */
+    /** @type {NumericDiceSetting} For a d20 test, if the roll is at or under this amount, it is considered a critical failure. */
     fumbleThreshold;
 }
 
@@ -94,7 +99,7 @@ export class DiceAction extends DiceActionFeatures {
     #properties;
     /** @type {boolean} */
     #d20test;
-    /** @type {AbilityModifierType?} */
+    /** @type {AbilityModifierType | undefined} */
     #ability;
     /** @type {boolean} */
     #abilityLocked;
@@ -109,7 +114,7 @@ export class DiceAction extends DiceActionFeatures {
      * @param {string} uri - The idetifier of the dice action being taken for quick lookups
      * @param {string} name - The friendly name of the dice action to be shown to the user.
      * @param {boolean} d20test - Whether this is a d20 test
-     * @param {AbilityModifierType?} ability - The ability modifier to apply to the dice roll.
+     * @param {AbilityModifierType | undefined} ability - The ability modifier to apply to the dice roll.
      * @param {boolean} abilityLocked - Whether the ability modifier can be changed for the roll.
      */
     constructor(context, uri, name, d20test, ability, abilityLocked) {
@@ -173,7 +178,7 @@ export class DiceActionModifier extends DiceActionFeatures {
         this.#tags.freeze();
         this.#targetTags.freeze();
 
-        for (const property of this) {
+        for (const property of Object.values(this)) {
             if (property instanceof FixedValueModifier) {
                 Object.freeze(property);
             }
@@ -182,17 +187,17 @@ export class DiceActionModifier extends DiceActionFeatures {
         Object.freeze(this);
     }
     
-    /** @type {number} The order that the modification will be applied to the baseline relative to other queued modifications. */
+    /** @type {number | undefined} The order that the modification will be applied to the baseline relative to other queued modifications. */
     priority;
     /** @type {DiceTagLookup} The set of tags that are used to determine if this modifier qualifies for a dice action; top level entries are OR, collections within the main array are AND */
     get tags() { return this.#tags; }
     /** @type {DiceTagLookup} The set of tags that are used to determine if this modifier qualifies for a dice action; top level entries are OR, collections within the main array are AND */
     get tagsOnTarget() { return this.#targetTags; }
-    /** @type {number} The minimum character level or challenge rating required for this modifier to be active. */
+    /** @type {number | undefined} The minimum character level or challenge rating required for this modifier to be active. */
     level;
-    /** @type {number} The minimum spell slot required for this modifier to be active. */
+    /** @type {number | undefined} The minimum spell slot required for this modifier to be active. */
     spellSlot;
-    /** @type {AbilityModifierType} The ability modifier to apply to the dice roll. */
+    /** @type {AbilityModifierType | undefined} The ability modifier to apply to the dice roll. */
     ability;
 }
 
@@ -204,45 +209,45 @@ class DiceRollFeatures {
         }
     }
 
-    /** @type {number | FixedValueModifier} The number of dice to include in the roll. */
+    /** @type {NumericDiceSetting} The number of dice to include in the roll. */
     count;
-    /** @type {number} The number of sides on the die to roll. */
+    /** @type {number | undefined} The number of sides on the die to roll. */
     sides;
-    /** @type {HitPointEffect} How the result of damage rolls are applied to the target's hit points. */
+    /** @type {HitPointEffect | undefined} How the result of damage rolls are applied to the target's hit points. */
     hp;
     /** @type {boolean | undefined} Whether the effect of the dice roll is against the target's hit point pool */
     hitsTarget;
     /** @type {boolean | undefined} Whether the effect of the dice roll is against the source's hit point pool */
     hitsSelf;
-    /** @type {number | FixedValueModifier} The fixed amount to include in the roll. */
+    /** @type {NumericDiceSetting} The fixed amount to include in the roll. */
     fixed;
-    /** @type {boolean} Whether the roll is subject to critical hit rules when applicable. */
+    /** @type {boolean | undefined} Whether the roll is subject to critical hit rules when applicable. */
     critical;
-    /** @type {number | FixedValueModifier} The dice roll only occurs when the value is greater than (positive) or less than (negative) the specified amount on the roll from the d20 test without modifiers. */
+    /** @type {NumericDiceSetting} The dice roll only occurs when the value is greater than (positive) or less than (negative) the specified amount on the roll from the d20 test without modifiers. */
     d20trigger;
-    /** @type {number | FixedValueModifier} The dice roll will first run a d100 test and only occurs when the value is greater than (positive) or less than (negative) the specified amount. */
+    /** @type {NumericDiceSetting} The dice roll will first run a d100 test and only occurs when the value is greater than (positive) or less than (negative) the specified amount. */
     chance;
-    /** @type {boolean} Whether the result of the roll is considered a penalty against the final result. */
+    /** @type {boolean | undefined} Whether the result of the roll is considered a penalty against the final result. */
     penalty;
-    /** @type {'once' | 'continuous'} Whether the roll will be replayed and added to the final result if the preceding roll was for maximum value. */
+    /** @type {'once' | 'continuous' | undefined} Whether the roll will be replayed and added to the final result if the preceding roll was for maximum value. */
     explosive;
-    /** @type {boolean} Whether the roll is automatically its maximum value; see "Beacon of Hope" */
+    /** @type {boolean | undefined} Whether the roll is automatically its maximum value; see "Beacon of Hope" */
     forceMaximum;
-    /** @type {number | FixedValueModifier} The number of dice roll results for non-d20 tests that are effective based on the highest or lowest; positive value for highest, negative for lowest. */
+    /** @type {NumericDiceSetting} The number of dice roll results for non-d20 tests that are effective based on the highest or lowest; positive value for highest, negative for lowest. */
     keep;
-    /** @type {number | FixedValueModifier} Modifies the number of dice included in the roll for non-d20 tests; can be used with "keep" to make advantage-like rolls */
+    /** @type {NumericDiceSetting} Modifies the number of dice included in the roll for non-d20 tests; can be used with "keep" to make advantage-like rolls */
     additionalCount;
-    /** @type {number | FixedValueModifier} If the value of the roll is under this, it is rerolled once and the new value is taken. */
+    /** @type {NumericDiceSetting} If the value of the roll is under this, it is rerolled once and the new value is taken. */
     rerollUnder;
-    /** @type {boolean} Whether reroll under continues to happen until the condition is met. */
+    /** @type {boolean | undefined} Whether reroll under continues to happen until the condition is met. */
     rerollUnderUntil;
-    /** @type {number | FixedValueModifier} If the value of the roll is over this, it is rerolled once and the new value is taken. */
+    /** @type {NumericDiceSetting} If the value of the roll is over this, it is rerolled once and the new value is taken. */
     rerollOver;
-    /** @type {boolean} Whether reroll over continues to happen until the condition is met. */
+    /** @type {boolean | undefined} Whether reroll over continues to happen until the condition is met. */
     rerollOverUntil;
-    /** @type {number | FixedValueModifier} If the roll is under this value, it is automatically increased to the minimum. */
+    /** @type {NumericDiceSetting} If the roll is under this value, it is automatically increased to the minimum. */
     minimum;
-    /** @type {number | FixedValueModifier} If the roll is over this value, it is automatically reduced to the maximum. */
+    /** @type {NumericDiceSetting} If the roll is over this value, it is automatically reduced to the maximum. */
     maximum;
 }
 
@@ -264,8 +269,8 @@ class DiceRoll extends DiceRollFeatures {
         this.#d20test = d20test;
 
         if (d20test === true) {
-            super.count = 1;
-            super.sides = 20;
+            this.count = 1;
+            this.sides = 20;
         }
 
         Object.seal(this);
@@ -276,7 +281,7 @@ class DiceRoll extends DiceRollFeatures {
 
     /**
      * Imports the provided dice roll features.
-     * @param {DiceRollFeatures} feature 
+     * @param {DiceRollFeatures} features 
      */
     import(features) {
         if (features == null) {
@@ -295,19 +300,19 @@ class DiceRoll extends DiceRollFeatures {
      * @param {DiceRollFeatures} feature 
      */
     #importStandard(feature) {
-        super.count = this.#modifyValue(super.count, feature.count);
-        super.sides = this.#swapValue(super.sides, feature.sides);
-        super.hp = this.#swapValue(super.hp, feature.hp);
-        super.hitsSelf = this.#swapValue(super.hitsSelf, feature.hitsSelf);
-        super.hitsTarget = this.#swapValue(super.hitsTarget, feature.hitsTarget);
-        super.fixed = this.#modifyValue(super.fixed, feature.fixed);
-        super.critical = this.#swapValue(super.critical, feature.critical);
-        super.d20trigger = this.#modifyValue(super.d20trigger, feature.d20trigger);
-        super.penalty = this.#swapValue(super.penalty, feature.penalty);
-        super.explosive = this.#swapValue(super.explosive, feature.explosive);
-        super.forceMaximum = this.#swapValue(super.forceMaximum, feature.forceMaximum);
-        super.keep = this.#modifyValue(super.keep, feature.keep);
-        super.additionalCount = this.#modifyValue(super.additionalCount, feature.additionalCount);
+        this.count = this.#modifyValue(this.count, feature.count);
+        this.sides = this.#swapValue(this.sides, feature.sides);
+        this.hp = this.#swapValue(this.hp, feature.hp);
+        this.hitsSelf = this.#swapValue(this.hitsSelf, feature.hitsSelf);
+        this.hitsTarget = this.#swapValue(this.hitsTarget, feature.hitsTarget);
+        this.fixed = this.#modifyValue(this.fixed, feature.fixed);
+        this.critical = this.#swapValue(this.critical, feature.critical);
+        this.d20trigger = this.#modifyValue(this.d20trigger, feature.d20trigger);
+        this.penalty = this.#swapValue(this.penalty, feature.penalty);
+        this.explosive = this.#swapValue(this.explosive, feature.explosive);
+        this.forceMaximum = this.#swapValue(this.forceMaximum, feature.forceMaximum);
+        this.keep = this.#modifyValue(this.keep, feature.keep);
+        this.additionalCount = this.#modifyValue(this.additionalCount, feature.additionalCount);
     }
 
     /**
@@ -315,15 +320,16 @@ class DiceRoll extends DiceRollFeatures {
      * @param {DiceRollFeatures} feature 
      */
     #importCommon(feature) {
-        super.fixed = this.#modifyValue(super.fixed, feature.fixed)
-        super.rerollOver = this.#modifyValue(super.rerollOver, feature.rerollOver);
-        super.rerollOverUntil = this.#swapValue(super.rerollOverUntil, feature.rerollOverUntil);
-        super.rerollUnder = this.#modifyValue(super.rerollUnder, feature.rerollUnder);
-        super.rerollUnderUntil = this.#swapValue(super.rerollUnderUntil, feature.rerollUnderUntil);
-        super.minimum = this.#modifyValue(super.minimum, feature.minimum);
-        super.maximum = this.#modifyValue(super.maximum, feature.maximum);
+        this.fixed = this.#modifyValue(this.fixed, feature.fixed)
+        this.rerollOver = this.#modifyValue(this.rerollOver, feature.rerollOver);
+        this.rerollOverUntil = this.#swapValue(this.rerollOverUntil, feature.rerollOverUntil);
+        this.rerollUnder = this.#modifyValue(this.rerollUnder, feature.rerollUnder);
+        this.rerollUnderUntil = this.#swapValue(this.rerollUnderUntil, feature.rerollUnderUntil);
+        this.minimum = this.#modifyValue(this.minimum, feature.minimum);
+        this.maximum = this.#modifyValue(this.maximum, feature.maximum);
     }
 
+    // @ts-ignore
     #swapValue(current, requested) {
         if (requested === undefined) {
             // We will preserve the current value if nothing was requested at all
@@ -336,6 +342,7 @@ class DiceRoll extends DiceRollFeatures {
         return requested;
     }
 
+    // @ts-ignore
     #modifyValue(current, requested) {
         if (requested === undefined) {
             // We will preserve the current value if nothing was requested at all
@@ -364,7 +371,7 @@ export class DiceRollConfig extends DiceRollFeatures {
         Object.seal(this);
     }
 
-    /** @type {string} The friendly name for the roll when applicable. */
+    /** @type {string | undefined} The friendly name for the roll when applicable. */
     name;
     /** The set of tags used to discover additional modifiers to the dice roll and effects on the target in the final outcome. */
     get tags() { return this.#tags; }
@@ -373,7 +380,7 @@ export class DiceRollConfig extends DiceRollFeatures {
     freeze() {
         this.#tags.freeze();
 
-        for (const property of this) {
+        for (const property of Object.values(this)) {
             if (property instanceof FixedValueModifier) {
                 Object.freeze(property);
             }
@@ -409,7 +416,7 @@ export class DiceRollModifier extends DiceRollFeatures {
         this.#tags.freeze();
         this.#targetTags.freeze();
 
-        for (const property of this) {
+        for (const property of Object.values(this)) {
             if (property instanceof FixedValueModifier) {
                 Object.freeze(property);
             }
@@ -418,15 +425,15 @@ export class DiceRollModifier extends DiceRollFeatures {
         Object.freeze(this);
     }
 
-    /** @type {number} The order that the modification will be applied to the rolls relative to other queued modifications; the final result for these properties is LIFO. */
+    /** @type {number | undefined} The order that the modification will be applied to the rolls relative to other queued modifications; the final result for these properties is LIFO. */
     priority;
     /** @type {DiceTagLookup} The set of tags that are used to determine if this modifier qualifies for a dice action; top level entries are OR, collections within the main array are AND */
     get tags() { return this.#tags; }
     /** @type {DiceTagLookup} The set of tags that are used to determine if this modifier qualifies for a dice action; top level entries are OR, collections within the main array are AND */
     get tagsOnTarget() { return this.#targetTags; }
-    /** @type {number} The minimum character level or challenge rating required for this modifier to be active. */
+    /** @type {number | undefined} The minimum character level or challenge rating required for this modifier to be active. */
     level;
-    /** @type {number} The minimum spell slot required for this modifier to be active. */
+    /** @type {number | undefined} The minimum spell slot required for this modifier to be active. */
     spellSlot;
 }
 
@@ -436,13 +443,13 @@ export class FixedValueModifier {
         Object.seal(this);
     }
 
-    /** @type {'set' | 'add' | 'subtract' | 'multiplier' | 'multiplier_up'} The operation to use relavative to the current value. */
+    /** @type {'set' | 'add' | 'subtract' | 'multiplier' | 'multiplier_up' | undefined} The operation to use relavative to the current value. */
     operation;
-    /** @type {number} The fixed amount used within the effect. */
+    /** @type {number | undefined} The fixed amount used within the effect. */
     amount;
-    /** @type {string} The URI of the numeric property to import the current value for and apply to the roll. */
+    /** @type {string | undefined} The URI of the numeric property to import the current value for and apply to the roll. */
     imports;
-    /** @type {boolean} Whether the imported value is treated as a penalty against the roll. */
+    /** @type {boolean | undefined} Whether the imported value is treated as a penalty against the roll. */
     penalty;
 
     /**
@@ -482,6 +489,7 @@ export class FixedValueModifier {
 
 /** Manages a set of strings that are normalized to lower case */
 export class DiceTagSet extends Set {
+    /** @param {string[]} [tags] */
     constructor(tags) {
         super();
         if (tags != null) {
@@ -491,9 +499,9 @@ export class DiceTagSet extends Set {
 
     /** Freezes the set */
     freeze() {
-        this.add = () => undefined;
-        this.delete = () => undefined;
-        this.addRange = () => undefined;
+        this.add = () => this;
+        this.delete = () => false;
+        this.addRange = () => this;
         this.deleteRange = () => undefined;
         this.clear = () => undefined;
 

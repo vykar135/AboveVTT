@@ -1,4 +1,4 @@
-/** @import { ConfigurationSettings } from './CoreEnums.mjs*/
+/** @import { ConfigurationSettings } from './CoreEnums.mjs'/
 import { Configuration, DiceType, SavingThrow, AbilityCheck, SkillCheck, PropertyType } from './CoreEnums.mjs'
 
 /**

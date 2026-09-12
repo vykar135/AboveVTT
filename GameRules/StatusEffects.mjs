@@ -1,4 +1,4 @@
-/** @import { TokenStatusEffectContainer, Concentration, MaintainedEffect, ActiveStatusEffect, PassiveStatusEffect, StatusEffect } from './StatusEffects.types.js' */
+/** @import { TokenStatusEffectContainer, Concentration, MaintainedStatusEffect, ActiveStatusEffect, PassiveStatusEffect, StatusEffect } from './types/StatusEffects.types.js' */
 
 import StatBlock, { ListStatBlocks, LookupStatBlock } from './StatBlock.mjs';
 
@@ -148,7 +148,7 @@ export default class StatusEffects {
 
     /**
      * Retrieves or initialized the concentration settings for the token.
-     * @param {TokenStatusEffectContainer?} container - The status effect container to retrieve the concentration settings from.
+     * @param {TokenStatusEffectContainer} container - The status effect container to retrieve the concentration settings from.
      * @returns {Concentration}
      */
     static #initConcentration(container) {
@@ -181,7 +181,6 @@ export default class StatusEffects {
 
     /**
      * Clones and appends the effect to the provided collection, then notifies the target that a change was made to it.
-     * @param {GlobalStatusEffectConfig} target 
      * @param {StatusEffect[]} collection 
      * @param {StatusEffect} effect 
      * */
@@ -307,7 +306,7 @@ export default class StatusEffects {
 
     /**
      * Retrieves or initialized the collection of maintained effects for the token.
-     * @returns {MaintainingStatusEffect[]}
+     * @returns {MaintainedStatusEffect[]}
      */
     getMaintaining() {
         const container = this.#getContainer();
@@ -320,7 +319,7 @@ export default class StatusEffects {
 
     /**
      * Appends a maintained effect to the to the token.
-     * @param {MaintainedEffect} effect - The status effect to append to the token.
+     * @param {MaintainedStatusEffect} effect - The status effect to append to the token.
      * @returns {string} The tracking identifier of the effect.
      */
     applyMaintainedEffect(effect) {
@@ -379,7 +378,7 @@ export default class StatusEffects {
 
         const available = ListStatBlocks();
         for (const target of available) {
-            const localRemove = target.dropActiveEffect(tracking);
+            const localRemove = target.statusEffects.dropActiveEffect(tracking);
             if (localRemove) {
                 this.#affectedTokens[target.id] = target;
                 removed = true;
@@ -438,6 +437,10 @@ export default class StatusEffects {
         }
 
         for (const effect of abandoned) {
+            if (effect == null) {
+                continue;
+            }
+
             this.dropMaintainedEffect(effect.tracking);
         }
 

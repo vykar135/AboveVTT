@@ -1,3 +1,5 @@
+// @ts-nocheck
+
 import { DiceActionsEnabled, GetCharacterId, IsGameMaster, uriEquals, WaitingForScene } from "./CoreEnums.mjs";
 import StatBlock, { GetActingAs, GetPrimaryCharacter, GetStatBlock, ListMyStatBlocks, ListStatBlocks } from "./StatBlock.mjs";
 
@@ -344,6 +346,7 @@ function fetchPendingBeyondSheets() {
 // #endregion
 
 // Exposing relevant properties to non-modules
+// @ts-ignore
 window.statBlocks = Object.freeze({
     isEnabled:  () => DiceActionsEnabled,
 

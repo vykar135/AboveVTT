@@ -1,3 +1,5 @@
+// @ts-nocheck
+
 /**
  * @typedef {KnownConfigurationSettings & { [property: string]: any }} ConfigurationSettings
  * @typedef {Object} KnownConfigurationSettings
@@ -11,6 +13,8 @@
  * @typedef { TypedConfigurationSettings & { diceTags: string[] } } DiceModifierSettings
  * @typedef { DiceModifierSettings & { rollType: KnownConfigurationSettings } } DiceRollSettings
  * @typedef { DiceModifierSettings & { ability: KnownConfigurationSettings } } SkillCheckSettings
+ * @typedef { ConfigurationSettings & { srd: string, open5e: string, ddbImmune: number, ddbResist: number, ddbVuln: number  } } DamageTypeSettings
+ * @typedef { ConfigurationSettings & { open5e: string, player: string, monster: number, default: number } } MovementSettings
  */
 
 /** Whether the new game rules feature is enabled. */
@@ -23,15 +27,19 @@ export const GetGameMaster = initGameMaster();
 /** The identifier of the character that the user is primarily viewing the VTT as */
 export const GetCharacterId = initActiveCharacter();
 
+/** Whether the VTT is in a state that will present the least possible issues with user interaction */
 export function WaitingForScene() {
     return (window.LOADING === true || window.pcs == null || window.TOKEN_OBJECTS == null || window.all_token_objects == null);
 }
 
+/** Whether the current user is the game master */
 export function IsGameMaster() {
     return (GetCurrentUser() === GetGameMaster());
 }
 
+/** @param {string} feature  */
 export function checkFeatureEnabled(feature) {
+    /** @type {any} */
     let features = localStorage.getItem('AVTT-Development-Features') ?? {};
     if (typeof features === 'string') {
         features = JSON.parse(features);
@@ -54,7 +62,7 @@ function initCurrentUser() {
         }
 
         let read = ($(`#message-broker-client[data-userid]`)?.attr('data-userid') ?? Cobalt?.User?.ID);
-        if (read != null && typeof read !== 'number') {
+        if (read != null && typeof read === 'string') {
             read = parseInt(read);
         }
 
@@ -75,7 +83,7 @@ function initGameMaster() {
         }
 
         let read = window.CAMPAIGN_INFO?.dmId;
-        if (read != null && typeof read !== 'number') {
+        if (read != null && typeof read === 'string') {
             read = parseInt(read);
         }
 
@@ -95,8 +103,9 @@ function initActiveCharacter() {
             return active;
         }
 
+        /** @type {number | string | undefined} */
         let read = window.characterData?.id;
-        if (read != null && typeof read !== 'number') {
+        if (read != null && typeof read === 'string') {
             read = parseInt(read);
         }
 
@@ -114,7 +123,7 @@ export class Configuration {
 
     /**
      * @param {{ [friendly: string]: ConfigurationSettings}} map - The mapping of properties within the configuration
-     * @param {{ [property: string]: any}} common - The mapping of common properties to apply to all settings
+     * @param {{ [property: string]: any}} [common] - The mapping of common properties to apply to all settings
     */
     constructor(map, common) {
         this.#lookup = {};
@@ -128,7 +137,7 @@ export class Configuration {
             }
 
             const frozen = Configuration.deepFreeze(value);
-            this[friendly] = frozen;
+            /** @type {any} */ (this)[friendly] = frozen;
             this.#lookup[frozen.uri] = frozen;
         }
 
@@ -149,7 +158,7 @@ export class Configuration {
         return Object.values(this.#lookup);
     }
 
-    /** Recursively freezes an object to make it completely immutable. */
+    /** @param {any} obj - Recursively freezes an object to make it completely immutable. */
     static deepFreeze(obj) {
         if (obj != null && typeof obj === 'object' && !Object.isFrozen(obj)) {
             Object.freeze(obj);
@@ -240,7 +249,7 @@ export const RollType = new Configuration({
  * }}
  */
 export const DiceType = new Configuration({
-    d4: { uri: 'd2', name: 'd2', size: 2 }, // Coin Flip
+    d2: { uri: 'd2', name: 'd2', size: 2 }, // Coin Flip
     d4: { uri: 'd4', name: 'd4', size: 4 },
     d6: { uri: 'd6', name: 'd6', size: 6 },
     d8: { uri: 'd8', name: 'd8', size: 8 },
@@ -279,22 +288,22 @@ export const ProficiencyType = new Configuration({
 /**
  * Defines the types of damage that can be dealt to a token
  * @type {Configuration & {
- *   Magic: ConfigurationSettings,
- *   Physical: ConfigurationSettings,
- *   All: ConfigurationSettings,
- *   Slashing: ConfigurationSettings,
- *   Piercing: ConfigurationSettings,
- *   Bludgeoning: ConfigurationSettings,
- *   Acid: ConfigurationSettings,
- *   Cold: ConfigurationSettings,
- *   Fire: ConfigurationSettings,
- *   Force: ConfigurationSettings,
- *   Lightning: ConfigurationSettings,
- *   Necrotic: ConfigurationSettings,
- *   Poison: ConfigurationSettings,
- *   Psychic: ConfigurationSettings,
- *   Radiant: ConfigurationSettings,
- *   Thunder: ConfigurationSettings
+ *   Magic: DamageTypeSettings,
+ *   Physical: DamageTypeSettings,
+ *   All: DamageTypeSettings,
+ *   Slashing: DamageTypeSettings,
+ *   Piercing: DamageTypeSettings,
+ *   Bludgeoning: DamageTypeSettings,
+ *   Acid: DamageTypeSettings,
+ *   Cold: DamageTypeSettings,
+ *   Fire: DamageTypeSettings,
+ *   Force: DamageTypeSettings,
+ *   Lightning: DamageTypeSettings,
+ *   Necrotic: DamageTypeSettings,
+ *   Poison: DamageTypeSettings,
+ *   Psychic: DamageTypeSettings,
+ *   Radiant: DamageTypeSettings,
+ *   Thunder: DamageTypeSettings
  * }}
  */
 export const DamageType = new Configuration({
@@ -571,13 +580,13 @@ export const SkillCheck = new Configuration({
 
 /**
  * @type {Configuration & {
- *     Walk: ConfigurationSettings,
- *     Crawl: ConfigurationSettings,
- *     Fly: ConfigurationSettings,
- *     Climb: ConfigurationSettings,
- *     Swim: ConfigurationSettings,
- *     Burrow: ConfigurationSettings,
- *     Hover: ConfigurationSettings
+ *     Walk: MovementSettings,
+ *     Crawl: MovementSettings,
+ *     Fly: MovementSettings,
+ *     Climb: MovementSettings,
+ *     Swim: MovementSettings,
+ *     Burrow: MovementSettings,
+ *     Hover: MovementSettings
  * }}
  */
 export const Movement = new Configuration({

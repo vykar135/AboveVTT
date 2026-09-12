@@ -1,5 +1,5 @@
-/** @import StatBlock from './StatBlock.mjs' */
-/** @import StatusEffects from './StatusEffects.mjs' */
+/** @import StatBlock from '../GameRules/StatBlock.mjs' */
+/** @import StatusEffects from '../GameRules/StatusEffects.mjs' */
 
 /**
  * @typedef {Object<string, any> & {
@@ -30,7 +30,7 @@
 
 /**
  * @typedef {Object} TokenSnapshotInfo
- * @property {{ [uri: string]: numeric }} numeric - Snapshots of the base value for numeric properties at the time an effect is applied.
+ * @property {{ [uri: string]: number }} numeric - Snapshots of the base value for numeric properties at the time an effect is applied.
  */
 
 /**

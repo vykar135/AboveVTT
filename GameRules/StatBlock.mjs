@@ -1,4 +1,4 @@
-/** @import { Token } from './Token.types.js' */
+/** @import { Token } from '../types/Token.types.js' */
 
 import { fetchBeyondSheetForToken, fetchOpen5eSheetForToken, fetchPlayerExtendedSheet } from './StatBlockSources.mjs';
 import { DiceActionsEnabled, GetCharacterId, GetCurrentUser, IsGameMaster, uriEquals, WaitingForScene } from './CoreEnums.mjs'
@@ -6,7 +6,7 @@ import HitPointBlock from './HitPointBlock.mjs';
 import ConditionTracker, { BlindedDice, CharmedDice, DeafenedDice, ExhaustionDice, FrightenedDice, GrappledDice, IncapacitatedDice, InvisibleDice, ParalyzedDice, PetrifiedDice, PoisonedDice, ProneDice, RestrainedDice, StunnedDice, UnconsciousDice } from './ConditionTracker.mjs';
 import NumericStatTracker from './NumericStatTracker.mjs';
 import StatusEffects from './StatusEffects.mjs';
-import { DiceAction, DiceActionContext } from './DiceAction.mjs';
+import { DiceAction, DiceActionContext, DiceActionModifier, DiceRollModifier, FixedValueModifier } from './DiceAction.mjs';
 import DefenseTracker from './DefenseTracker.mjs';
 import ToggleTracker from './ToggleTracker.mjs';
 import StatNormalization from './StatNormalization.mjs';
@@ -176,8 +176,10 @@ function syncPendingPlayerOptions() {
 export default class StatBlock {
     #id;
     #needsRebuild;
+    /** @type {number | undefined} */
     #pendingRebuild;
 
+    /** @type {string | undefined} */
     #name;
     #proficiency;
     #ac;
@@ -437,12 +439,16 @@ export default class StatBlock {
             return false;
         }
 
-        this.#cloneOptionData(fromLocal, fromGlobal);
+        if (fromLocal != null && fromGlobal != null) {
+            this.#cloneOptionData(fromLocal, fromGlobal);
+        }
 
         try {
             callback(target);
             delete this.#warnings[failureUri];
+        
         } catch (error) {
+            // @ts-ignore
             this.reportFailure(failureUri, `Failed to sync options data`, error);
         }
 
@@ -451,8 +457,8 @@ export default class StatBlock {
 
     /**
      * Creates a structured clone of stat block related information on the source and sets the appropriate properties on the destination.
-     * @param {Token} source - The instance to clone information from.
-     * @param {Token} destination - The instance to clone information to.
+     * @param {any} source - The instance to clone information from.
+     * @param {any} destination - The instance to clone information to.
      */
     #cloneOptionData(source, destination) {
         if (source == null || destination == null || source === destination) {
@@ -506,6 +512,7 @@ export default class StatBlock {
      */
     getNumeric(uri) {
         if (uri && typeof uri === 'object' && 'uri' in uri) {
+            // @ts-ignore
             uri = uri.uri;
         }
 
@@ -520,6 +527,7 @@ export default class StatBlock {
      */
     getOrAddNumeric(uri, init) {
         if (uri && typeof uri === 'object' && 'uri' in uri) {
+            // @ts-ignore
             uri = uri.uri;
         }
 
@@ -555,7 +563,7 @@ export default class StatBlock {
     }
 
     /**
-     * @param {Token} token - The details of the token to retrieve the current initiative for.
+     * @param {Token | undefined} token - The details of the token to retrieve the current initiative for.
      * @returns {{ round: number, token?: Token, initiative?: number }} A snapshot of the current initiative order for the token in the combat tracker
      */
     static getTokenInitiative(token) {
@@ -564,7 +572,7 @@ export default class StatBlock {
             round = parseInt(round);
         }
 
-        if (token.options.ct_show !== true) {
+        if (token == null || token.options.ct_show !== true) {
             return { token: token, round: round, initiative: undefined };
         }
 
@@ -627,7 +635,8 @@ export default class StatBlock {
                 (this.#player && player.userId === GetCurrentUser())
             );
 
-            const sheets = { tokenOptions, player, playerExt: undefined, playerOptions: undefined };
+            /** @type {import('./StatNormalization.mjs').AvailableSheets} */
+            const sheets = { tokenOptions, player, playerExt: undefined, playerOptions: undefined, open5e: undefined, monster: undefined };
 
             if (this.#player) {
                 sheets.playerOptions = this.#getPlayerOptions();
@@ -656,6 +665,7 @@ export default class StatBlock {
 
             delete this.#warnings['rebuild'];
         } catch (error) {
+            // @ts-ignore
             this.reportFailure('rebuild', `Failed to rebuild character sheet`, error);
         }
 
@@ -693,6 +703,7 @@ export default class StatBlock {
 
             delete this.#warnings['recalculate'];
         } catch (error) {
+            // @ts-ignore
             this.reportFailure('recalculate', `Failed to recalculate status efforts`, error);
         }
 
@@ -702,16 +713,31 @@ export default class StatBlock {
     /** Generates a snapshot of the creature stat block using the current calculated values. */
     getNormalizedSheet() {
         const pb = this.#proficiency.current ?? 2;
+        const diceContext = this.#diceContext;
 
-        const getSave = (save, abilityMod) => {
-            const bonusAmount = save.bonus ?? 0;
-            const profAmount = (pb * (save.proficiency ?? 0));
+        function convertNumeric() {
+
+        }
+
+        /**
+         * @param {DiceAction} save 
+         * @param {number} abilityMod 
+         * @returns 
+         */
+        function getSave(save, abilityMod) {
+            const bonusAmount = diceContext.convertNumeric(save.bonus) ?? 0;
+            const profAmount = (pb * (diceContext.convertNumeric(save.proficiency) ?? 0));
             const total = abilityMod + bonusAmount + profAmount;
 
             return { total, proficiency: profAmount, bonus: bonusAmount };
         };
 
-        const getScore = (score, modifier, save) => {
+        /**
+         * @param {NumericStatTracker} score 
+         * @param {BlockAbilityModifier} modifier 
+         * @param {DiceAction} save 
+         */
+        function getScore(score, modifier, save) {
             const modValue = modifier.value.current ?? 0;
 
             return {
@@ -721,17 +747,20 @@ export default class StatBlock {
             };
         };
 
-        const getSkill = (skill) => {
+        /** @param {DiceAction} skill */
+        function getSkill(skill) {
+            // @ts-ignore
             const abiltyMod = this.#modifiers[skill.ability]?.value;
             const modValue = abiltyMod?.current ?? 0
             const bonusAmount = skill.bonus ?? 0;
-            const profAmount = (pb * (skill.proficiency ?? 0));
+            const profAmount = (pb * (diceContext.convertNumeric(skill.proficiency) ?? 0));
             const total = modValue + bonusAmount + profAmount;
 
             return { total, proficiency: profAmount, bonus: bonusAmount, modifier: skill.ability };
         };
 
-        const getCondition = (condition) => {
+        /** @param {ConditionTracker} condition */
+        function getCondition(condition) {
             return {
                 active: condition.isActive, 
                 intensity: condition.isActive ? condition.intensity : 0, 
@@ -739,7 +768,8 @@ export default class StatBlock {
             }
         };
 
-        const getDefense = (defense) => {
+        /** @param {DefenseTracker} defense */
+        function getDefense (defense) {
             return {
                 immune: defense.immune, 
                 resistant: defense.resistant, 
@@ -833,6 +863,7 @@ export default class StatBlock {
 
 /** Defines the ability scores associated with a stat block. */
 class BlockAbilityScores {
+    /** @param {StatBlock} stats  */
     constructor(stats) {
         this.str = new NumericStatTracker(stats, 'str', 10, 'Strength');
         this.dex = new NumericStatTracker(stats, 'dex', 10, 'Dexterity');
@@ -846,6 +877,7 @@ class BlockAbilityScores {
 
 /** Defines the ability modifiers associated with a stat block. */
 class BlockAbilityModifiers {
+    /** @param {StatBlock} stats  */
     constructor(stats) {
         this.str = new BlockAbilityModifier(stats, 'str', 'Strength Ability Check');
         this.dex = new BlockAbilityModifier(stats, 'dex', 'Dexterity Ability Check');
@@ -859,10 +891,15 @@ class BlockAbilityModifiers {
 
 /** Defines an ability modifier associated with a stat block. */
 class BlockAbilityModifier {
-    /** @param {StatBlock} stats */
+    /**
+     * @param {StatBlock} stats
+     * @param {string} uri
+     * @param {string} name
+     */
     constructor(stats, uri, name) {
         this.value = new NumericStatTracker(stats, `${uri}:modifier`, 0, name);
 
+        // @ts-ignore
         this.check = new DiceAction(stats.diceContext, `${uri}:check`, name, true, uri, true);
         this.check.tags.addRange([ 'ability', uri ]);
         this.check.tagFreeze();
@@ -1054,6 +1091,21 @@ class BlockDiceContext extends DiceActionContext {
     /** The collection of available dice roll modifiers
      * @returns {DiceRollModifier[]} */
     listRollModifiers() { throw new Error('Not Implemented'); }
+
+    /** The collection of available dice roll modifiers
+     * @param {import('./DiceAction.mjs').NumericDiceSetting} setting 
+     * @returns {number | undefined} */
+    convertNumeric(setting) {
+        if (setting === undefined || typeof setting === 'number') {
+            return setting;
+        }
+
+        if (setting instanceof FixedValueModifier) {
+            setting.getValue(this, 0);
+        }
+
+        return undefined;
+    }
 }
 
 // Lets wait for the scene to load and setup any player characters that don't have active tokens.

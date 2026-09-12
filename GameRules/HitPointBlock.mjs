@@ -1,4 +1,4 @@
-/** @import { TokenHitPointInfo } from './Token.types.js' */
+/** @import { TokenHitPointInfo } from '../types/Token.types.js' */
 
 import NumericStatTracker from "./NumericStatTracker.mjs";
 import StatBlock from "./StatBlock.mjs";
@@ -19,7 +19,7 @@ export default class HitPointBlock {
      */
     constructor(stats){
         this.#statBlock = stats;
-        this.#maximum = new NumericStatTracker(stats, 'hp:max', 0);
+        this.#maximum = new NumericStatTracker(stats, 'hp:max', 0, 'Maximum Hit Points');
     }
 
     /** Provides the numeric stat tracker for the maximum hit point. */
@@ -29,13 +29,27 @@ export default class HitPointBlock {
     get maximum() { return this.#maximum.current ?? 0; }
 
     /** @returns {number} The remaining number of hit points that the creature or object has before it will either die or begin making death saving throws  */
-    get remaining() { return this.#getCurrent().current ?? 0; }
+    get remaining() {
+        let amount = this.#getCurrent().current;
+        if (typeof amount === 'string') {
+            amount = parseInt(amount);
+        }
+
+        return amount ?? 0;
+    }
 
     /** The total number of hit points the creature or object has including temporary hit hpoints */
     get total() { return this.remaining + this.temp; }
 
     /** @returns {number} The number of temporary hit hpoints that the creature or object has */
-    get temp() { return this.#getCurrent().temp ?? 0; }
+    get temp() {
+        let amount = this.#getCurrent().temp;
+        if (typeof amount === 'string') {
+            amount = parseInt(amount);
+        }
+
+        return amount ?? 0;
+    }
 
     /** @returns {TokenHitPointInfo} The hit point information that is stored on the token */
     #getCurrent() {
@@ -93,6 +107,10 @@ export default class HitPointBlock {
         const info = this.#getCurrent();
 
         let temp = info.temp;
+        if (typeof temp === 'string') {
+            temp = parseInt(temp);
+        }
+
         if (temp >= amount) {
             temp = temp - amount;
             info.temp = temp;
@@ -104,7 +122,12 @@ export default class HitPointBlock {
             info.temp = 0;
         }
 
-        let remaining = info.current - amount;
+        let current = info.current;
+        if (typeof current === 'string') {
+            current = parseInt(current);
+        }
+
+        let remaining = current - amount;
         if (remaining < 0) {
             remaining = 0;
         }
@@ -126,8 +149,12 @@ export default class HitPointBlock {
 
         const info = this.#getCurrent();
         const max = this.maximum;
+        let current = info.current;
+        if (typeof current === 'string') {
+            current = parseInt(current);
+        }
 
-        let remaining = info.current + amount;
+        let remaining = current + amount;
         if (remaining > max) {
             remaining = max;
         }
@@ -141,8 +168,12 @@ export default class HitPointBlock {
     checkMaximum() {
         const info = this.#getCurrent();
         const max = this.maximum;
+        let current = info.current;
+        if (typeof current === 'string') {
+            current = parseInt(current);
+        }
 
-        if (info.current <= max) {
+        if (current <= max) {
             return;
         }
 
@@ -157,7 +188,11 @@ export default class HitPointBlock {
      */
     applyTemp(amount, tags){
         const info = this.#getCurrent();
-        const current = info.temp;
+        let current = info.temp;
+        if (typeof current === 'string') {
+            current = parseInt(current);
+        }
+
         if (current != null && current >= amount) {
             return current;
         }
@@ -173,7 +208,10 @@ export default class HitPointBlock {
      */
     setRemaining(amount) {
         const info = this.#getCurrent();
-        const max = info.maximum;
+        let max = info.maximum;
+        if (typeof max === 'string') {
+            max = parseInt(max);
+        }
 
         if (amount < 0) {
             amount = 0;

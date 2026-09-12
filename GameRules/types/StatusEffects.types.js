@@ -1,4 +1,4 @@
-/** @import { EffectInitiativeSnapshot, EffectResolutionRules } from './EffectDefinition.types.js' */
+/** @import { EffectInitiative, EffectResolutionRule } from './EffectDefinition.types.js' */
 
 /**
  * @typedef TokenStatusEffectContainer
@@ -7,21 +7,21 @@
  * @property {Concentration} concentration - Manages concentration effects that are being maintained by the token
  * @property {PassiveStatusEffect[]} passive - Collection of status effects that the token is under the effects of at all times
  * @property {ActiveStatusEffect[]} active - Collection of status effects that the token is temporarily under the effects of
- * @property {MaintainedEffect[]} maintaining - Collection of status effects that the token is maintaining on itself and others
+ * @property {MaintainedStatusEffect[]} maintaining - Collection of status effects that the token is maintaining on itself and others
  * 
  * @typedef Concentration
- * @property {boolean} allowed - Whether the token is permitted to concentrate
- * @property {number} limit - The maximum number of items that the token is allowed to concentrate on
+ * @property {boolean} [allowed] - Whether the token is permitted to concentrate
+ * @property {number} [limit] - The maximum number of items that the token is allowed to concentrate on
  * 
  * @typedef StatusEffect
  * @property {string} tracking - The tracking identifier for the status effect across tokens
  * @property {string} behavior - URI to well-known or campaign-specific behavior that this effect implements
- * @property {EffectInitiativeSnapshot?} initiative - Details of the initiative order when the status effect was applied; otherwise undefined if applied outside combat.
+ * @property {EffectInitiative?} initiative - Details of the initiative order when the status effect was applied; otherwise undefined if applied outside combat.
  * @property {boolean?} resilient - Override for whether the effect persists even when the token is incapacitated
  * @property {boolean?} concentration - Override for whether the effect is being maintained through concentration
  * @property {number?} remaining - The number of resolution attempts remaining before the effect ends on its own
  * @property {string?} resolveTrigger - Overrides the points when the token can attempt to resolve the effect
- * @property {EffectResolutionRules[]} resolution - The points when the target of the status effect can attempt to fully resolve the effect
+ * @property {EffectResolutionRule[]} resolution - The points when the target of the status effect can attempt to fully resolve the effect
  * @property {StatusEffectImpact[]?} impacts - Override of the rolls used to determine the impact when the effect is triggered
  *
  * @typedef StatusEffectImpact
@@ -40,7 +40,7 @@
  * @property {string} source - The identifier of the token that applied the effect when the effect is being concentrated on or has token-based trigger action
  * @property {boolean} fromMaintained - The details for the active effect are to be retrieved from maintained effect list for the token
  * 
- * @typedef {StatusEffect & MaintainedEffectExtensions} MaintainedEffect
+ * @typedef {StatusEffect & MaintainedEffectExtensions} MaintainedStatusEffect
  * @typedef MaintainedEffectExtensions
  * @property {string[]} targets - Collection of token identifiers that the effect is being applied to.
  */

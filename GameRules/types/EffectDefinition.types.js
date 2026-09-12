@@ -1,4 +1,4 @@
-import StatBlock from './StatBlock.mjs'
+import StatBlock from '../StatBlock.mjs'
 
 /**
  * @typedef {Object} EffectBehavior

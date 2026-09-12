@@ -1,5 +1,5 @@
  /** @import { TypedConfigurationSettings } from './CoreEnums.mjs' */
- /** @import { EffectImpactContext } from './EffectDefinition.types.js' */
+ /** @import { EffectImpactContext } from './types/EffectDefinition.types.js' */
 
 import { ConfigurationIndex, PropertyType } from './CoreEnums.mjs';
 import ConditionTracker from './ConditionTracker.mjs';

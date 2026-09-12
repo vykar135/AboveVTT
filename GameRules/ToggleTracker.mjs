@@ -1,5 +1,14 @@
 import StatBlock from "./StatBlock.mjs";
 
+/**
+ * @typedef {Object} ToggleImpact
+ * @property {string} [instance] - The reference to the status effect that produced the change.
+ * @property {number} [version] - The version of the status effect collect at the time the impact was applied.
+ * @property {boolean} [fromCondition] - Whether the effect is from a condition.
+ * @property {number} [priority] - The priority of the effect.
+ * @property {boolean} [enabled] - Whether the toggle is on or off.
+ */
+
 /** Tracks whether a boolean property is enabled on a stat block. */
 export default class ToggleTracker {
     #stats
@@ -8,7 +17,7 @@ export default class ToggleTracker {
     #baseEnabled;
     #enabled;
 
-    /** @type {{ instance: string, version: number, fromCondition: boolean, priority: number, enabled: boolean | undefined }[]} */
+    /** @type {ToggleImpact[]} */
     #sources;
 
     /**
@@ -56,7 +65,7 @@ export default class ToggleTracker {
         this.#sources.sort((a, b) => (a.priority ?? 0) - (b.priority ?? 0));
 
         for (const applied of this.#sources) {
-            enabled = applied.enabled ?? immunity;
+            enabled = applied.enabled ?? enabled;
         }
 
         this.#enabled = enabled;
@@ -65,7 +74,7 @@ export default class ToggleTracker {
 
     /**
      * Appends an instance of the property to enable of the stat block.
-     * @param {{ instance: string , fromCondition: boolean, priority: number, enabled: boolean }} settings 
+     * @param {ToggleImpact} settings 
      */
     addInstance(settings) {
         let { instance, fromCondition, priority, enabled } = settings;

@@ -1,3 +1,8 @@
+/**
+ * @import { NumericStatImpact } from './NumericStatTracker.mjs'
+ * @import { DefenseImpact } from './DefenseTracker.mjs'
+*/
+
 import DefenseTracker from "./DefenseTracker.mjs";
 import { DiceActionModifier } from "./DiceAction.mjs";
 import StatBlock from "./StatBlock.mjs";
@@ -12,10 +17,20 @@ import StatBlock from "./StatBlock.mjs";
  * @param {StatBlock} stats - The stat block being modified.
  * @returns {DiceActionModifier | DiceActionModifier[]}
  * 
+ * @typedef {ConditionDiceEffectCallback | DiceActionModifier | DiceActionModifier[] | undefined} ConditionDice
+ * 
  * @typedef {Object} ConditionEffects
- * @property {ConditionEffectCallback} changes - The method used to apply changes from the condition into the stat block.
- * @property {ConditionDiceEffectCallback} actionDice - The dice action modifier that is applied when taking an action.
- * @property {ConditionDiceEffectCallback} targetedDice - The dice action modifier that is applied when targetted for an action.
+ * @property {ConditionEffectCallback | undefined} changes - The method used to apply changes from the condition into the stat block.
+ * @property {ConditionDice} action - The dice action modifier that is applied when taking an action.
+ * @property {ConditionDice} targeted - The dice action modifier that is applied when targetted for an action.
+ * 
+ * @typedef {Object} ConditionImpact
+ * @property {string} [instance] - The reference to the status effect that produced the change.
+ * @property {number} [version] - The version of the status effect collect at the time the impact was applied.
+ * @property {boolean} [fromCondition] - Whether the effect is from a condition.
+ * @property {number} [priority] - The priority of the effect.
+ * @property {number} [intensity] - The number of stacks this condition currently has which can affect how strong the condition is.
+ * @property {boolean} [immunity] - Whether immunity to the condition is being granted or denied.
  */
 
 /** Tracks whether a condition should be applied to a stat block. */
@@ -35,7 +50,7 @@ export default class ConditionTracker {
     #actionDice;
     #targetedDice;
 
-    /** @type {{ instance: string, version: number, fromCondition: boolean, priority: number, intensity: number, immunity: boolean | undefined }[]} */
+    /** @type {ConditionImpact[]} */
     #sources;
 
     /**
@@ -53,13 +68,13 @@ export default class ConditionTracker {
         this.#effectActive = false;
         this.#baseIntensity = 0;
         this.#intensity = 0;
-        this.#baseIntensity = false;
+        this.#baseImmunity = false;
         this.#immunity = false;
         this.#sources = [];
 
         this.#changes = effects?.changes;
-        this.#actionDice = effects?.actionDice;
-        this.#targetedDice = effects?.targetedDice;
+        this.#actionDice = effects?.action;
+        this.#targetedDice = effects?.targeted;
 
         Object.freeze(this);
     }
@@ -85,7 +100,7 @@ export default class ConditionTracker {
     /** The dice action modifier that is applied when targetted for an action. */
     getTargetedDice() { return this.#getDiceModifier(this.#targetedDice); }
 
-    /** @param {(ConditionDiceEffectCallback | DiceActionModifier | DiceActionModifier[])} callback */
+    /** @param {ConditionDice} callback */
     #getDiceModifier(callback) {
         if (callback == null) {
             return undefined;
@@ -161,7 +176,7 @@ export default class ConditionTracker {
 
     /**
      * Appends an instance of the condition being applied to the stat block.
-     * @param {{ instance: string, fromCondition: boolean, priority: number, intensity: number, immunity: boolean }} settings
+     * @param {ConditionImpact} settings
      */
     addInstance(settings) {
         let { instance, fromCondition, priority, intensity, immunity } = settings;
@@ -189,7 +204,7 @@ export default class ConditionTracker {
         instance = instance.toLowerCase();
         const index = this.#sources.findIndex(entry => entry.instance === instance);
 
-        const impact = {
+        const impact = /** @type {ConditionImpact} */ {
             fromCondition: (fromCondition === true),
             instance, intensity, immunity, priority,
             version: this.#stats.statusEffects.version
@@ -359,8 +374,12 @@ function SetPetrified(condition, stats) {
     CannotMove(condition, stats);
 
     if (condition.isActive) {
-        stats.conditions.poisoned.addInstance({ instance, fromCondition: true, priority: 999999999, immunity: true });
+        /** @type {ConditionImpact} */
+        const impact = { instance, fromCondition: true, priority: 999999999, immunity: true };
 
+        stats.conditions.poisoned.addInstance(impact);
+
+        /** @type {DefenseImpact} */
         const settings = { instance, fromCondition: true, priority: 999999999, resistance: true };
         for (const defense of Object.values(stats.defenses)) {
             if (defense instanceof DefenseTracker) {
@@ -396,6 +415,7 @@ export function CannotMove(condition, stats) {
         return;
     }
 
+    /** @type {NumericStatImpact} */
     const impact = { instance, fromCondition: true, priority: 999999999, setTo: 0 };
 
     stats.movement.walk.addInstance(impact);
