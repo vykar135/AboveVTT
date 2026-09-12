@@ -1,4 +1,14 @@
-/** @import { TokenHitPointInfo } from '../types/Token.types.js' */
+/**
+ * @typedef {HitPointNormalized & Object.<string, number>} HitPointInfo
+ * 
+ * @typedef {Object} HitPointNormalized - Defines normalized hit point data while maintaining the shape from D&D Beyond
+ * @property {number} maximum - The effective total hit points for the stat block
+ * @property {number} current - The current hit points, excluding temporary hit points.
+ * @property {number} temp - The amount of temporary hit points.
+ * @property {number} [baseTotalHp] - The base maximum hit points before modifiers and overrides.
+ * @property {number} [override] - The value that the maximum hit points was explicitly overridden to.
+ * @property {number} [removedHp] - The amount of hit points that have been lost by the token; allows for current to be correctly determined by a change to max HP.
+ */
 
 import NumericStatTracker from "./NumericStatTracker.mjs";
 import StatBlock from "./StatBlock.mjs";
@@ -13,6 +23,8 @@ import StatBlock from "./StatBlock.mjs";
 export default class HitPointBlock {
     #statBlock;
     #maximum;
+    #removed;
+    #temp;
 
     /**
      * @param {StatBlock} stats The stat block to retrieve the hit point metadata for
@@ -20,38 +32,40 @@ export default class HitPointBlock {
     constructor(stats){
         this.#statBlock = stats;
         this.#maximum = new NumericStatTracker(stats, 'hp:max', 0, 'Maximum Hit Points');
-    }
-
-    /** Provides the numeric stat tracker for the maximum hit point. */
-    get maximumChanges() { return this.#maximum; }
-
-    /** The calculated maximum hit points of the creature or object */
-    get maximum() { return this.#maximum.current ?? 0; }
-
-    /** @returns {number} The remaining number of hit points that the creature or object has before it will either die or begin making death saving throws  */
-    get remaining() {
-        let amount = this.#getCurrent().current;
-        if (typeof amount === 'string') {
-            amount = parseInt(amount);
-        }
-
-        return amount ?? 0;
+        this.#removed = 0;
+        this.#temp = 0;
     }
 
     /** The total number of hit points the creature or object has including temporary hit hpoints */
     get total() { return this.remaining + this.temp; }
 
+    /** Provides the numeric stat tracker for the maximum hit point. */
+    get maximumChanges() { return this.#maximum; }
+
+    /** The calculated maximum hit points of the creature or object. */
+    get maximum() { return this.#maximum.current ?? 0; }
+
+    /** The amount of hit points that have been lost from the total hit point pool. */
+    get removed() { return this.#removed ?? 0; }
+
     /** @returns {number} The number of temporary hit hpoints that the creature or object has */
-    get temp() {
-        let amount = this.#getCurrent().temp;
-        if (typeof amount === 'string') {
-            amount = parseInt(amount);
+    get temp() { return this.#temp ?? 0; }
+
+    /** @returns {number} The remaining number of hit points that the creature or object has before it will either die or begin making death saving throws  */
+    get remaining() {
+        const max = this.maximum;
+        let amount = max - this.removed;
+
+        if (amount < 0) {
+            amount = 0;
+        } else if (amount > max) {
+            amount = max;
         }
 
-        return amount ?? 0;
+        return amount;
     }
 
-    /** @returns {TokenHitPointInfo} The hit point information that is stored on the token */
+    /** @returns {HitPointInfo} The hit point information that is stored on the token */
     #getCurrent() {
         const options = this.#statBlock.getOptions();
         if (options.hitPointInfo == null) {
@@ -63,16 +77,20 @@ export default class HitPointBlock {
         }
 
         const info = options.hitPointInfo;
-        HitPointBlock.fix(info);
-        return info;
+        return this.#fix(info);
     }
 
     /**
      * Converts any strings or null values in hit point metadata to numeric values.
-     * @param {TokenHitPointInfo} info - The hit point metadata to review.
-     * @returns {TokenHitPointInfo} The updated values.
+     * @param {HitPointInfo} info - The hit point metadata to review.
      */
-    static fix(info) {
+    #fix(info) {
+        if (info.maximum == null) {
+            info.maximum = 0;
+        } else if (typeof info.maximum === 'string') {
+            info.maximum = parseInt(info.maximum);
+        }
+
         if (info.current == null) {
             info.current = 0;
         } else if (typeof info.current === 'string') {
@@ -84,14 +102,59 @@ export default class HitPointBlock {
         } else if (typeof info.temp === 'string') {
             info.temp = parseInt(info.temp);
         }
-        
-        if (info.maximum == null) {
-            info.maximum = 0;
-        } else if (typeof info.maximum === 'string') {
-            info.maximum = parseInt(info.maximum);
+
+        if (typeof info.removedHp === 'string') {
+            info.removedHp = parseInt(info.removedHp);
+            if (isNaN(info.removedHp)) {
+                info.removedHp = undefined;
+            }
         }
-        
+
+        if (typeof info.override === 'string') {
+            info.override = parseInt(info.override);
+            if (isNaN(info.override)) {
+                info.override = undefined;
+            }
+        }
+
+        for (const [key, value] of Object.entries(info)) {
+            if (value != null && isNaN(value)) {
+                info[key] = 0;
+            }
+        }
+
+        if (info.removedHp == null) {
+            info.removedHp = (info.maximum - info.current);
+        }
+
+        this.#maximum.setBaseValue(info.maximum ?? 0);
+        this.#removed = info.removedHp;
+        this.#temp = info.temp;
+
         return info;
+    }
+
+    /** Verifies that the current hit point value does not exceed the maximum. */
+    checkMaximum() {
+        let changed = false;
+        const info = this.#getCurrent();
+
+        const max = this.maximum;
+        if (this.#statBlock.isPlayer && info.maximum !== max) {
+            changed = true;
+        }
+
+        let current = info.current;
+        if (current > max) {
+            changed = true;
+            info.current = max;
+            info.removedHp = 0;
+            this.#removed = 0;
+        }
+
+        if (changed) {
+            this.#commit();
+        }
     }
 
     /**
@@ -107,32 +170,27 @@ export default class HitPointBlock {
         const info = this.#getCurrent();
 
         let temp = info.temp;
-        if (typeof temp === 'string') {
-            temp = parseInt(temp);
-        }
-
         if (temp >= amount) {
             temp = temp - amount;
-            info.temp = temp;
+            this.#temp = info.temp = temp;
             
             return this.total;
 
         } else if (temp > 0) {
             amount = amount - temp;
-            info.temp = 0;
+            this.#temp = info.temp = 0;
         }
 
-        let current = info.current;
-        if (typeof current === 'string') {
-            current = parseInt(current);
+        const max = this.maximum;
+        this.#removed += amount;
+        if (this.#removed > max) {
+            this.#removed = max;
         }
 
-        let remaining = current - amount;
-        if (remaining < 0) {
-            remaining = 0;
-        }
+        info.removedHp = this.#removed;
+        info.current = this.remaining;
 
-        info.current = remaining;
+        this.#commit();
 
         return this.total;
     }
@@ -149,35 +207,47 @@ export default class HitPointBlock {
 
         const info = this.#getCurrent();
         const max = this.maximum;
-        let current = info.current;
-        if (typeof current === 'string') {
-            current = parseInt(current);
+
+        this.#removed -= amount;
+        if (this.#removed > max) {
+            this.#removed = max;
         }
 
-        let remaining = current + amount;
-        if (remaining > max) {
-            remaining = max;
-        }
+        info.removedHp = this.#removed;
+        info.current = this.remaining;
 
-        info.current = remaining;
+        this.#commit();
 
         return this.total;
     }
 
-    /** Verifies that the current hit point value does not exceed the maximum. */
-    checkMaximum() {
+    /**
+     * Sets the amount of remaining hit points to the amount specified; only checking that the value is within the bounds of the maximum hit points.
+     * @param {number} amount - The amount of remaining hit points to set
+     */
+    setRemaining(amount) {
         const info = this.#getCurrent();
-        const max = this.maximum;
-        let current = info.current;
-        if (typeof current === 'string') {
-            current = parseInt(current);
+        const max = info.maximum;
+
+        if (amount < 0) {
+            amount = 0;
+        } else if (amount > max) {
+            amount = max;
         }
 
-        if (current <= max) {
-            return;
+        const removed = (max - amount);
+        this.#removed = removed;
+
+        if (info.current === amount && info.removedHp === removed) {
+            return amount;
         }
 
-        info.current = max;
+        info.current = amount;
+        info.removedHp = removed;
+
+        this.#commit();
+
+        return amount;
     }
 
     /**
@@ -189,37 +259,14 @@ export default class HitPointBlock {
     applyTemp(amount, tags){
         const info = this.#getCurrent();
         let current = info.temp;
-        if (typeof current === 'string') {
-            current = parseInt(current);
-        }
-
-        if (current != null && current >= amount) {
+        if (current >= amount) {
             return current;
         }
 
         info.temp = amount;
+        this.#temp = amount;
 
-        return amount;
-    }
-
-    /**
-     * Sets the amount of remaining hit points to the amount specified; only checking that the value is within the bounds of the maximum hit points.
-     * @param {number} amount - The amount of remaining hit points to set
-     */
-    setRemaining(amount) {
-        const info = this.#getCurrent();
-        let max = info.maximum;
-        if (typeof max === 'string') {
-            max = parseInt(max);
-        }
-
-        if (amount < 0) {
-            amount = 0;
-        } else if (amount > max) {
-            amount = max;
-        }
-
-        info.current = amount;
+        this.#commit();
 
         return amount;
     }
@@ -233,8 +280,48 @@ export default class HitPointBlock {
             amount = 0;
         }
 
-        this.#getCurrent().temp = amount;
+        const info = this.#getCurrent();
+        if (info.temp === amount) {
+            return amount;
+        }
+
+        info.temp = amount;
+        this.#temp = amount;
         
+        this.#commit();
+
         return amount;
+    }
+
+    /** Queues up the commit process for changes being made to the hit point block. */
+    #commit() {
+        if (!this.#statBlock.isContributor) {
+            return;
+        }
+
+        if (!this.#statBlock.isPlayer) {
+            this.#statBlock.token?.sync();
+            return;
+        }
+
+        const info = this.#getCurrent();
+        const commitMax = this.#shouldOverrideMax(info);
+    }
+
+    /**
+     * Determines whether a change to the tracked maximum value has occurred and should be commited.
+     * @param {HitPointInfo} info */
+    #shouldOverrideMax(info) {
+        if (!this.#maximum.hasChanges) {
+            return (info.override != null);
+        }
+
+        const overrideTo = this.#maximum.current;
+        const commitOverride = (info.override !== overrideTo);
+
+        info.maximum = overrideTo;
+        info.override = overrideTo;
+
+        return commitOverride;
     }
 }

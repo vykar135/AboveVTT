@@ -292,6 +292,9 @@ export default class StatBlock {
     /** Whether or not this stat block is waiting for the game state to reach a point it can rebuild. */
     get needsRebuild() { return this.#needsRebuild; }
 
+    /** Whether or not this stat block has a rebuild queued and that waiting for the game to reach a state that allows it. */
+    get pendingRebuild() { return (this.#pendingRebuild != undefined); }
+
     /** Whether the user can contribute to the token. */
     get isContributor() { return (this.#contributor === true); }
 

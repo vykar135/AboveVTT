@@ -72,6 +72,9 @@ export default class NumericStatTracker {
         return this.#baseOverride ?? this.#base;
     }
 
+    /** Whether the tracker is currently maintaining a list of changes. */
+    get hasChanges() { return (this.#sources.length > 0); }
+
     /** The current value of the property adjusted for a snapshot at the time an effect was applied. */
     get current() {
         return (this.baseEffective + this.#calculated) * this.multiplier;
