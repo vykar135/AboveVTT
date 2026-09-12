@@ -746,10 +746,9 @@ export default class StatBlock {
 
         /** @param {DiceAction} skill */
         function getSkill(skill) {
-            // @ts-ignore
-            const abiltyMod = modifiers[skill.ability]?.value;
+            const abiltyMod = ((skill.ability != null) ? modifiers[skill.ability]?.value : undefined);
             const modValue = abiltyMod?.current ?? 0
-            const bonusAmount = skill.bonus ?? 0;
+            const bonusAmount = diceContext.convertNumeric(skill.bonus) ?? 0;
             const profAmount = (pb * (diceContext.convertNumeric(skill.proficiency) ?? 0));
             const total = modValue + bonusAmount + profAmount;
 
