@@ -1,5 +1,5 @@
 import { DiceActionsEnabled, uriEquals } from "./CoreEnums.mjs";
-import StatBlock, { ListStatBlocks, WaitingForScene } from "./StatBlock.mjs";
+import StatBlock, { GetStatBlock, ListStatBlocks, WaitingForScene } from "./StatBlock.mjs";
 
 /** @param {(stats: StatBlock) => boolean} filter  */
 function refreshFilteredStatBlocks(filter) {
@@ -344,7 +344,11 @@ function fetchPendingBeyondSheets() {
 // #endregion
 
 // Addressing compatibility issues
-window.refreshTokenStats = refreshStatBlock;
-window.refreshPlayerTokenStats = refreshPlayerSheets;
-window.refreshMonsterTokenStats = refreshMonsterStatBlocks;
-window.refreshOpen5eTokenStats = refreshOpen5eStatBlocks;
+window.statBlocks = Object.freeze({
+    get: GetStatBlock,
+    isEnabled:  () => DiceActionsEnabled,
+    refreshStatBlock:  refreshStatBlock,
+    refreshPlayer:  refreshPlayerSheets,
+    refreshMonster:  refreshMonsterStatBlocks,
+    refreshOpen5e:  refreshOpen5eStatBlocks
+});

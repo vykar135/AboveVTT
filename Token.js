@@ -165,13 +165,13 @@ class Token {
 		delete this.options.hp;
 		delete this.options.temp_hp;
 
-		this.#stats = window.initStatBlock(options.id);
+		this.#stats = window.statBlocks.get(options.id);
 	}
 
 	/** @return {StatBlock} The normalized stat block for the token */
 	get stats() {
 		if (this.#stats == null) {
-			this.#stats = window.initStatBlock(this.options.id);
+			this.#stats = window.statBlocks.get(this.options.id);
 		}
 
 		if (this.#stats.needsRebuild) {
@@ -181,7 +181,7 @@ class Token {
 		return this.#stats;
 	}
 
-	/** @return {TokenStatusEffects} The manager for active, passive, and maintained status effects applied to the token */
+	/** @return {StatusEffects} The manager for active, passive, and maintained status effects applied to the token */
 	get statusEffects() {
 		return this.stats.statusEffects;
 	}

@@ -105,7 +105,7 @@
 			"TokenManagement/StatBlock.mjs",
         	"TokenManagement/StatNormalization.mjs",
         	"TokenManagement/StatBlockSources.mjs",
-			"TokenManagement/TokenStatusEffects.mjs",
+			"TokenManagement/StatusEffects.mjs",
 			"MessageBroker.js",
 			"ScenesHandler.js",
 			"ScenesPanel.js",

@@ -1,18 +1,18 @@
-/** @import { TokenStatusEffectContainer, Concentration, MaintainedEffect, ActiveStatusEffect, PassiveStatusEffect, StatusEffect } from './TokenStatusEffects.types.js' */
+/** @import { TokenStatusEffectContainer, Concentration, MaintainedEffect, ActiveStatusEffect, PassiveStatusEffect, StatusEffect } from './StatusEffects.types.js' */
 
 import StatBlock, { ListStatBlocks, LookupStatBlock } from './StatBlock.mjs';
 
 /**
  * @typedef GlobalStatusEffectConfig
  * @property {TokenStatusEffectContainer} settings - The configuration for status effects.
- * @property {TokenStatusEffects} effects - The status effects being modified.
+ * @property {StatusEffects} effects - The status effects being modified.
  * @property {(modified: boolean) => void} hasChanges - Callback used to notify the status effect manager of a change
  */
 
 /**
  * Manages the active, passive, and maintained (concentration) status effects that are currently effecting to a token.
  */
-export default class TokenStatusEffects {
+export default class StatusEffects {
     #stats;
     #version;
     #incapacitatedSources;
@@ -166,7 +166,7 @@ export default class TokenStatusEffects {
      * */
     canConcentrate(allowed, limit) {
         const container = this.#getContainer();
-        const settings = TokenStatusEffects.#initConcentration(container);
+        const settings = StatusEffects.#initConcentration(container);
         const wasAllowed = (settings.allowed ?? true);
         const previousLimit = (settings.limit ?? 1);
 
@@ -395,7 +395,7 @@ export default class TokenStatusEffects {
      */
     reviewConcentration() {
         const settings = this.#getContainer();
-        const concentration = TokenStatusEffects.#initConcentration(settings);
+        const concentration = StatusEffects.#initConcentration(settings);
 
         if (this.incapacitated === true || (concentration.allowed ?? true) === false) {
             this.dropConcentration();

@@ -5271,7 +5271,7 @@ function update_monster_item_cache(newItems, callback=()=>{}) {
    const promise = new Promise((resolve, reject) =>{
         newItems.forEach(async (item, index, array) => {
             cached_monster_items[item.monsterData.id] = item;
-            window.refreshMonsterTokenStats?.(item.monsterData.id);
+            window.statBlocks.refreshMonster?.(item.monsterData.id);
             if(index === array.length-1) {
               resolve();
             }
@@ -5285,7 +5285,7 @@ function update_open5e_item_cache(newItems, callback=()=>{}) {
    const promise = new Promise((resolve, reject) =>{
         newItems.forEach(async (item, index, array) => {
             cached_open5e_items[item.monsterData.key] = item;
-            window.refreshMonsterTokenStats?.(item.monsterData.key);
+            window.statBlocks.refreshMonster?.(item.monsterData.key);
             if(index === array.length-1) {
               resolve();
             }

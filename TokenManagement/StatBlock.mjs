@@ -5,7 +5,7 @@ import { DiceActionsEnabled, uriEquals } from './CoreEnums.mjs'
 import HitPointBlock from './HitPointBlock.mjs';
 import ConditionTracker, { BlindedDice, CharmedDice, DeafenedDice, ExhaustionDice, FrightenedDice, GrappledDice, IncapacitatedDice, InvisibleDice, ParalyzedDice, PetrifiedDice, PoisonedDice, ProneDice, RestrainedDice, StunnedDice, UnconsciousDice } from './ConditionTracker.mjs';
 import NumericStatTracker from './NumericStatTracker.mjs';
-import TokenStatusEffects from './TokenStatusEffects.mjs';
+import StatusEffects from './StatusEffects.mjs';
 import { DiceAction, DiceActionContext } from './DiceAction.mjs';
 import DefenseTracker from './DefenseTracker.mjs';
 import ToggleTracker from './ToggleTracker.mjs';
@@ -201,7 +201,7 @@ export default class StatBlock {
         this.#defenses = new BlockDefenses(this);
         this.#movement = new BlockMovement(this);
         this.#hitPoints = new HitPointBlock(this);
-        this.#effects = new TokenStatusEffects(this);
+        this.#effects = new StatusEffects(this);
 
         this.#initiative = new DiceAction(this.diceContext, 'initiative', 'Initiative', true, 'dex', true);
         this.#initiative.tags.addRange(['initiative', 'dex']);
@@ -1026,10 +1026,6 @@ class BlockDiceContext extends DiceActionContext {
      * @returns {DiceRollModifier[]} */
     listRollModifiers() { throw new Error('Not Implemented'); }
 }
-
-// Addressing compatibility issues
-window.initStatBlock = GetStatBlock;
-window.statNormalizationEnabled = DiceActionsEnabled;
 
 // Lets wait for the scene to load and setup any player characters that don't have active tokens.
 LoadPlayerCharacterBlocks();

@@ -1,5 +1,5 @@
 /** @import StatBlock from './StatBlock.mjs' */
-/** @import TokenStatusEffects from './TokenStatusEffects.mjs' */
+/** @import StatusEffects from './StatusEffects.mjs' */
 
 /**
  * @typedef {Object<string, any> & {
@@ -42,7 +42,7 @@
  * @property {number} MIN_TOKEN_SIZE - The minimum token size in pixels.
  * @property {number} MAX_TOKEN_SIZE - The maximum token size in pixels.
  * @property {StatBlock} stats - The normalized stat block for the token.
- * @property {TokenStatusEffects} statusEffects - The manager for active, passive, and maintained token status effects.
+ * @property {StatusEffects} statusEffects - The manager for active, passive, and maintained token status effects.
  * @property {number} hp - The total of the token's base hit points and temporary hit points.
  * @property {number} totalHp - The total hit points assigned to the token, including temporary hit points.
  * @property {number} hpPercentage - The percentage of the token's base hit points relative to its maximum hit points.
