@@ -714,10 +714,7 @@ export default class StatBlock {
     getNormalizedSheet() {
         const pb = this.#proficiency.current ?? 2;
         const diceContext = this.#diceContext;
-
-        function convertNumeric() {
-
-        }
+        const modifiers = this.#modifiers;
 
         /**
          * @param {DiceAction} save 
@@ -750,7 +747,7 @@ export default class StatBlock {
         /** @param {DiceAction} skill */
         function getSkill(skill) {
             // @ts-ignore
-            const abiltyMod = this.#modifiers[skill.ability]?.value;
+            const abiltyMod = modifiers[skill.ability]?.value;
             const modValue = abiltyMod?.current ?? 0
             const bonusAmount = skill.bonus ?? 0;
             const profAmount = (pb * (diceContext.convertNumeric(skill.proficiency) ?? 0));
@@ -769,7 +766,7 @@ export default class StatBlock {
         };
 
         /** @param {DefenseTracker} defense */
-        function getDefense (defense) {
+        function getDefense(defense) {
             return {
                 immune: defense.immune, 
                 resistant: defense.resistant, 
