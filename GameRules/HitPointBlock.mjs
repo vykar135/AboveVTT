@@ -300,7 +300,8 @@ export default class HitPointBlock {
         }
 
         if (!this.#statBlock.isPlayer) {
-            this.#statBlock.token?.sync();
+            this.#statBlock.hasPendingChanges(true);
+            this.#statBlock.sync();
             return;
         }
 
