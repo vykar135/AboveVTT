@@ -2,5 +2,6 @@
  * If you need to change this file, make sure you update .github/workflows/release-build.yml as well */
 const AVTT_ENVIRONMENT = {
   "versionSuffix": "-local",
-  "baseUrl": "https://services.abovevtt.net"
+  "baseUrl": "https://services.abovevtt.net",
+  "dice_actions": true
 };

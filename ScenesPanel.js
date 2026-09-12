@@ -1949,6 +1949,7 @@ function init_scenes_panel() {
 			delete data.hidePlayersScene;
 		}
 		AboveApi.setCampaignData(data);
+		window.AVTT_CAMPAIGN_INFO = data;
 		window.MB.sendMessage("custom/myVTT/campaignData", data);
 	});
 	scenesPanel.header.find('.expand-collapse-wrapper').prepend(hideMapFromPlayers);
