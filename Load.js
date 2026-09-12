@@ -73,6 +73,7 @@
         "Settings.js",
         "SidebarPanel.js",
         "StatHandler.js",
+        "GameRules/StatBlockSources.mjs",
         "Token.js",
         "constants/names.js",
         "TokenMenu.js",

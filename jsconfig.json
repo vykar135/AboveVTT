@@ -1,0 +1,11 @@
+{
+  "compilerOptions": {
+    "module": "commonjs",
+    "target": "ES2022",
+    "checkJs": true
+  },
+  "include": [
+    "GameRules/*",
+    "types/*"
+, "GameRules/types/StatusEffects.types.js", "GameRules/types/EffectDefinition.types.js"  ]
+}
