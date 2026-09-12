@@ -1,5 +1,5 @@
-import { DiceActionsEnabled, uriEquals } from "./CoreEnums.mjs";
-import StatBlock, { GetStatBlock, ListStatBlocks, WaitingForScene } from "./StatBlock.mjs";
+import { DiceActionsEnabled, GetCharacterId, IsGameMaster, uriEquals, WaitingForScene } from "./CoreEnums.mjs";
+import StatBlock, { GetActingAs, GetPrimaryCharacter, GetStatBlock, ListMyStatBlocks, ListStatBlocks } from "./StatBlock.mjs";
 
 /** @param {(stats: StatBlock) => boolean} filter  */
 function refreshFilteredStatBlocks(filter) {
@@ -82,7 +82,7 @@ export function fetchPlayerExtendedSheet(id) {
         id = id.toString();
     }
 
-    const owner = (window.DM || window.characterData?.id?.toString() === (id ?? ''));
+    const owner = (IsGameMaster() || GetCharacterId()?.toString() === (id ?? ''));
     if (!owner || id == null || typeof id !== 'string' || id.trim().length <= 1) {
         return undefined;
     }
@@ -94,7 +94,7 @@ export function fetchPlayerExtendedSheet(id) {
     const loader = { loading: true, failed: false, sheet: undefined };
     playerSheetsExt[id] = loader;
 
-    if (window.characterData?.id?.toString() == id) {
+    if (GetCharacterId()?.toString() == id) {
         loader.sheet = window.characterData;
         return loader.sheet;
     }
@@ -343,10 +343,17 @@ function fetchPendingBeyondSheets() {
 
 // #endregion
 
-// Addressing compatibility issues
+// Exposing relevant properties to non-modules
 window.statBlocks = Object.freeze({
-    get: GetStatBlock,
     isEnabled:  () => DiceActionsEnabled,
+
+    list: ListStatBlocks,
+    listMine: ListMyStatBlocks,
+
+    get: GetStatBlock,
+    getPrimary: GetPrimaryCharacter,
+    getActingAs: GetActingAs,
+
     refreshStatBlock:  refreshStatBlock,
     refreshPlayer:  refreshPlayerSheets,
     refreshMonster:  refreshMonsterStatBlocks,

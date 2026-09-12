@@ -1,7 +1,7 @@
 /** @import { Token } from './Token.types.js' */
 
 import { fetchBeyondSheetForToken, fetchOpen5eSheetForToken, fetchPlayerExtendedSheet } from './StatBlockSources.mjs';
-import { DiceActionsEnabled, uriEquals } from './CoreEnums.mjs'
+import { DiceActionsEnabled, GetCharacterId, GetCurrentUser, IsGameMaster, uriEquals, WaitingForScene } from './CoreEnums.mjs'
 import HitPointBlock from './HitPointBlock.mjs';
 import ConditionTracker, { BlindedDice, CharmedDice, DeafenedDice, ExhaustionDice, FrightenedDice, GrappledDice, IncapacitatedDice, InvisibleDice, ParalyzedDice, PetrifiedDice, PoisonedDice, ProneDice, RestrainedDice, StunnedDice, UnconsciousDice } from './ConditionTracker.mjs';
 import NumericStatTracker from './NumericStatTracker.mjs';
@@ -13,6 +13,20 @@ import StatNormalization from './StatNormalization.mjs';
 
 /** @type {{ [id: string]: StatBlock }} */
 const StatBlockCache = {};
+/** @type {StatBlock | undefined} */
+let CharacterStatBlock = undefined;
+/** @type {StatBlock | undefined} */
+let ActingAs = undefined;
+
+/** Retrieves the primary character stat block to use when a player is viewing the VTT. */
+export function GetPrimaryCharacter() {
+    return CharacterStatBlock;
+}
+
+/** Retrieves the stat block that the user is currently acting as; will default to the active character when applicable. */
+export function GetActingAs() {
+    return ActingAs ?? CharacterStatBlock;
+}
 
 /**
  * Gets or adds the stat block from the central store
@@ -34,7 +48,7 @@ export function GetStatBlock(id){
 }
 
 /**
- * Gets the stat block from the central store
+ * Gets the stat block from the central store without initializing it.
  * @param {string} id - The identifier of the character or creature. */
 export function LookupStatBlock(id){
     if (id != null && id in StatBlockCache) {
@@ -49,8 +63,14 @@ export function ListStatBlocks() {
     return Object.values(StatBlockCache);
 }
 
-export function WaitingForScene() {
-    return (window.LOADING === true || window.pcs == null || window.TOKEN_OBJECTS == null || window.all_token_objects == null);
+/** Provides an enumeration of all stat blocks that the user is a contributor to. */
+export function ListMyStatBlocks() {
+    const available = ListStatBlocks();
+    if (IsGameMaster()) {
+        return available;
+    }
+
+    return available.filter(entry => entry.isContributor);
 }
 
 /** Waits for the scene to load then initializes any */
@@ -60,10 +80,19 @@ function LoadPlayerCharacterBlocks() {
         return;
     }
 
+    const active = GetCharacterId()?.toString()?.toLowerCase();
     for (const entry of window.pcs) {
         const character = GetStatBlock(entry.sheet);
-        if (character != null && character.level === 0) {
+        if (character == null) {
+            continue;
+        }
+
+        if (character.level === 0) {
             character.rebuild();
+        }
+
+        if (character.characterId != null && character.characterId === active) {
+            CharacterStatBlock = character;
         }
     }
 }
@@ -115,7 +144,7 @@ function syncPendingPlayerOptions() {
         }
     }
 
-    if (!window.DM) {
+    if (!IsGameMaster()) {
         console.log('TODO: Send pending changes to DM to let them manage the full update.');
         console.log(campaign);
         return;
@@ -262,7 +291,7 @@ export default class StatBlock {
     get needsRebuild() { return this.#needsRebuild; }
 
     /** Whether the user can contribute to the token. */
-    get isContributor() { return (window.DM === true || this.#contributor === true); }
+    get isContributor() { return (this.#contributor === true); }
 
     /** Whether a backing character or monster stat block was found for the token */
     get hasSheet() { return this.#hasSheet; }
@@ -512,7 +541,7 @@ export default class StatBlock {
     /** @returns {{ round: number, token?: Token, initiative?: number }} A snapshot of the current initiative order in the combat tracker */
     static getActiveInitiative() {
         for (const token of Object.values(window.all_token_objects)) {
-            if (token.options.current === true && (token.options.ct_show === true || (window.DM && token.options.ct_show !== undefined))) {
+            if (token.options.current === true && (token.options.ct_show === true || (IsGameMaster() && token.options.ct_show !== undefined))) {
                 return StatBlock.getTokenInitiative(token);
             }
         }
@@ -594,8 +623,8 @@ export default class StatBlock {
             this.#characterUri = player?.sheet;
             this.#player = (player != null);
             this.#contributor = (
-                window.DM === true || tokenOptions?.player_owned === true ||
-                (this.#player && window.PLAYER_ID != null && player.characterId?.toString() === window.PLAYER_ID.toString())
+                IsGameMaster() === true || tokenOptions?.player_owned === true ||
+                (this.#player && player.userId === GetCurrentUser())
             );
 
             const sheets = { tokenOptions, player, playerExt: undefined, playerOptions: undefined };

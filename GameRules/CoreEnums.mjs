@@ -13,7 +13,24 @@
  * @typedef { DiceModifierSettings & { ability: KnownConfigurationSettings } } SkillCheckSettings
  */
 
-/** Determines if a development feature is active. */
+/** Whether the new game rules feature is enabled. */
+export const DiceActionsEnabled = checkFeatureEnabled('dice_actions');
+
+/** The identifier of the current users that is using the VTT */
+export const GetCurrentUser = initCurrentUser();
+/** The identifier of the game master for the campaign */
+export const GetGameMaster = initGameMaster();
+/** The identifier of the character that the user is primarily viewing the VTT as */
+export const GetCharacterId = initActiveCharacter();
+
+export function WaitingForScene() {
+    return (window.LOADING === true || window.pcs == null || window.TOKEN_OBJECTS == null || window.all_token_objects == null);
+}
+
+export function IsGameMaster() {
+    return (GetCurrentUser() === GetGameMaster());
+}
+
 export function checkFeatureEnabled(feature) {
     let features = localStorage.getItem('AVTT-Development-Features') ?? {};
     if (typeof features === 'string') {
@@ -27,8 +44,68 @@ export function checkFeatureEnabled(feature) {
     return (AVTT_ENVIRONMENT[feature] === true);
 }
 
-/** Whether normalized stat blocks and dice actions are enabled */
-export const DiceActionsEnabled = checkFeatureEnabled('dice_actions');
+function initCurrentUser() {
+    /** @type {number | undefined} */
+    let user = undefined;
+
+    const checkUser = () => {
+        if (user !== undefined) {
+            return user;
+        }
+
+        let read = ($(`#message-broker-client[data-userid]`)?.attr('data-userid') ?? Cobalt?.User?.ID);
+        if (read != null && typeof read !== 'number') {
+            read = parseInt(read);
+        }
+
+        user = read;
+        return user;
+    };
+
+    return checkUser;
+}
+
+function initGameMaster() {
+    /** @type {number | undefined} */
+    let dm = undefined;
+
+    const checkGameMaster = () => {
+        if (dm !== undefined) {
+            return dm;
+        }
+
+        let read = window.CAMPAIGN_INFO?.dmId;
+        if (read != null && typeof read !== 'number') {
+            read = parseInt(read);
+        }
+
+        dm = read;
+        return dm;
+    };
+
+    return checkGameMaster;
+}
+
+function initActiveCharacter() {
+    /** @type {number | undefined} */
+    let active = undefined;
+
+    const checkCharacter = () => {
+        if (active !== undefined) {
+            return active;
+        }
+
+        let read = window.characterData?.id;
+        if (read != null && typeof read !== 'number') {
+            read = parseInt(read);
+        }
+
+        active = read;
+        return active;
+    };
+
+    return checkCharacter;
+}
 
 /** Manages a sealed index of configuration settings for a given type. */
 export class Configuration {
@@ -541,3 +618,12 @@ function buildPropertyIndex() {
 
 /** Full index of all available configuration settings. */
 export const ConfigurationIndex = buildPropertyIndex();
+
+// Exposing relevant properties to non-modules
+window.gameState = Object.freeze({
+    isWaiting: WaitingForScene,
+    isGameMaster: IsGameMaster,
+    getCurrentUser: GetCurrentUser,
+    getGameMaster: GetGameMaster,
+    getCharacterId: GetCharacterId
+});

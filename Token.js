@@ -1,4 +1,4 @@
-﻿/** @import StatBlock from "./TokenManagement/StatBlock.mjs" */
+﻿/** @import StatBlock from "./GameRules/StatBlock.mjs" */
 
 const TOKEN_COLORS = ["1A6AFF", "FF7433", "FFD433", "884DFF", "5F0404", "EC8AFF", "00E5FF",
 					"000000", "F032E6", "911EB4", //END OF NEW COLORS
