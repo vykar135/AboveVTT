@@ -469,7 +469,7 @@ export default class StatBlock {
         }
 
         destination.status_effects = structuredClone(source.status_effects);
-        destination.hpSnapshot = structuredClone(source.hpSnapshot);
+        destination.hitPointInfo = structuredClone(source.hitPointInfo);
         destination.snapshots = structuredClone(source.snapshots);
     }
 
@@ -645,8 +645,6 @@ export default class StatBlock {
                 sheets.playerOptions = this.#getPlayerOptions();
 
                 if (player?.hitPointInfo != null) {
-                    // Snapshotting the base total HP because some messages are removing.
-                    sheets.playerOptions.baseTotalHp = player.hitPointInfo.baseTotalHp ?? sheets.playerOptions.baseTotalHp;
                     sheets.playerOptions.hitPointInfo = { ...player.hitPointInfo };
                 }
             }
