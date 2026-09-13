@@ -43,12 +43,13 @@ class ActionBarControl {
     #theme;
     #bar;
     #dialog;
-    #videoOpen;
 
     #hp;
     #abilities;
     #saves;
     #skills;
+    #actions;
+    #conditions;
 
     constructor() {
         if (!DiceActionsEnabled) {
@@ -61,15 +62,16 @@ class ActionBarControl {
 
         this.#bar = $('<div class="avtt-hotbar" />').appendTo(this.#container);
         this.#dialog = new ActionBarDialog(this.#container);
-        this.#videoOpen = false;
 
-        this.#hp = $('<div class="avtt-hotbar-button"><span>Hit Points</span></div>').appendTo(this.#bar);
-        this.#abilities = $('<div class="avtt-hotbar-button"><span>Abilities</span></div>').appendTo(this.#bar);
-        this.#saves = $('<div class="avtt-hotbar-button"><span>Saves</span></div>').appendTo(this.#bar);
-        this.#skills = $('<div class="avtt-hotbar-button"><span>Skills</span></div>').appendTo(this.#bar);
+        this.#hp = $('<div class="avtt-hotbar-button hp"><span class="icon" /></div>').appendTo(this.#bar);
+        this.#abilities = $('<div class="avtt-hotbar-button abilities"><span class="icon" /></div>').appendTo(this.#bar);
+        this.#saves = $('<div class="avtt-hotbar-button saves"><span class="icon" /></div>').appendTo(this.#bar);
+        this.#skills = $('<div class="avtt-hotbar-button skills"><span class="icon" /></div>').appendTo(this.#bar);
+        this.#actions = $('<div class="avtt-hotbar-button actions"><span class="icon" /></div>').appendTo(this.#bar);
+        this.#conditions = $('<div class="avtt-hotbar-button srd-conditions"><span class="icon" /></div>').appendTo(this.#bar);
 
         let count = 0;
-        for (const entry of [ this.#hp, this.#abilities, this.#saves, this.#skills ]) {
+        for (const entry of [ this.#hp, this.#abilities, this.#saves, this.#skills, this.#actions, this.#conditions ]) {
             const content = $(`<div>I\'m menu #${count}</div>`);
             entry.on('click', () => this.#dialog.attach(entry, content))
             count++;
@@ -183,9 +185,6 @@ export class ActionBarDialog {
         }
 
         this.#dialog.empty();
-        if (content != null) {
-            this.#dialog.append(content);
-        }
 
         if (this.#archor === anchor) {
             this.#archor = undefined;
@@ -193,6 +192,10 @@ export class ActionBarDialog {
             this.#onRelease = undefined;
             this.#dialog.toggleClass('open', false);
             return;
+        }
+        
+        if (content != null) {
+            this.#dialog.append(content);
         }
 
         this.#archor = anchor;

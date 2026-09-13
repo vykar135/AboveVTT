@@ -6,6 +6,9 @@
         --hotbar-border: 1px solid rgba(255, 255, 255, 0.25);
         --hotbar-box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
         --hotbar-color: #FFF;
+        --hotbar-idle-color: rgba(255, 255, 255, 0.45);
+        --hotbar-hover: #FFF;
+        --hotbar-icon-size: 32px;
     }
 
     :scope.use-light-mode {
@@ -13,11 +16,26 @@
         --hotbar-border: 1px solid rgba(0, 0, 0, 0.25);
         --hotbar-box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
         --hotbar-color: rgba(0, 0, 0, 0.85);
+        --hotbar-idle-color: rgba(0, 0, 0, 0.45);
+        --hotbar-hover: rgba(0, 0, 0, 0.85);;
+    }
+
+    :scope {
+        --hotbar-bug: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="%23e3e3e3"><path d="M480-120q-65 0-120.5-32T272-240H160v-80h84q-3-20-3.5-40t-.5-40h-80v-80h80q0-20 .5-40t3.5-40h-84v-80h112q14-23 31.5-43t40.5-35l-64-66 56-56 86 86q28-9 57-9t57 9l88-86 56 56-66 66q23 15 41.5 34.5T688-640h112v80h-84q3 20 3.5 40t.5 40h80v80h-80q0 20-.5 40t-3.5 40h84v80H688q-32 56-87.5 88T480-120Zm-80-200h160v-80H400v80Zm0-160h160v-80H400v80Z"/></svg>');
+        --hotbar-hp: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="%23e3e3e3"><path d="m480-120-58-52q-101-91-167-157T150-447.5Q111-500 95.5-544T80-634q0-94 63-157t157-63q52 0 99 22t81 62q34-40 81-62t99-22q94 0 157 63t63 157q0 46-15.5 90T810-447.5Q771-395 705-329T538-172l-58 52Z"/></svg>');
+        --hotbar-hp-hurt: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="%23e3e3e3"><path d="M645-840q100 0 167.5 74T880-590q0 18-2 35.5t-7 34.5H621l-67-102h-72l-54 172-47-70H89q-5-17-7-34.5T80-589q0-103 67-177t167-74q48 0 90.5 19t75.5 53q32-34 74.5-53t90.5-19ZM479-82 148-415q-6-6-11-12t-10-13h211l69 103h71l54-173 46 70h254l-10 12-10 12L479-82Z"/></svg>');
+        --hotbar-hp-bloody: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="%23e3e3e3"><path d="M121-480q-22-35-31.5-69.5T80-621q0-94 63-156.5T300-840q51 0 98.5 22t81.5 62q34-40 81-62t99-22q94 0 157 63.5T880-619q-32-29-73-45t-87-16q-90 0-156 57.5T484-480h-62L321-632 218-480h-97Zm359 360L353-234q-61-55-101.5-94.5T182-400h79l59-88 59 88h105q9 55 40.5 99t78.5 70L480-120Zm200-280v-200h80v200h-80Zm11.5 108.5Q680-303 680-320t11.5-28.5Q703-360 720-360t28.5 11.5Q760-337 760-320t-11.5 28.5Q737-280 720-280t-28.5-11.5Z"/></svg>');
+        --hotbar-dead: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="%23e3e3e3"><path d="M420-330h120l-60-120-60 120Zm-80-110q33 0 56.5-23.5T420-520q0-33-23.5-56.5T340-600q-33 0-56.5 23.5T260-520q0 33 23.5 56.5T340-440Zm280 0q33 0 56.5-23.5T700-520q0-33-23.5-56.5T620-600q-33 0-56.5 23.5T540-520q0 33 23.5 56.5T620-440ZM240-80v-170q-39-17-68.5-45.5t-50-64.5q-20.5-36-31-77T80-520q0-158 112-259t288-101q176 0 288 101t112 259q0 42-10.5 83t-31 77q-20.5 36-50 64.5T720-250v170H600v-80h-80v80h-80v-80h-80v80H240Z"/></svg>');
+        --hotbar-abilities: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="%23e3e3e3"><path d="M360-120v-200q-62-5-121.5-14T120-360l20-80q83 23 168 31.5t172 8.5q86 0 171-8.5T820-440l20 80q-60 17-119.5 26T600-320v200H360Zm120-320q-34 0-57-23t-23-57q0-33 23-56.5t57-23.5q33 0 56.5 23.5T560-520q0 34-23.5 57T480-440ZM180-560q-26 0-43-17t-17-43q0-25 17-42.5t43-17.5q25 0 42.5 17.5T240-620q0 26-17.5 43T180-560Zm600 0q-26 0-43-17t-17-43q0-25 17-42.5t43-17.5q25 0 42.5 17.5T840-620q0 26-17.5 43T780-560ZM290-710q-26 0-43-17t-17-43q0-25 17-42.5t43-17.5q25 0 42.5 17.5T350-770q0 26-17.5 43T290-710Zm380 0q-26 0-43-17t-17-43q0-25 17-42.5t43-17.5q25 0 42.5 17.5T730-770q0 26-17.5 43T670-710Zm-190-50q-26 0-43-17t-17-43q0-25 17-42.5t43-17.5q25 0 42.5 17.5T540-820q0 26-17.5 43T480-760Z"/></svg>');
+        --hotbar-saves: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="%23e3e3e3"><path d="M324-111.5Q251-143 197-197t-85.5-127Q80-397 80-480q0-114 59.5-210.5T301-838q1 19 4 38.5t10 45.5q-72 44-113.5 116.5T160-480q0 134 93 227t227 93q134 0 227-93t93-227q0-85-41.5-158T644-755q7-26 10-45.5t5-37.5q102 51 161.5 147T880-480q0 83-31.5 156T763-197q-54 54-127 85.5T480-80q-83 0-156-31.5ZM310-310q-70-70-70-170 0-58 25.5-109t72.5-85q5 15 11 34.5t16 48.5q-22 23-33.5 51T320-480q0 66 47 113t113 47q66 0 113-47t47-113q0-32-11.5-60T595-591q8-24 14.5-44.5T621-674q47 34 73 85t26 109q0 100-70 170t-170 70q-100 0-170-70Zm130-310q-37-112-48.5-157.5T380-860q0-42 29-71t71-29q42 0 71 29t29 71q0 37-11.5 82.5T520-620h-80Zm-16.5 196.5Q400-447 400-480t23.5-56.5Q447-560 480-560t56.5 23.5Q560-513 560-480t-23.5 56.5Q513-400 480-400t-56.5-23.5Z"/></svg>');
+        --hotbar-skills: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="%23e3e3e3"><path d="m480-80-20-400-140-40H40v-80h240l280-200 52 61-166 119h114l312-180 48 56-340 264-20 400h-80ZM240-640q-33 0-56.5-23.5T160-720q0-33 23.5-56.5T240-800q33 0 56.5 23.5T320-720q0 33-23.5 56.5T240-640Z"/></svg>');
+        --hotbar-actions: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="%23e3e3e3"><path d="M762-96 645-212l-88 88-28-28q-23-23-23-57t23-57l169-169q23-23 57-23t57 23l28 28-88 88 116 117q12 12 12 28t-12 28l-50 50q-12 12-28 12t-28-12Zm118-628L426-270l5 4q23 23 23 57t-23 57l-28 28-88-88L198-96q-12 12-28 12t-28-12l-50-50q-12-12-12-28t12-28l116-117-88-88 28-28q23-23 57-23t57 23l4 5 454-454h160v160ZM278-526 80-724v-160h160l198 198-160 160Z"/></svg>');
+        --hotbar-srd-conditions: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="%23e3e3e3"><path d="m336-496 84-84-85-85-42 42 43 42-43 43 43 42Zm447.5-127.5Q760-647 760-680q0-27 15-57.5T840-840q50 72 65 102.5t15 57.5q0 33-23.5 56.5T840-600q-33 0-56.5-23.5ZM625-495l43-43-43-43 42-42-42-42-85 85 85 85Zm-145 75q-26 0-50.5 6T383-397l-143-83q0-16-8-30t-22-22q-22-12-45.5-5.5T128-510q-12 22-5.5 45.5T150-428q14 8 30 8t30-8l119 69q-17 17-30.5 36.5T276-280h66q21-36 57-58t81-22q45 0 81 22t57 58h66q-24-62-78.5-101T480-420Zm0 340q-84 0-157-31.5T196-197q-54-54-85-127T80-480q0-83 31-156t85-127q54-54 127-85.5T480-880q74 0 139.5 24T737-788q-14 26-25.5 52T700-680q0 59 41 99.5t99 40.5q9 0 18-1t17-3q2 16 3.5 31.5T880-480q0 83-31.5 156T763-197q-54 54-127 85.5T480-80Z"/></svg>');
     }
 
     :scope {
         position: fixed;
-        bottom: 25px;
+        bottom: 15px;
         left: 0;
         right: var(--sidebar-width, 340px);
         height: fit-content;
@@ -33,7 +51,7 @@
     div.avtt-hotbar {
         display: flex;
         flex-direction: row;
-        padding: 5px 18px;
+        padding: 0 18px;
         border-radius: 16px;
         pointer-events: auto;
 
@@ -51,6 +69,61 @@
         align-items: center;
         cursor: pointer;
         padding: 5px 5px;
+        color: var(--hotbar-idle-color);
+
+        &:hover {
+            color: var(--hotbar-hover);
+        }
+
+        & > span.icon {
+            display: inline-block;
+            height: var(--hotbar-icon-size);
+            width: var(--hotbar-icon-size);
+            background-color: var(--hotbar-idle-color);
+
+            -webkit-mask-image: var(--hotbar-bug);
+            -webkit-mask-size: contain;
+            -webkit-mask-repeat: no-repeat;
+
+            mask-image: var(--hotbar-bug);
+            mask-size: contain;
+            mask-repeat: no-repeat;
+
+            &:hover {
+                background-color: var(--hotbar-hover);
+            }
+        }
+
+        &.hp > span.icon {
+            -webkit-mask-image: var(--hotbar-hp);
+            mask-image: var(--hotbar-hp);
+        }
+
+        &.abilities > span.icon {
+            -webkit-mask-image: var(--hotbar-abilities);
+            mask-image: var(--hotbar-abilities);
+        }
+
+        &.saves > span.icon {
+            -webkit-mask-image: var(--hotbar-saves);
+            mask-image: var(--hotbar-saves);
+        }
+
+        &.skills > span.icon {
+            -webkit-mask-image: var(--hotbar-skills);
+            mask-image: var(--hotbar-skills);
+        }
+
+        &.actions > span.icon {
+            -webkit-mask-image: var(--hotbar-actions);
+            mask-image: var(--hotbar-actions);
+        }
+
+        /* "conditions" by itself is a keyword, causes wierd render issues. */
+        &.srd-conditions > span.icon {
+            -webkit-mask-image: var(--hotbar-srd-conditions);
+            mask-image: var(--hotbar-srd-conditions);
+        }
     }
 
     div.avtt-hotbar-menu {
