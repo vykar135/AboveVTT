@@ -152,14 +152,10 @@ function syncPendingPlayerOptions() {
 
     // Update the campaign data in the API.
     AboveApi.setCampaignData(campaign).then(() => {
-        console.log('Synced characters to campaign');
-        console.log([...pendingPlayers.pending.values()]);
-        console.log(campaign);
         pendingPlayers.pending.clear();
 
     }).catch((error) => {
         console.error('Failed to sync character data to campaign', error);
-        console.log(campaign);
         
     }).finally(() => {
         pendingPlayers.timer = undefined;

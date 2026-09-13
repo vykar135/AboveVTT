@@ -3,5 +3,6 @@
 const AVTT_ENVIRONMENT = {
   "versionSuffix": "-local",
   "baseUrl": "https://services.abovevtt.net",
-  "dice_actions": true
+  "dice_actions": true,
+  "prevent_item_load": true
 };
