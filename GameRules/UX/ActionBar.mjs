@@ -1,46 +1,9 @@
 import { DiceActionsEnabled } from '../CoreEnums.mjs'
-
-/**
- * @typedef {'system' | 'dark' | 'light'} ThemeOptions
- * 
- * @callback DialogReleaseCallback
- * @param {JQuery<HTMLElement> | undefined} [anchor] - The former anchor that is beind released by the dialog.
- * @param {JQuery<HTMLElement> | undefined} [content] - The former content that is being released by the dialog.
- */
-
-/**
- * Reviews what theme the user currently wants, adds an event listener for any changes, and a means to override it manually.
- * @param {JQuery<HTMLElement>} container 
- * @returns {(option: ThemeOptions) => void} */
-export function MonitorSystemTheme(container) {
-    const useLightMode = window.matchMedia('(prefers-color-scheme: light)');
-
-    /** @type {ThemeOptions} */
-    let manualTheme = localStorage.getItem('AVTT-Theme') ?? 'system';
-
-    const setupTheme = (event) => {
-        let requested = manualTheme;
-        if (requested === 'system') {
-            requested = (event?.matches ?? false) ? 'light' : 'dark'
-        }
-
-        container.toggleClass('use-light-mode', (requested === 'light'));
-    };
-
-    setupTheme(useLightMode);
-    useLightMode.addEventListener('change', setupTheme);
-
-    return (theme) => {
-        manualTheme = theme ?? 'system';
-        localStorage.setItem('AVTT-Theme', theme);
-        setupTheme(undefined);
-    };
-}
+import { Tabletop, TabletopDialog } from './Tabletop.mjs';
 
 /** Management of the main action bar for the active character or token being played by the user. */
 class ActionBarControl {
     #container;
-    #theme;
     #bar;
     #dialog;
 
@@ -58,10 +21,10 @@ class ActionBarControl {
         }
 
         this.#container = $('<div class="avtt-hotbar-container" />');
-        this.#theme = MonitorSystemTheme(this.#container);
+        Tabletop.monitorTheme(this.#changeTheme.bind(this));
 
         this.#bar = $('<div class="avtt-hotbar" />').appendTo(this.#container);
-        this.#dialog = new ActionBarDialog(this.#container);
+        this.#dialog = new TabletopDialog(this.#container);
 
         this.#hp = $('<div class="avtt-hotbar-button hp"><span class="icon" /></div>').appendTo(this.#bar);
         this.#abilities = $('<div class="avtt-hotbar-button abilities"><span class="icon" /></div>').appendTo(this.#bar);
@@ -83,10 +46,12 @@ class ActionBarControl {
     }
 
     /**
-     * Manually sets the theme for all action bar controls.
-     * @param {'system' | 'dark' | 'light' | undefined} theme */
-    setTheme(theme) {
-        this.#theme(theme ?? 'system');
+     * Handles a change to the tabletop's theme
+     * @param {CustomEvent<{ theme: string }>} event
+    */
+    #changeTheme(event) {
+        const requested = event.detail.theme ?? 'dark';
+        this.#container.toggleClass('use-light-mode', (requested === 'light'));
     }
 
     /** Notifies the action bar that the peer-to-peer video panel is open. */
@@ -111,109 +76,9 @@ class ActionBarControl {
     }
 }
 
-export class ActionBarDialog {
-    #dialog;
-
-    /** @type {JQuery<HTMLElement> | undefined} */
-    #archor;
-    /** @type {JQuery<HTMLElement> | undefined} */
-    #content;
-    /** @type {DialogReleaseCallback | undefined} */
-    #onRelease;
-
-    /** @param {JQuery<HTMLElement>} container - The container to place the dialog within.  */
-    constructor(parent) {
-        this.#dialog = $('<div class="avtt-hotbar-menu" />').appendTo(parent);
-        this.#archor = undefined;
-        this.#content = undefined;
-
-        $(window).on('keydown', this.#keyboardClose.bind(this));
-
-        Object.freeze(this);
-    }
-
-    /** @param {JQuery.KeyDownEvent} event  */
-    #keyboardClose(event) {
-        if (event.key === 'Escape') {
-            this.close();
-        }
-    }
-
-    /** Closes the dialog. */
-    close() {
-        if (typeof this.#onRelease === 'function') {
-            try {
-                this.#onRelease(this.#archor, this.#content);
-            } catch (error) {
-                console.error('Failed to release content from an action bar dialog', error);
-            }
-        }
-
-        try {
-            this.#content?.detach();
-        } catch (error) {
-            console.error('Failed to detach content from an action bar dialog', error);
-        }
-
-        this.#dialog.empty();
-
-        this.#archor = undefined;
-        this.#content = undefined;
-        this.#onRelease = undefined;
-        this.#dialog.toggleClass('open', false);
-    }
-
-    /**
-     * Moves the dialog to the specified anchor and opens it if it isn't already; otherwise closes the dialog.
-     * @param {JQuery<HTMLElement>} anchor - The HTML element to anchor the dialog to.
-     * @param {JQuery<HTMLElement>} content - The HTML element to display within the dialog.
-     * @param {DialogReleaseCallback | undefined} onRelease
-     */
-    attach(anchor, content, onRelease) {
-        if (typeof this.#onRelease === 'function') {
-            try {
-                this.#onRelease(this.#archor, this.#content);
-            } catch (error) {
-                console.error('Failed to release content from an action bar dialog', error);
-            }
-        }
-
-        try {
-            this.#content?.detach();
-        } catch (error) {
-            console.error('Failed to detach content from an action bar dialog', error);
-        }
-
-        this.#dialog.empty();
-
-        if (this.#archor === anchor) {
-            this.#archor = undefined;
-            this.#content = undefined;
-            this.#onRelease = undefined;
-            this.#dialog.toggleClass('open', false);
-            return;
-        }
-        
-        if (content != null) {
-            this.#dialog.append(content);
-        }
-
-        this.#archor = anchor;
-        this.#content = content;
-        this.#onRelease = onRelease;
-
-        const bounds = anchor.get(0).getBoundingClientRect();
-        this.#dialog.css({
-            "left": `${bounds.left + (bounds.width / 2)}px`,
-            "bottom": `${document.documentElement.clientHeight - bounds.top + 10}px`
-        });
-
-        this.#dialog.toggleClass('open', true);
-    }
-}
-
 export const ActionBar = new ActionBarControl();
 
 window.tabletop = Object.freeze({
+    environment: Tabletop,
     actionBar: ActionBar
 });

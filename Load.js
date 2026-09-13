@@ -123,7 +123,7 @@
         "spectrum-2.0.8.min.css",
         "magnific-popup.css",
         "DiceContextMenu/DiceContextMenu.css",
-        "GameRules/UX/ActionBar.css"
+        "GameRules/UX/Tabletop.css"
     ];
     const simpleAvttStyles = [
         "DiceContextMenu/DiceContextMenu.css", "jquery.contextMenu.css"
