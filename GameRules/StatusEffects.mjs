@@ -1,6 +1,7 @@
 /** @import { TokenStatusEffectContainer, Concentration, MaintainedStatusEffect, ActiveStatusEffect, PassiveStatusEffect, StatusEffect } from './types/StatusEffects.types.js' */
 
-import StatBlock, { ListStatBlocks, LookupStatBlock } from './StatBlock.mjs';
+import StatBlock from './StatBlock.mjs';
+import { StatBlockCache } from './StatBlockCache.mjs';
 
 /**
  * @typedef GlobalStatusEffectConfig
@@ -113,7 +114,7 @@ export default class StatusEffects {
      * @returns {StatBlock | undefined}
      */
     #getTargetStatBlock(target) {
-        const cached = LookupStatBlock(target);
+        const cached = StatBlockCache.lookup(target);
         if (cached == null) {
             return undefined;
         }
@@ -376,7 +377,7 @@ export default class StatusEffects {
         let removed = (rebuild.length !== current.length);
         this.#stats.hasPendingChanges(removed);
 
-        const available = ListStatBlocks();
+        const available = StatBlockCache.list();
         for (const target of available) {
             const localRemove = target.statusEffects.dropActiveEffect(tracking);
             if (localRemove) {

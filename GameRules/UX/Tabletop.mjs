@@ -51,12 +51,12 @@ export class TabletopEnvironment {
         this.#commit();
 
         const notify = this.#createThemeEvent();
-        window.dispatchEvent(notify)
+        window.dispatchEvent(notify);
     }
 
     /**
      * Registers a callback to monitor for changes to the tabletop theme.
-     * @param {(event: CustomEvent<{theme: string}>) => void} callback 
+     * @param {(event: Event) => void} callback 
      * @returns {() => void} Callback used to remove the event listener. */
     monitorTheme(callback) {
         const notify = this.#createThemeEvent();
@@ -89,7 +89,9 @@ export class TabletopEnvironment {
         return new CustomEvent(ThemeEvent, {
             detail: {
                 theme: showing
-            }
+            },
+            bubbles: false,
+            cancelable: false
         });
     }
 }

@@ -1,7 +1,8 @@
 // @ts-nocheck
 
 import { DiceActionsEnabled, GetCharacterId, IsGameMaster, uriEquals, WaitingForScene } from "./CoreEnums.mjs";
-import StatBlock, { GetActingAs, GetPrimaryCharacter, GetStatBlock, ListMyStatBlocks, ListStatBlocks } from "./StatBlock.mjs";
+import StatBlock from "./StatBlock.mjs";
+import { StatBlockCache } from "./StatBlockCache.mjs";
 
 /** @param {(stats: StatBlock) => boolean} filter  */
 function refreshFilteredStatBlocks(filter) {
@@ -9,7 +10,7 @@ function refreshFilteredStatBlocks(filter) {
         return;
     }
 
-    const available = ListStatBlocks();
+    const available = StatBlockCache.list();
     for (const stats of available) {
         if (filter(stats) === true) {
             stats.rebuild();
@@ -23,7 +24,7 @@ function refreshFilteredTokens(filter) {
         return;
     }
 
-    const available = ListStatBlocks();
+    const available = StatBlockCache.list();
     for (const stats of available) {
         if (stats.token?.options == null) {
             continue;
@@ -350,12 +351,13 @@ function fetchPendingBeyondSheets() {
 window.statBlocks = Object.freeze({
     isEnabled:  () => DiceActionsEnabled,
 
-    list: ListStatBlocks,
-    listMine: ListMyStatBlocks,
+    list: () => StatBlockCache.list(),
+    listMine: () => StatBlockCache.listMine(),
 
-    get: GetStatBlock,
-    getPrimary: GetPrimaryCharacter,
-    getActingAs: GetActingAs,
+    get: (id) => StatBlockCache.get(id),
+    getPrimary: () => StatBlockCache.primary,
+    getActor: () => StatBlockCache.actor,
+    changeActor: (actor) => StatBlockCache.changeActor(actor),
 
     refreshStatBlock:  refreshStatBlock,
     refreshPlayer:  refreshPlayerSheets,

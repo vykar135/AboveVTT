@@ -11,92 +11,6 @@ import DefenseTracker from './DefenseTracker.mjs';
 import ToggleTracker from './ToggleTracker.mjs';
 import StatNormalization from './StatNormalization.mjs';
 
-/** @type {{ [id: string]: StatBlock }} */
-const StatBlockCache = {};
-/** @type {StatBlock | undefined} */
-let CharacterStatBlock = undefined;
-/** @type {StatBlock | undefined} */
-let ActingAs = undefined;
-
-/** Retrieves the primary character stat block to use when a player is viewing the VTT. */
-export function GetPrimaryCharacter() {
-    return CharacterStatBlock;
-}
-
-/** Retrieves the stat block that the user is currently acting as; will default to the active character when applicable. */
-export function GetActingAs() {
-    return ActingAs ?? CharacterStatBlock;
-}
-
-/**
- * Gets or adds the stat block from the central store
- * @param {string} id - The identifier of the character or creature to build the stat block for. */
-export function GetStatBlock(id){
-    if (id == null) {
-        return undefined;
-    }
-
-    if (id in StatBlockCache) {
-        return StatBlockCache[id];
-    }
-
-    const stats = new StatBlock(id);
-    StatBlockCache[stats.id] = stats;
-
-    stats.rebuild();
-    return stats;
-}
-
-/**
- * Gets the stat block from the central store without initializing it.
- * @param {string} id - The identifier of the character or creature. */
-export function LookupStatBlock(id){
-    if (id != null && id in StatBlockCache) {
-        return StatBlockCache[id];
-    }
-
-    return undefined;
-}
-
-/** Provides an enumeration of all available stat blocks. */
-export function ListStatBlocks() {
-    return Object.values(StatBlockCache);
-}
-
-/** Provides an enumeration of all stat blocks that the user is a contributor to. */
-export function ListMyStatBlocks() {
-    const available = ListStatBlocks();
-    if (IsGameMaster()) {
-        return available;
-    }
-
-    return available.filter(entry => entry.isContributor);
-}
-
-/** Waits for the scene to load then initializes any */
-function LoadPlayerCharacterBlocks() {
-    if (WaitingForScene()) {
-        window.setTimeout(LoadPlayerCharacterBlocks, 1000);
-        return;
-    }
-
-    const active = GetCharacterId()?.toString()?.toLowerCase();
-    for (const entry of window.pcs) {
-        const character = GetStatBlock(entry.sheet);
-        if (character == null) {
-            continue;
-        }
-
-        if (character.level === 0) {
-            character.rebuild();
-        }
-
-        if (character.characterId != null && character.characterId === active) {
-            CharacterStatBlock = character;
-        }
-    }
-}
-
 /** @type {{ pending: Set<StatBlock>, allowed: Set<string>, delay: number, timer?: number }} */
 const pendingPlayers = {
     pending: new Set(),
@@ -631,7 +545,7 @@ export default class StatBlock {
             this.#player = (player != null);
             this.#contributor = (
                 IsGameMaster() === true || tokenOptions?.player_owned === true ||
-                (this.#player && player.userId === GetCurrentUser())
+                (this.#player && (player.userId === GetCurrentUser() || this.#characterId == GetCharacterId()?.toString()))
             );
 
             /** @type {import('./StatNormalization.mjs').AvailableSheets} */
@@ -1100,6 +1014,3 @@ class BlockDiceContext extends DiceActionContext {
         return undefined;
     }
 }
-
-// Lets wait for the scene to load and setup any player characters that don't have active tokens.
-LoadPlayerCharacterBlocks();

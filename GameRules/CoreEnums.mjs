@@ -26,15 +26,12 @@ export const GetCurrentUser = initCurrentUser();
 export const GetGameMaster = initGameMaster();
 /** The identifier of the character that the user is primarily viewing the VTT as */
 export const GetCharacterId = initActiveCharacter();
+/** Whether the current user is the game master */
+export const IsGameMaster = initIsGameMaster();
 
 /** Whether the VTT is in a state that will present the least possible issues with user interaction */
 export function WaitingForScene() {
     return (window.LOADING === true || window.pcs == null || window.TOKEN_OBJECTS == null || window.all_token_objects == null);
-}
-
-/** Whether the current user is the game master */
-export function IsGameMaster() {
-    return (GetCurrentUser() === GetGameMaster());
 }
 
 /** @param {string} feature  */
@@ -89,6 +86,34 @@ function initGameMaster() {
 
         dm = read;
         return dm;
+    };
+
+    return checkGameMaster;
+}
+
+function initIsGameMaster() {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('dm') !== 'true') {
+        return () => false;
+    }
+
+    /** @type {boolean | undefined} */
+    let active = undefined;
+
+    const checkGameMaster = () => {
+        if (active !== undefined) {
+            return active;
+        }
+
+        const user = GetCurrentUser();
+        const dm = GetGameMaster();
+
+        if (user == null || dm == null) {
+            return false;
+        }
+
+        active = (user == dm);
+        return active;
     };
 
     return checkGameMaster;

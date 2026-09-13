@@ -103,6 +103,7 @@
 			"GameRules/DefenseTracker.mjs",
 			"GameRules/ToggleTracker.mjs",
 			"GameRules/StatBlock.mjs",
+        	"GameRules/StatBlockCache.mjs",
         	"GameRules/StatNormalization.mjs",
         	"GameRules/StatBlockSources.mjs",
 			"GameRules/StatusEffects.mjs",
