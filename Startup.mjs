@@ -86,11 +86,13 @@ $(function() {
         await rebuild_window_pcs();
         startup_step("Fetching Party Inventory/Items/Spells")
         try{
-          await Promise.all([
-            DDBApi.debounceGetPartyInventory(),
-            DDBApi.fetchSpellsJsonWithToken(),
-            DDBApi.fetchItemsJsonWithToken()
-          ]);
+          if (AVTT_ENVIRONMENT.prevent_item_load !== true) {
+            await Promise.all([
+              DDBApi.debounceGetPartyInventory(),
+              DDBApi.fetchSpellsJsonWithToken(),
+              DDBApi.fetchItemsJsonWithToken()
+            ]);
+          }
         } catch (error) {
           console.warn(`Failed to fetch party inventory/items/spells`, error)
         }

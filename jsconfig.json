@@ -7,5 +7,5 @@
   "include": [
     "GameRules/*",
     "types/*"
-, "GameRules/types/EffectOverrideDesigner.mjs"  ]
+  ]
 }

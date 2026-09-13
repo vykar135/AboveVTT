@@ -106,6 +106,8 @@
         	"GameRules/StatNormalization.mjs",
         	"GameRules/StatBlockSources.mjs",
 			"GameRules/StatusEffects.mjs",
+			"GameRules/UX/ActionBar.css",
+			"GameRules/UX/ActionBar.mjs",
 			"MessageBroker.js",
 			"ScenesHandler.js",
 			"ScenesPanel.js",
