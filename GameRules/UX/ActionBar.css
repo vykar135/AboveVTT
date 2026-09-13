@@ -1,19 +1,6 @@
 @scope (.avtt-hotbar-container) {
     :scope {
-        position: fixed;
-        bottom: 25px;
-        left: 0;
-        right: var(--sidebar-width);
-        height: fit-content;
-        z-index: 9999;
-
-        display: flex;
-        flex-direction: row;
-        justify-content: center;
-        align-items: flex-end;
-    }
-
-    :scope {
+        --hotbar-z-index: 9999;
         --hotbar-background: rgba(0, 0, 0, 0.65); 
         --hotbar-backdrop-filter: blur(12px);
         --hotbar-border: 1px solid rgba(255, 255, 255, 0.25);
@@ -28,11 +15,27 @@
         --hotbar-color: rgba(0, 0, 0, 0.85);
     }
 
-    & div.avtt-hotbar {
+    :scope {
+        position: fixed;
+        bottom: 25px;
+        left: 0;
+        right: var(--sidebar-width, 340px);
+        height: fit-content;
+        z-index: var(--hotbar-z-index);
+        pointer-events: none;
+
+        display: flex;
+        flex-direction: row;
+        justify-content: center;
+        align-items: flex-end;
+    }
+
+    div.avtt-hotbar {
         display: flex;
         flex-direction: row;
         padding: 5px 18px;
         border-radius: 16px;
+        pointer-events: auto;
 
         background: var(--hotbar-background);
         backdrop-filter: var(--hotbar-backdrop-filter);
@@ -40,5 +43,33 @@
         border: var(--hotbar-border);
         box-shadow: var(--hotbar-box-shadow);
         color: var(--hotbar-color);
+    }
+
+    div.avtt-hotbar-button {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        cursor: pointer;
+        padding: 5px 5px;
+    }
+
+    div.avtt-hotbar-menu {
+        display: none;
+        position: fixed;
+        transform: translateX(-50%);
+        padding: 5px 0;
+        border-radius: 10px;
+        pointer-events: auto;
+
+        background: var(--hotbar-background);
+        backdrop-filter: var(--hotbar-backdrop-filter);
+        -webkit-backdrop-filter: var(--hotbar-backdrop-filter);
+        border: var(--hotbar-border);
+        box-shadow: var(--hotbar-box-shadow);
+        color: var(--hotbar-color);
+
+        &.open {
+            display: flex;
+        }
     }
 }
