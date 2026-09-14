@@ -76,6 +76,12 @@ class ActionBarControl {
     }
 }
 
+class ActionBarMenu {
+    constructor() {
+        Object.freeze(this);
+    }
+}
+
 class HitPointManager {
     #button;
     #dialog;

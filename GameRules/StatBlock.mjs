@@ -135,7 +135,7 @@ export default class StatBlock {
 
         this.#ac = new NumericStatTracker(this, 'ac', 10, 'Armor Class');
         this.#scores = new BlockAbilityScores(this);
-        this.#modifiers = new BlockAbilityModifiers(this);
+        this.#modifiers = new BlockAbilityModifiers(this, this.#scores);
         this.#saves = new BlockSavingThrows(this);
         this.#skills = new BlockSkillChecks(this);
         this.#conditions = new BlockConditions(this);
@@ -784,27 +784,36 @@ class BlockAbilityScores {
 
 /** Defines the ability modifiers associated with a stat block. */
 class BlockAbilityModifiers {
-    /** @param {StatBlock} stats  */
-    constructor(stats) {
-        this.str = new BlockAbilityModifier(stats, 'str', 'Strength Ability Check');
-        this.dex = new BlockAbilityModifier(stats, 'dex', 'Dexterity Ability Check');
-        this.con = new BlockAbilityModifier(stats, 'con', 'Constitution Ability Check');
-        this.wis = new BlockAbilityModifier(stats, 'wis', 'Wisdom Ability Check');
-        this.int = new BlockAbilityModifier(stats, 'int', 'Intellegence Ability Check');
-        this.cha = new BlockAbilityModifier(stats, 'cha', 'Charisma Ability Check');
+    /**
+     * @param {StatBlock} stats 
+     * @param {BlockAbilityScores} scores 
+    */
+    constructor(stats, scores) {
+        this.str = new BlockAbilityModifier(stats, scores.str, 'str', 'Strength Ability Check');
+        this.dex = new BlockAbilityModifier(stats, scores.dex, 'dex', 'Dexterity Ability Check');
+        this.con = new BlockAbilityModifier(stats, scores.con, 'con', 'Constitution Ability Check');
+        this.wis = new BlockAbilityModifier(stats, scores.wis, 'wis', 'Wisdom Ability Check');
+        this.int = new BlockAbilityModifier(stats, scores.int, 'int', 'Intellegence Ability Check');
+        this.cha = new BlockAbilityModifier(stats, scores.cha, 'cha', 'Charisma Ability Check');
         Object.freeze(this);
     }
 }
 
 /** Defines an ability modifier associated with a stat block. */
 class BlockAbilityModifier {
+    #score;
+    #bonus;
+
     /**
      * @param {StatBlock} stats
+     * @param {NumericStatTracker} score
      * @param {string} uri
      * @param {string} name
      */
-    constructor(stats, uri, name) {
-        this.value = new NumericStatTracker(stats, `${uri}:modifier`, 0, name);
+    constructor(stats, score, uri, name) {
+        this.#score = score;
+        this.#bonus = 0;
+        this.value = new NumericStatTracker(stats, `${uri}:modifier`, this.calculateBaseline.bind(this), name, { allowSnapshots: false });
 
         // @ts-ignore
         this.check = new DiceAction(stats.diceContext, `${uri}:check`, name, true, uri, true);
@@ -822,6 +831,26 @@ class BlockAbilityModifier {
     get current() { return this.value.current; }
     /** The base value of the property. */
     get base() { return this.value.base; }
+    /** The score used to calculate the baseline. */
+    get score() { return this.#score; }
+    /** The bonus value appended to the calculated value from the score baseline. */
+    get bonus() { return this.#bonus; }
+
+    /**
+     * Sets the bonus value and assigns the baseline calculation to the numeric tracker.
+     * @param {number} value 
+     */
+    setBonus(value) {
+        this.#bonus = value;
+        this.value.setBaseValue(this.calculateBaseline.bind(this));
+    }
+
+    /** Calculates the current base modifier including the baseline from the score. */
+    calculateBaseline() {
+        let baseline = this.#score?.base ?? 10;
+        baseline = Math.floor((baseline - 10) / 2);
+        return baseline + this.#bonus;
+    }
 }
 
 /** Defines the saving throws associated with a stat block. */

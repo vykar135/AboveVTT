@@ -1,6 +1,8 @@
 import StatBlock from "./StatBlock.mjs";
 
 /**
+ * @typedef {number | (() => number)} NumericTrackerBase
+ * 
  * @typedef {Object} NumericStatImpact
  * @property {string} [instance] - The reference to the status effect that produced the change.
  * @property {number} [version] - The version of the status effect collect at the time the impact was applied.
@@ -13,6 +15,9 @@ import StatBlock from "./StatBlock.mjs";
  * @property {boolean} [importPenalty] - Whether the imported value is treated as a penalty against the requesting property.
  * 
  * @typedef {'manual' | 'initiative' | 'long_rest' | 'short_rest' | 'dawn'} ChargeReset
+ * 
+ * @typedef {Object} NumericTrackerSettings
+ * @property {boolean} [allowSnapshots] - Whehther or not snapshots are allowed for the tracker; defaults to true.
  */
 
 /** Manages a numberic property value that can have status effects applied to it. */
@@ -20,7 +25,8 @@ export default class NumericStatTracker {
     #stats
     #uri;
     #name;
-    #chargesReset;
+
+    /** @type {NumericTrackerBase} */
     #base;
 
     /** @type {number | undefined} */
@@ -33,43 +39,47 @@ export default class NumericStatTracker {
     #sources;
     /** @type {number} */
     #calculated;
-    /** @type {number | undefined} */
-    #chargesUsed;
+    #allowSnapshots;
 
     /**
      * @param {StatBlock} stats - The stat block that this property is for.
      * @param {string} uri - The identifier of the property.
-     * @param {number} value - The initial value for the property.
+     * @param {NumericTrackerBase} value - The initial value for the property.
      * @param {string} name - The name of the property.
-     * @param {ChargeReset} [chargesReset] - When charges associated with the tracker reset.
+     * @param {NumericTrackerSettings} [options] - When charges associated with the tracker reset.
      */
-    constructor(stats, uri, value, name, chargesReset){
+    constructor(stats, uri, value, name, options){
         this.#uri = uri;
         this.#name = name;
         this.#stats = stats;
         this.#base = value;
-        this.#chargesReset = chargesReset;
         this.#sources = [];
         this.#calculated = 0;
         this.#multiplier = 1;
-        this.#chargesUsed = 0;
         this.#baseOverride = undefined;
         this.#snapshot = undefined;
+        this.#allowSnapshots = options?.allowSnapshots ?? true;
     }
 
     /** The name of the property. */
     get name() { return this.#name; }
 
     /** The base value of the property. */
-    get base() { return this.#base; }
+    get base() {
+        if (typeof this.#base === 'function') {
+            return this.#base() ?? 0;
+        }
+
+        return this.#base;
+    }
 
     /** The effective base value of the property adjusted for a snapshot at the time an effect was applied. */
     get baseEffective() {
         if (this.#stats.isPlayer) {
-            return (this.#baseOverride ?? this.#snapshot ?? this.#base);
+            return (this.#baseOverride ?? this.#snapshot ?? this.base);
         }
 
-        return this.#baseOverride ?? this.#base;
+        return this.#baseOverride ?? this.base;
     }
 
     /** Whether the tracker is currently maintaining a list of changes. */
@@ -89,27 +99,18 @@ export default class NumericStatTracker {
     /** @returns {number} The multiplier on the base + calculated amount on the effects that are applied to the stat block. */
     get multiplier() { return this.#multiplier ?? 1; }
 
-    /** When charges associated with the tracker reset. */
-    get chargesReset() { return this.#chargesReset; }
-
-    /** The number of changes that have been used. */
-    get chargesUsed() { return this.#chargesUsed ?? 0; }
-
-    /** The number of changes that are reminaing. */
-    get chargesRemaining() { return this.current - this.chargesUsed; }
-
     /** @returns {boolean} Whether the player's character sheet is not synced with the campaign. */
     isNotSynced() {
         if (!this.#stats.isPlayer || this.#snapshot === undefined) {
             return false;
         }
 
-        return (this.#snapshot !== this.#base);
+        return (this.#snapshot !== this.base);
     }
 
     /**
      * Updates the base value for the property.
-     * @param {number} value - The new value to assign
+     * @param {NumericTrackerBase} value - The new value to assign
      */
     setBaseValue(value) {
         this.#base = value;
@@ -125,7 +126,7 @@ export default class NumericStatTracker {
         // We leave the visited property undefined here so that it will create it for each individual effect
         const [base, calculated, multipler] = this.#recalculateGraph(version, undefined);
 
-        this.#baseOverride = ((this.#snapshot ?? this.#base) !== base) ? base : undefined;
+        this.#baseOverride = ((this.#snapshot ?? this.base) !== base) ? base : undefined;
         this.#calculated = calculated;
         this.#multiplier = multipler;
 
@@ -176,7 +177,7 @@ export default class NumericStatTracker {
             }
         }
 
-        return [(base ?? this.#snapshot ?? this.#base), calculated, (multipler ?? 1)];
+        return [(base ?? this.#snapshot ?? this.base), calculated, (multipler ?? 1)];
     }
 
     /** Removes the current snapshot */
@@ -190,7 +191,7 @@ export default class NumericStatTracker {
      * @param {boolean} canWrite - Whether the snapshot value can be written back to the stat block as a pending update
      */
     setSnapshot(value, canWrite) {
-        if (!this.#stats.isPlayer) {
+        if (!this.#stats.isPlayer || !this.#allowSnapshots) {
             return;
         }
 
@@ -241,7 +242,7 @@ export default class NumericStatTracker {
             return;
         }
 
-        const snapshot = this.#snapshot ?? this.#base;
+        const snapshot = this.#snapshot ?? this.base;
         this.setSnapshot(snapshot, true);
 
         instance = instance.toLowerCase();

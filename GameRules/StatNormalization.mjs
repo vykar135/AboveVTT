@@ -237,11 +237,20 @@ export default class StatNormalization {
             this.#sheets.open5e?.modifiers?.[config.open5e] ??
             this.#sheets.tokenOptions.abilities?.find((entry) => uriEquals(entry?.name, expected))?.modifier;
 
-        if (value == null) {
-            value = Math.floor((score.base - 10) / 2);
+        if (typeof value === 'string') {
+            value = parseInt(value);
+            if (isNaN(value)) {
+                value = undefined;
+            }
         }
 
-        this.#updateNumeric(modifier.value, value);
+        if (value == null || typeof value !== 'number') {
+            modifier.setBonus(0);
+            return;
+        }
+
+        const baseline = Math.floor((score.base - 10) / 2);
+        modifier.setBonus(baseline - value);
     }
 
     /**
