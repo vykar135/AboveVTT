@@ -2,9 +2,17 @@
 /**
  * @typedef {'system' | 'dark' | 'light'} ThemeOptions
  * 
- * @callback DialogReleaseCallback
+ * @callback DialogCloseCallback
  * @param {JQuery<HTMLElement> | undefined} [anchor] - The former anchor that is beind released by the dialog.
  * @param {JQuery<HTMLElement> | undefined} [content] - The former content that is being released by the dialog.
+ * 
+ * @typedef DialogOptions
+ * @property {string[]} classNames - The collection of class names to enable on the dialog.
+ * @property {'top' | 'bottom' | 'left' | 'right'} [edge] - The edge to originate the dialog from.
+ * @property {'start' | 'center' | 'end'} [alignment] - Where along the anchor element's edge the dialog will start.
+ * @property {'topleft' | 'bottomleft' | 'topright' | 'bottomright'} [screenOrigin] - How the dialog will position itself relative to the viewport.
+ * @property {number} [offset] - The number of pixels to offset the dialog from the bound edge.
+ * @property {DialogCloseCallback} [onClose] - The callback to make when the dialog is closed.
  */
 
 const EnvironmentLocalStore = 'AVTT-UX-Settings';
@@ -107,17 +115,30 @@ export class TabletopDialog {
     #archor;
     /** @type {JQuery<HTMLElement> | undefined} */
     #content;
-    /** @type {DialogReleaseCallback | undefined} */
-    #onRelease;
+    /** @type {DialogCloseCallback | undefined} */
+    #onClose;
+    /** @type {string[]} */
+    #classNames;
+    /** @type {'top' | 'bottom' | 'left' | 'right'} */
+    #edge;
+    /** @type {'start' | 'center' | 'end'} */
+    #alignment;
+    /** @type {'topleft' | 'bottomleft' | 'topright' | 'bottomright'} */
+    #screenOrigin
+    /** @type {number} */
+    #offset;
 
     /** @param {JQuery<HTMLElement>} container - The container to place the dialog within.  */
     constructor(parent) {
-        this.#dialog = $('<div class="avtt-hotbar-menu" />').appendTo(parent);
+        this.#dialog = $('<div class="avtt-dialog" />').appendTo(parent);
         this.#archor = undefined;
         this.#content = undefined;
-        this.#onRelease = undefined;
+        this.#onClose = undefined;
+        this.#classNames = [];
 
-        $(window).on('keydown', this.#keyboardClose.bind(this));
+        const eventing = $(window);
+        eventing.on('keydown', this.#keyboardClose.bind(this));
+        eventing.on('resize', this.#position.bind(this));
 
         Object.freeze(this);
     }
@@ -131,9 +152,9 @@ export class TabletopDialog {
 
     /** Closes the dialog. */
     close() {
-        if (typeof this.#onRelease === 'function') {
+        if (typeof this.#onClose === 'function') {
             try {
-                this.#onRelease(this.#archor, this.#content);
+                this.#onClose(this.#archor, this.#content);
             } catch (error) {
                 console.error('Failed to release content from an action bar dialog', error);
             }
@@ -147,9 +168,19 @@ export class TabletopDialog {
 
         this.#dialog.empty();
 
+        this.#closeDialog();
+    }
+
+    /** Finalizes a request to close the dialog. */
+    #closeDialog() {
+        for (const name of this.#classNames) {
+            this.#dialog.toggleClass(name, false);
+        }
+
         this.#archor = undefined;
         this.#content = undefined;
-        this.#onRelease = undefined;
+        this.#onClose = undefined;
+        this.#classNames = [];
         this.#dialog.toggleClass('open', false);
     }
 
@@ -157,12 +188,12 @@ export class TabletopDialog {
      * Moves the dialog to the specified anchor and opens it if it isn't already; otherwise closes the dialog.
      * @param {JQuery<HTMLElement>} anchor - The HTML element to anchor the dialog to.
      * @param {JQuery<HTMLElement>} content - The HTML element to display within the dialog.
-     * @param {DialogReleaseCallback | undefined} onRelease
+     * @param {DialogOptions} [options] - Additional options used to render or managed the dialog.
      */
-    attach(anchor, content, onRelease) {
-        if (typeof this.#onRelease === 'function') {
+    attach(anchor, content, options) {
+        if (typeof this.#onClose === 'function') {
             try {
-                this.#onRelease(this.#archor, this.#content);
+                this.#onClose(this.#archor, this.#content);
             } catch (error) {
                 console.error('Failed to release content from an action bar dialog', error);
             }
@@ -177,27 +208,93 @@ export class TabletopDialog {
         this.#dialog.empty();
 
         if (this.#archor === anchor) {
-            this.#archor = undefined;
-            this.#content = undefined;
-            this.#onRelease = undefined;
-            this.#dialog.toggleClass('open', false);
+            this.#closeDialog();
             return;
         }
 
-        if (content != null) {
+        if ((content?.length ?? 0) > 0) {
             this.#dialog.append(content);
         }
 
         this.#archor = anchor;
         this.#content = content;
-        this.#onRelease = onRelease;
+        this.#onClose = options?.onClose;
+        this.#classNames = options?.classNames ?? ['standard', 'centerX'];
+        this.#edge = options?.edge ?? 'top';
+        this.#alignment = options?.alignment ?? 'center';
+        this.#screenOrigin = options?.screenOrigin ?? 'bottomleft';
+        this.#offset = options?.offset ?? -5;
 
-        const bounds = anchor.get(0).getBoundingClientRect();
-        this.#dialog.css({
-            "left": `${bounds.left + (bounds.width / 2)}px`,
-            "bottom": `${document.documentElement.clientHeight - bounds.top + 5}px`
-        });
+        this.#position();
+
+        for (const name of this.#classNames) {
+            this.#dialog.toggleClass(name, true);
+        }
 
         this.#dialog.toggleClass('open', true);
+    }
+
+    /** Repositions the dialog based on the options provided. */
+    #position() {
+        if (this.#archor == null) {
+            return;
+        }
+
+        const bounds = this.#archor.get(0).getBoundingClientRect();
+        const isEdgeHorizontal = (this.#edge === 'top' || this.#edge === 'bottom');
+
+        let edgeStart = bounds.top;
+        let edgeEnd = bounds.bottom;
+        if (isEdgeHorizontal) {
+            edgeStart = bounds.left;
+            edgeEnd = bounds.right;
+        }
+
+        const edgeSize = (isEdgeHorizontal) ? bounds.width : bounds.height;
+        let edgePosition = edgeSize;
+        if (this.#alignment === 'center') {
+            edgePosition = (edgeSize / 2);
+        } else if (this.#alignment === 'end') {
+            edgePosition = edgeSize;
+        }
+
+        let x = bounds.left + edgePosition;
+        let y = bounds.top + this.#offset;
+        if (this.#edge === 'bottom') {
+            y = bounds.bottom + this.#offset;
+        } else if (this.#edge === 'left') {
+            x = bounds.left + this.#offset;
+            y = bounds.top + edgePosition;
+        } else if (this.#edge === 'right') {
+            x = bounds.right + this.#offset;
+            y = bounds.top + edgePosition;
+        }
+
+        const css = {
+            left: '',
+            right: '',
+            top: '',
+            bottom: '',
+            width: '',
+            height: ''
+        };
+
+        if (this.#screenOrigin === 'topleft') {
+            css.left = `${x}px`;
+            css.top = `${y}px`;
+            
+        } else if (this.#screenOrigin === 'topright') {
+            css.right = `${document.documentElement.clientWidth - x}px`;
+            css.top = `${y}px`;
+
+        } else if (this.#screenOrigin === 'bottomleft') {
+            css.left = `${x}px`;
+            css.bottom = `${document.documentElement.clientHeight - y}px`;
+        } else if (this.#screenOrigin === 'bottomright') {
+            css.right = `${document.documentElement.clientWidth - x}px`;
+            css.bottom = `${document.documentElement.clientHeight - y}px`;
+        }
+
+        this.#dialog.css(css);
     }
 }

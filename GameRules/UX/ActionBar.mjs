@@ -36,7 +36,7 @@ class ActionBarControl {
         let count = 0;
         for (const entry of [ this.#hp, this.#abilities, this.#saves, this.#skills, this.#actions, this.#conditions ]) {
             const content = $(`<div>I\'m menu #${count}</div>`);
-            entry.on('click', () => this.#dialog.attach(entry, content))
+            entry.on('click', () => this.#dialog.attach(entry, content, { classNames: [ 'standard', 'centerX' ]}))
             count++;
         }
 
@@ -73,6 +73,15 @@ class ActionBarControl {
         this.#container.css({
             "bottom": `${document.documentElement.clientHeight - bounds.top}px`
         });
+    }
+}
+
+class HitPointManager {
+    #button;
+    #dialog;
+
+    constructor() {
+
     }
 }
 

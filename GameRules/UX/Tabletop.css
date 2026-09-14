@@ -126,23 +126,28 @@
         }
     }
 
-    div.avtt-hotbar-menu {
+    div.avtt-dialog {
         display: none;
         position: fixed;
-        transform: translateX(-50%);
-        padding: 5px 0;
         border-radius: 10px;
         pointer-events: auto;
 
-        background: var(--hotbar-background);
-        backdrop-filter: var(--hotbar-backdrop-filter);
-        -webkit-backdrop-filter: var(--hotbar-backdrop-filter);
-        border: var(--hotbar-border);
-        box-shadow: var(--hotbar-box-shadow);
-        color: var(--hotbar-color);
-
         &.open {
             display: flex;
+        }
+
+        &.standard {
+            padding: 5px 0;
+            background: var(--hotbar-background);
+            backdrop-filter: var(--hotbar-backdrop-filter);
+            -webkit-backdrop-filter: var(--hotbar-backdrop-filter);
+            border: var(--hotbar-border);
+            box-shadow: var(--hotbar-box-shadow);
+            color: var(--hotbar-color);
+        }
+
+        &.centerX {
+            transform: translateX(-50%);
         }
     }
 }
