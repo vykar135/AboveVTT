@@ -150,7 +150,7 @@ export class TabletopDialog {
     #dialog;
 
     /** @type {JQuery<HTMLElement> | undefined} */
-    #archor;
+    #anchor;
     /** @type {JQuery<HTMLElement> | undefined} */
     #content;
     /** @type {DialogCloseCallback | undefined} */
@@ -169,7 +169,7 @@ export class TabletopDialog {
     /** @param {JQuery<HTMLElement>} container - The container to place the dialog within.  */
     constructor(parent) {
         this.#dialog = $('<div class="avtt-dialog" />').appendTo(parent);
-        this.#archor = undefined;
+        this.#anchor = undefined;
         this.#content = undefined;
         this.#onClose = undefined;
         this.#classNames = [];
@@ -194,7 +194,7 @@ export class TabletopDialog {
     close() {
         if (typeof this.#onClose === 'function') {
             try {
-                this.#onClose(this.#archor, this.#content);
+                this.#onClose(this.#anchor, this.#content);
             } catch (error) {
                 console.error('Failed to release content from an action bar dialog', error);
             }
@@ -217,7 +217,7 @@ export class TabletopDialog {
             this.#dialog.toggleClass(name, false);
         }
 
-        this.#archor = undefined;
+        this.#anchor = undefined;
         this.#content = undefined;
         this.#onClose = undefined;
         this.#classNames = [];
@@ -233,7 +233,7 @@ export class TabletopDialog {
     attach(anchor, content, options) {
         if (typeof this.#onClose === 'function') {
             try {
-                this.#onClose(this.#archor, this.#content);
+                this.#onClose(this.#anchor, this.#content);
             } catch (error) {
                 console.error('Failed to release content from an action bar dialog', error);
             }
@@ -247,7 +247,7 @@ export class TabletopDialog {
 
         this.#dialog.empty();
 
-        if (this.#archor === anchor) {
+        if (this.#anchor === anchor) {
             this.#closeDialog();
             return;
         }
@@ -256,7 +256,7 @@ export class TabletopDialog {
             this.#dialog.append(content);
         }
 
-        this.#archor = anchor;
+        this.#anchor = anchor;
         this.#content = content;
         this.#onClose = options?.onClose;
         this.#classNames = options?.classNames ?? ['standard', 'centerX'];
@@ -281,11 +281,11 @@ export class TabletopDialog {
 
     /** Repositions the dialog based on the options provided. */
     #position() {
-        if (this.#archor == null) {
+        if (this.#anchor == null) {
             return;
         }
 
-        const bounds = this.#archor.get(0).getBoundingClientRect();
+        const bounds = this.#anchor.get(0).getBoundingClientRect();
         const isEdgeHorizontal = (this.#edge === 'top' || this.#edge === 'bottom');
 
         let edgeStart = bounds.top;
