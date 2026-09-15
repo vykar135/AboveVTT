@@ -22,6 +22,7 @@
 
     :scope {
         --hotbar-bug: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="%23e3e3e3"><path d="M480-120q-65 0-120.5-32T272-240H160v-80h84q-3-20-3.5-40t-.5-40h-80v-80h80q0-20 .5-40t3.5-40h-84v-80h112q14-23 31.5-43t40.5-35l-64-66 56-56 86 86q28-9 57-9t57 9l88-86 56 56-66 66q23 15 41.5 34.5T688-640h112v80h-84q3 20 3.5 40t.5 40h80v80h-80q0 20-.5 40t-3.5 40h84v80H688q-32 56-87.5 88T480-120Zm-80-200h160v-80H400v80Zm0-160h160v-80H400v80Z"/></svg>');
+        --hotbar-play-as: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="%23e3e3e3"><path d="M220-464 64-620l156-156 156 156-156 156ZM360-80v-200q-61-5-121-14.5T120-320l20-80q84 23 168.5 31.5T480-360q87 0 171.5-8.5T820-400l20 80q-59 16-119 25.5T600-280v200H360ZM220-576l44-44-44-44-44 44 44 44Zm175-139q-35-35-35-85t35-85q35-35 85-35t85 35q35 35 35 85t-35 85q-35 35-85 35t-85-35Zm28.5 291.5Q400-447 400-480t23.5-56.5Q447-560 480-560t56.5 23.5Q560-513 560-480t-23.5 56.5Q513-400 480-400t-56.5-23.5Zm85-348Q520-783 520-800t-11.5-28.5Q497-840 480-840t-28.5 11.5Q440-817 440-800t11.5 28.5Q463-760 480-760t28.5-11.5ZM682-480l-68-120 68-120h136l68 120-68 120H682Zm46-80h44l22-40-22-40h-44l-22 40 22 40Zm-508-60Zm260-180Zm270 200Z"/></svg>');
         --hotbar-hp: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="%23e3e3e3"><path d="m480-120-58-52q-101-91-167-157T150-447.5Q111-500 95.5-544T80-634q0-94 63-157t157-63q52 0 99 22t81 62q34-40 81-62t99-22q94 0 157 63t63 157q0 46-15.5 90T810-447.5Q771-395 705-329T538-172l-58 52Z"/></svg>');
         --hotbar-hp-hurt: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="%23e3e3e3"><path d="M645-840q100 0 167.5 74T880-590q0 18-2 35.5t-7 34.5H621l-67-102h-72l-54 172-47-70H89q-5-17-7-34.5T80-589q0-103 67-177t167-74q48 0 90.5 19t75.5 53q32-34 74.5-53t90.5-19ZM479-82 148-415q-6-6-11-12t-10-13h211l69 103h71l54-173 46 70h254l-10 12-10 12L479-82Z"/></svg>');
         --hotbar-hp-bloody: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="%23e3e3e3"><path d="M121-480q-22-35-31.5-69.5T80-621q0-94 63-156.5T300-840q51 0 98.5 22t81.5 62q34-40 81-62t99-22q94 0 157 63.5T880-619q-32-29-73-45t-87-16q-90 0-156 57.5T484-480h-62L321-632 218-480h-97Zm359 360L353-234q-61-55-101.5-94.5T182-400h79l59-88 59 88h105q9 55 40.5 99t78.5 70L480-120Zm200-280v-200h80v200h-80Zm11.5 108.5Q680-303 680-320t11.5-28.5Q703-360 720-360t28.5 11.5Q760-337 760-320t-11.5 28.5Q737-280 720-280t-28.5-11.5Z"/></svg>');
@@ -51,7 +52,7 @@
     div.avtt-hotbar {
         display: flex;
         flex-direction: row;
-        padding: 0 18px;
+        padding: 0 5px;
         border-radius: 16px;
         pointer-events: auto;
 
@@ -68,6 +69,10 @@
 
         &.names > div.avtt-hotbar-button {
             min-width: 50px;
+
+            &.play-as {
+                min-width: 0;
+            }
 
             & > span.title {
                 display: inline-block;
@@ -110,6 +115,11 @@
             & > span.icon {
                 background-color: var(--hotbar-hover);
             }
+        }
+
+        &.play-as > span.icon {
+            -webkit-mask-image: var(--hotbar-play-as);
+            mask-image: var(--hotbar-play-as);
         }
 
         &.hp > span.icon {

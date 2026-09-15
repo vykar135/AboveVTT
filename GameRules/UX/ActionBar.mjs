@@ -46,7 +46,7 @@ class ActionBarControl {
         this.#showingNames = false;
         this.#actor = undefined;
 
-        this.#actorSelect = this.#createMenuButton('Actor', 'unknown', this.#createPlaceholder());
+        this.#actorSelect = this.#createMenuButton('Play As', 'play-as', this.#createPlaceholder());
         this.#actorSelect.button.appendTo(this.#bar);
 
         this.#hp = this.#createMenuButton('Health', 'hp', this.#createPlaceholder());
