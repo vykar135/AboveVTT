@@ -1104,6 +1104,15 @@ function token_context_menu_expanded(tokenIds, e, crossScenePortalData) {
 				body.append(button);
 			}
 		}
+
+		if (window.statBlocks != null && token.stats?.isContributor === true) {
+			let button = $(`<button style="padding-left: 0;"><span class="material-symbols-outlined">person_play</span><span style="padding-left: 3px;">Assign To Action Bar</span></button>`);
+			button.on("click", function() {
+				window.statBlocks?.changeActor(token.stats);
+				close_token_context_menu();
+			});
+			body.append(button);
+		}
 	}
 
 
@@ -1718,16 +1727,6 @@ function token_context_menu_expanded(tokenIds, e, crossScenePortalData) {
 	});
 
 	body.append(conditionsRow);
-
-	if (tokens.length === 1 && tokens[0].stats.isContributor === true) {
-		let statusEffectsMenuItem = $(`<div class="token-image-modal-footer-select-wrapper flyout-from-menu-item"><div class="token-image-modal-footer-title">Status Effects</div></div>`);
-		statusEffectsMenuItem.hover(function (hoverEvent) {
-			context_menu_flyout("conditions-flyout", hoverEvent, function(flyout) {
-				flyout.append(build_status_effects_flyout_menu(tokens));
-			})
-		});
-		body.append(statusEffectsMenuItem);
-	}
 
 
 	// Auras (torch, lantern, etc)
@@ -4006,21 +4005,6 @@ function build_conditions_and_markers_flyout_menu(tokenIds) {
 		body.find(".active-condition").click(); // anything that is active should be deactivated.
 	});
 	conditionsList.prepend(removeAllItem);
-
-	return body;
-}
-
-function build_status_effects_flyout_menu(tokens) {
-	let body = $("<div></div>");
-	body.css({
-		width: "fit-content", // once we add Markers, make this wide enough to contain them all
-		padding: "5px",
-		display: "flex",
-		"flex-direction": "row"
-	});
-
-	let standIn = $(`<div>Selected ${(tokens?.length ?? 0) > 0 ? tokens[0].stats.statusEffects.reviewConcentration() : 'asdf'} tokens</div>`)
-	body.append(standIn);
 
 	return body;
 }
