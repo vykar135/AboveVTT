@@ -86,12 +86,14 @@ $(function() {
         await rebuild_window_pcs();
         startup_step("Fetching Party Inventory/Items/Spells")
         try{
-          if (AVTT_ENVIRONMENT.prevent_item_load !== true) {
+          if (new URLSearchParams(window.location.search).get('fast_load') !== 'true') {
             await Promise.all([
               DDBApi.debounceGetPartyInventory(),
               DDBApi.fetchSpellsJsonWithToken(),
               DDBApi.fetchItemsJsonWithToken()
             ]);
+          } else {
+            console.log('Fast load requested: Preventing party inventory/spells/items');
           }
         } catch (error) {
           console.warn(`Failed to fetch party inventory/items/spells`, error)

@@ -122,8 +122,6 @@ export class StatBlockCacheManager {
         }
 
         const active = GetCharacterId()?.toString()?.toLowerCase();
-        console.log('Loading player sheets');
-        console.log(active);
         for (const entry of window.pcs) {
             const character = this.get(entry.sheet);
             if (character == null) {
@@ -134,7 +132,6 @@ export class StatBlockCacheManager {
                 character.rebuild();
             }
 
-            console.log(character);
             if (character.characterId != null && character.characterId === active) {
                 this.#character = character;
             }

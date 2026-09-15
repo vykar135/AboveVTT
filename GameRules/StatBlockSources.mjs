@@ -1,15 +1,11 @@
 // @ts-nocheck
 
-import { DiceActionsEnabled, GetCharacterId, IsGameMaster, uriEquals, WaitingForScene } from "./CoreEnums.mjs";
+import { GetCharacterId, IsGameMaster, uriEquals, WaitingForScene } from "./CoreEnums.mjs";
 import StatBlock from "./StatBlock.mjs";
 import { StatBlockCache } from "./StatBlockCache.mjs";
 
 /** @param {(stats: StatBlock) => boolean} filter  */
 function refreshFilteredStatBlocks(filter) {
-    if (!DiceActionsEnabled) {
-        return;
-    }
-
     const available = StatBlockCache.list();
     for (const stats of available) {
         if (filter(stats) === true) {
@@ -20,10 +16,6 @@ function refreshFilteredStatBlocks(filter) {
 
 /** @param {(stats: StatBlock) => boolean} filter  */
 function refreshFilteredTokens(filter) {
-    if (!DiceActionsEnabled) {
-        return;
-    }
-
     const available = StatBlockCache.list();
     for (const stats of available) {
         if (stats.token?.options == null) {
@@ -58,10 +50,6 @@ export function refreshPlayerSheets(player) {
 
 /** Forces any stat blocks within the global cache that implement the specified extended player character sheet to rebuild */
 export function refreshPlayerExtended(player) {
-    if (!DiceActionsEnabled) {
-        return;
-    }
-
     if (player == null) {
         return;
     }
@@ -77,10 +65,6 @@ const playerSheetsExt = {};
 
 /** Loads the cache of extended player character sheets for the provided identifier */
 export function fetchPlayerExtendedSheet(id) {
-    if (!DiceActionsEnabled) {
-        return;
-    }
-
     if (typeof id === 'number') {
         id = id.toString();
     }
@@ -133,10 +117,6 @@ const open5eCreatures = {};
 
 /** Retrieves the common Open 5E stat block if the token is an instance of one */
 export function fetchOpen5eSheetForToken(token) {
-    if (!DiceActionsEnabled) {
-        return;
-    }
-
     if (!uriEquals(token?.options?.itemType, 'open5e') || token?.options?.itemId == null){
         return null;
     }
@@ -146,10 +126,6 @@ export function fetchOpen5eSheetForToken(token) {
 
 /** Loads the cache of Open 5E creature stat blocks for the provided key */
 export function fetchOpen5eSheet(key) {
-    if (!DiceActionsEnabled) {
-        return;
-    }
-
     key = key?.toLowerCase();
     if (key == null) {
         return undefined;
@@ -208,10 +184,6 @@ export function refreshMonsterStatBlocks(monster) {
  * @param {Token} token - The token to retrieve the monster stat block for.
  */
 export function fetchBeyondSheetForToken(token) {
-    if (!DiceActionsEnabled) {
-        return;
-    }
-
     const itemType = token?.options?.itemType?.toLowerCase();
     if (itemType !== 'monster') {
         return undefined;
@@ -230,10 +202,6 @@ export function fetchBeyondSheetForToken(token) {
  * @param {number | undefined} monster - The identifier of the monster to retrieve.
  */
 export function fetchBeyondSheet(monster) {
-    if (!DiceActionsEnabled) {
-        return;
-    }
-
     if (monster == null) {
         return undefined;
     }
@@ -349,8 +317,6 @@ function fetchPendingBeyondSheets() {
 // Exposing relevant properties to non-modules
 // @ts-ignore
 window.statBlocks = Object.freeze({
-    isEnabled:  () => DiceActionsEnabled,
-
     list: () => StatBlockCache.list(),
     listMine: () => StatBlockCache.listMine(),
 

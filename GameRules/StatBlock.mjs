@@ -1,7 +1,7 @@
 /** @import { Token } from '../types/Token.types.js' */
 
 import { fetchBeyondSheetForToken, fetchOpen5eSheetForToken, fetchPlayerExtendedSheet } from './StatBlockSources.mjs';
-import { DiceActionsEnabled, GetCharacterId, GetCurrentUser, IsGameMaster, uriEquals, WaitingForScene } from './CoreEnums.mjs'
+import { GetCharacterId, GetCurrentUser, IsGameMaster, uriEquals, WaitingForScene } from './CoreEnums.mjs'
 import HitPointBlock from './HitPointBlock.mjs';
 import ConditionTracker, { BlindedDice, CharmedDice, DeafenedDice, ExhaustionDice, FrightenedDice, GrappledDice, IncapacitatedDice, InvisibleDice, ParalyzedDice, PetrifiedDice, PoisonedDice, ProneDice, RestrainedDice, StunnedDice, UnconsciousDice } from './ConditionTracker.mjs';
 import NumericStatTracker from './NumericStatTracker.mjs';
@@ -410,10 +410,6 @@ export default class StatBlock {
      * @param {boolean} modified - Whether a modification occurred.
      */
     hasPendingChanges(modified) {
-        if (!DiceActionsEnabled) {
-            return;
-        }
-
         if (modified === true) {
             this.#pendingChanges = Date.now();
         }
@@ -525,10 +521,6 @@ export default class StatBlock {
 
     /** Rebuilds the stat block for the token */
     rebuild() {
-        if (!DiceActionsEnabled) {
-            return;
-        }
-
         try {
             const player = this.getPlayerSheet();
             const tokenOptions = this.token?.options;
@@ -585,7 +577,7 @@ export default class StatBlock {
 
     /** Recalculates the values for the properties within the stat block after changes have been applied. */
     recalculate() {
-        if (!DiceActionsEnabled || this.#needsRebuild) {
+        if (this.#needsRebuild) {
             return;
         }
 

@@ -14,7 +14,7 @@
  */
 
 import ConditionTracker from './ConditionTracker.mjs';
-import { DiceActionsEnabled, AbilityScore, ConditionType, DamageType, ProficiencyType, SkillCheck, uriEquals, Movement } from './CoreEnums.mjs'
+import { AbilityScore, ConditionType, DamageType, ProficiencyType, SkillCheck, uriEquals, Movement } from './CoreEnums.mjs'
 import DefenseTracker from './DefenseTracker.mjs';
 import { DiceAction } from './DiceAction.mjs';
 import NumericStatTracker from './NumericStatTracker.mjs';
@@ -45,10 +45,6 @@ export default class StatNormalization {
 
     /** Rebuilds the stat block for the token */
     rebuild() {
-        if (!DiceActionsEnabled) {
-            return;
-        }
-
         this.#sheets.pb = this.#refreshLevel();
 
         const ac = this.#sheets.player?.armorClass ?? this.#sheets.tokenOptions?.armorClass ?? this.#sheets.monster?.armorClass ?? 

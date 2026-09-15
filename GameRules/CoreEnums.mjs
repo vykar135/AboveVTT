@@ -17,9 +17,6 @@
  * @typedef { ConfigurationSettings & { open5e: string, player: string, monster: number, default: number } } MovementSettings
  */
 
-/** Whether the new game rules feature is enabled. */
-export const DiceActionsEnabled = checkFeatureEnabled('dice_actions');
-
 /** The identifier of the current users that is using the VTT */
 export const GetCurrentUser = initCurrentUser();
 /** The identifier of the game master for the campaign */
@@ -32,21 +29,6 @@ export const IsGameMaster = initIsGameMaster();
 /** Whether the VTT is in a state that will present the least possible issues with user interaction */
 export function WaitingForScene() {
     return (window.LOADING === true || window.pcs == null || window.TOKEN_OBJECTS == null || window.all_token_objects == null);
-}
-
-/** @param {string} feature  */
-export function checkFeatureEnabled(feature) {
-    /** @type {any} */
-    let features = localStorage.getItem('AVTT-Development-Features') ?? {};
-    if (typeof features === 'string') {
-        features = JSON.parse(features);
-    }
-
-    if (feature in features) {
-        return (features[feature] === true);
-    }
-
-    return (AVTT_ENVIRONMENT[feature] === true);
 }
 
 function initCurrentUser() {

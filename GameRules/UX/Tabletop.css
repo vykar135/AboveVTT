@@ -16,7 +16,7 @@
         --hotbar-border: 1px solid rgba(0, 0, 0, 0.25);
         --hotbar-box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
         --hotbar-color: rgba(0, 0, 0, 0.85);
-        --hotbar-idle-color: rgba(0, 0, 0, 0.45);
+        --hotbar-idle-color: rgba(0, 0, 0, 0.55);
         --hotbar-hover: rgba(0, 0, 0, 0.85);;
     }
 
@@ -61,18 +61,32 @@
         border: var(--hotbar-border);
         box-shadow: var(--hotbar-box-shadow);
         color: var(--hotbar-color);
+
+        & > div.avtt-hotbar-button > span.title {
+            display: none;
+        }
+
+        &.names > div.avtt-hotbar-button {
+            min-width: 50px;
+
+            & > span.title {
+                display: inline-block;
+            }
+        }
     }
 
     div.avtt-hotbar-button {
         display: flex;
+        flex-direction: column;
         justify-content: center;
         align-items: center;
         cursor: pointer;
         padding: 5px 5px;
         color: var(--hotbar-idle-color);
 
-        &:hover {
-            color: var(--hotbar-hover);
+        & > span.title {
+            font-family: monospace;
+            font-size: .7em;
         }
 
         & > span.icon {
@@ -88,8 +102,12 @@
             mask-image: var(--hotbar-bug);
             mask-size: contain;
             mask-repeat: no-repeat;
+        }
 
-            &:hover {
+        &:hover {
+            color: var(--hotbar-hover);
+
+            & > span.icon {
                 background-color: var(--hotbar-hover);
             }
         }

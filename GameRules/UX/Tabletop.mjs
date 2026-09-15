@@ -5,6 +5,7 @@
  * @callback DialogCloseCallback
  * @param {JQuery<HTMLElement> | undefined} [anchor] - The former anchor that is beind released by the dialog.
  * @param {JQuery<HTMLElement> | undefined} [content] - The former content that is being released by the dialog.
+ * @returns {void}
  * 
  * @typedef DialogOptions
  * @property {string[]} classNames - The collection of class names to enable on the dialog.
@@ -13,15 +14,25 @@
  * @property {'topleft' | 'bottomleft' | 'topright' | 'bottomright'} [screenOrigin] - How the dialog will position itself relative to the viewport.
  * @property {number} [offset] - The number of pixels to offset the dialog from the bound edge.
  * @property {DialogCloseCallback} [onClose] - The callback to make when the dialog is closed.
+ * 
+ * @typedef ActionBarOptions
+ * @property {boolean} names - Whether names are shown in the action bar.
+ * 
+ * @typedef EnvironmentChangeEvent
+ * @property {ThemeOptions} theme
+ * @property {ActionBarOptions} actionBar
  */
 
 const EnvironmentLocalStore = 'AVTT-UX-Settings';
-const ThemeEvent = 'avtt.ux.theme';
+const EnvironmentChangeEvent = 'avtt.ux.change';
 
 export class TabletopEnvironment {
     /** @type {ThemeOptions} */
     #theme;
     #themeObserver;
+
+    /** @type {ActionBarOptions} */
+    #actionBar;
 
     constructor() {
         let stored = localStorage.getItem(EnvironmentLocalStore) ?? {}
@@ -35,6 +46,10 @@ export class TabletopEnvironment {
         }
 
         this.#theme = stored.theme ?? 'system';
+        this.#actionBar = stored.actionBar ?? {
+            names: true
+        };
+
         this.#themeObserver = window.matchMedia('(prefers-color-scheme: light)');
         this.#themeObserver.addEventListener('change', this.#changeSystemTheme.bind(this));
 
@@ -44,37 +59,20 @@ export class TabletopEnvironment {
     /** Commits the environment settings to local storage. */
     #commit() {
         const config = {
-            theme: this.#theme
+            theme: this.#theme,
+            actionBar: this.#actionBar
         };
 
         const json = JSON.stringify(config);
         localStorage.setItem(EnvironmentLocalStore, json);
+
+        this.#dispatchEvents();
     }
 
-    /**
-     * Updates the theme for the tabletop
-     * @param {ThemeOptions} theme */
-    changeTheme(theme) {
-        this.#theme = theme ?? 'system';
-        this.#commit();
-
-        const notify = this.#createThemeEvent();
+    /** Creates and sends an event notifying components of a change to the environment settings. */
+    #dispatchEvents() {
+        const notify = this.#createEnvironmentChangeEvent();
         window.dispatchEvent(notify);
-    }
-
-    /**
-     * Registers a callback to monitor for changes to the tabletop theme.
-     * @param {(event: Event) => void} callback 
-     * @returns {() => void} Callback used to remove the event listener. */
-    monitorTheme(callback) {
-        const notify = this.#createThemeEvent();
-        callback(notify);
-
-        window.addEventListener(ThemeEvent, callback);
-
-        return () => {
-            window.removeEventListener(ThemeEvent, callback);
-        };
     }
 
     /** Handles an update to the user's preferred system theme. */
@@ -83,20 +81,60 @@ export class TabletopEnvironment {
             return;
         }
 
-        const notify = this.#createThemeEvent();
-        window.dispatchEvent(notify)
+        this.#dispatchEvents();
+    }
+
+    /**
+     * Updates the theme for the tabletop
+     * @param {ThemeOptions} theme */
+    changeTheme(theme) {
+        this.#theme = theme ?? 'system';
+        this.#commit();
+    }
+
+    /**
+     * Updates the options for the action bar.
+     * @param {ActionBarOptions} options 
+     */
+    changeActionBar(options) {
+        if (options == null) {
+            return;
+        }
+
+        const current = this.#actionBar;
+        this.#actionBar = {
+            names: options.names ?? current.names ?? true
+        }
+
+        this.#commit();
+    }
+
+    /**
+     * Registers a callback to monitor for changes to the tabletop theme.
+     * @param {(event: Event) => void} callback 
+     * @returns {() => void} Callback used to remove the event listener. */
+    monitor(callback) {
+        const notify = this.#createEnvironmentChangeEvent();
+        callback(notify);
+
+        window.addEventListener(EnvironmentChangeEvent, callback);
+
+        return () => {
+            window.removeEventListener(EnvironmentChangeEvent, callback);
+        };
     }
 
     /** Generates a custom event to send to the theme change event. */
-    #createThemeEvent() {
+    #createEnvironmentChangeEvent() {
         let showing = this.#theme;
         if (showing === 'system') {
             showing = (this.#themeObserver?.matches ?? false) ? 'light' : 'dark'
         }
 
-        return new CustomEvent(ThemeEvent, {
+        return new CustomEvent(EnvironmentChangeEvent, {
             detail: {
-                theme: showing
+                theme: showing,
+                actionBar: structuredClone(this.#actionBar)
             },
             bubbles: false,
             cancelable: false
@@ -139,6 +177,8 @@ export class TabletopDialog {
         const eventing = $(window);
         eventing.on('keydown', this.#keyboardClose.bind(this));
         eventing.on('resize', this.#position.bind(this));
+
+        
 
         Object.freeze(this);
     }
@@ -232,6 +272,11 @@ export class TabletopDialog {
         }
 
         this.#dialog.toggleClass('open', true);
+    }
+
+    /** Repositions the dialog to the appropriate location. */
+    reposition() {
+        this.#position();
     }
 
     /** Repositions the dialog based on the options provided. */
