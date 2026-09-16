@@ -75,7 +75,6 @@
 
         background: var(--hotbar-background);
         backdrop-filter: var(--hotbar-backdrop-filter);
-        -webkit-backdrop-filter: var(--hotbar-backdrop-filter);
         border: var(--hotbar-border);
         box-shadow: var(--hotbar-box-shadow);
         color: var(--hotbar-color);
@@ -123,10 +122,6 @@
             width: var(--hotbar-icon-size);
             background-color: var(--hotbar-idle-color);
 
-            -webkit-mask-image: var(--hotbar-bug);
-            -webkit-mask-size: contain;
-            -webkit-mask-repeat: no-repeat;
-
             mask-image: var(--hotbar-bug);
             mask-size: contain;
             mask-repeat: no-repeat;
@@ -141,7 +136,6 @@
         }
 
         &.play-as > span.icon {
-            -webkit-mask-image: var(--hotbar-play-as);
             mask-image: var(--hotbar-play-as);
         }
 
@@ -149,33 +143,27 @@
             margin-left: 5px;
 
             & > span.icon {
-                -webkit-mask-image: var(--hotbar-hp);
                 mask-image: var(--hotbar-hp);
             }
         }
 
         &.abilities > span.icon {
-            -webkit-mask-image: var(--hotbar-abilities);
             mask-image: var(--hotbar-abilities);
         }
 
         &.saves > span.icon {
-            -webkit-mask-image: var(--hotbar-saves);
             mask-image: var(--hotbar-saves);
         }
 
         &.skills > span.icon {
-            -webkit-mask-image: var(--hotbar-skills);
             mask-image: var(--hotbar-skills);
         }
 
         &.actions > span.icon {
-            -webkit-mask-image: var(--hotbar-actions);
             mask-image: var(--hotbar-actions);
         }
 
         &.status-effects > span.icon {
-            -webkit-mask-image: var(--hotbar-status-effects);
             mask-image: var(--hotbar-status-effects);
         }
     }
@@ -194,7 +182,6 @@
             padding: 5px 0;
             background: var(--hotbar-background);
             backdrop-filter: var(--hotbar-backdrop-filter);
-            -webkit-backdrop-filter: var(--hotbar-backdrop-filter);
             border: var(--hotbar-border);
             box-shadow: var(--hotbar-box-shadow);
             color: var(--hotbar-color);
