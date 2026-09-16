@@ -31,7 +31,7 @@
         --hotbar-saves: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="%23e3e3e3"><path d="M324-111.5Q251-143 197-197t-85.5-127Q80-397 80-480q0-114 59.5-210.5T301-838q1 19 4 38.5t10 45.5q-72 44-113.5 116.5T160-480q0 134 93 227t227 93q134 0 227-93t93-227q0-85-41.5-158T644-755q7-26 10-45.5t5-37.5q102 51 161.5 147T880-480q0 83-31.5 156T763-197q-54 54-127 85.5T480-80q-83 0-156-31.5ZM310-310q-70-70-70-170 0-58 25.5-109t72.5-85q5 15 11 34.5t16 48.5q-22 23-33.5 51T320-480q0 66 47 113t113 47q66 0 113-47t47-113q0-32-11.5-60T595-591q8-24 14.5-44.5T621-674q47 34 73 85t26 109q0 100-70 170t-170 70q-100 0-170-70Zm130-310q-37-112-48.5-157.5T380-860q0-42 29-71t71-29q42 0 71 29t29 71q0 37-11.5 82.5T520-620h-80Zm-16.5 196.5Q400-447 400-480t23.5-56.5Q447-560 480-560t56.5 23.5Q560-513 560-480t-23.5 56.5Q513-400 480-400t-56.5-23.5Z"/></svg>');
         --hotbar-skills: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="%23e3e3e3"><path d="m480-80-20-400-140-40H40v-80h240l280-200 52 61-166 119h114l312-180 48 56-340 264-20 400h-80ZM240-640q-33 0-56.5-23.5T160-720q0-33 23.5-56.5T240-800q33 0 56.5 23.5T320-720q0 33-23.5 56.5T240-640Z"/></svg>');
         --hotbar-actions: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="%23e3e3e3"><path d="M762-96 645-212l-88 88-28-28q-23-23-23-57t23-57l169-169q23-23 57-23t57 23l28 28-88 88 116 117q12 12 12 28t-12 28l-50 50q-12 12-28 12t-28-12Zm118-628L426-270l5 4q23 23 23 57t-23 57l-28 28-88-88L198-96q-12 12-28 12t-28-12l-50-50q-12-12-12-28t12-28l116-117-88-88 28-28q23-23 57-23t57 23l4 5 454-454h160v160ZM278-526 80-724v-160h160l198 198-160 160Z"/></svg>');
-        --hotbar-srd-conditions: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="%23e3e3e3"><path d="m336-496 84-84-85-85-42 42 43 42-43 43 43 42Zm447.5-127.5Q760-647 760-680q0-27 15-57.5T840-840q50 72 65 102.5t15 57.5q0 33-23.5 56.5T840-600q-33 0-56.5-23.5ZM625-495l43-43-43-43 42-42-42-42-85 85 85 85Zm-145 75q-26 0-50.5 6T383-397l-143-83q0-16-8-30t-22-22q-22-12-45.5-5.5T128-510q-12 22-5.5 45.5T150-428q14 8 30 8t30-8l119 69q-17 17-30.5 36.5T276-280h66q21-36 57-58t81-22q45 0 81 22t57 58h66q-24-62-78.5-101T480-420Zm0 340q-84 0-157-31.5T196-197q-54-54-85-127T80-480q0-83 31-156t85-127q54-54 127-85.5T480-880q74 0 139.5 24T737-788q-14 26-25.5 52T700-680q0 59 41 99.5t99 40.5q9 0 18-1t17-3q2 16 3.5 31.5T880-480q0 83-31.5 156T763-197q-54 54-127 85.5T480-80Z"/></svg>');
+        --hotbar-status-effects: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24" fill="currentColor" aria-hidden="true"><path d="M 8.79 5.17 L 8.06 5.94 L 7.50 6.91 L 7.20 7.90 L 7.14 9.10 L 7.31 10.03 L 7.78 11.11 L 8.34 11.86 L 9.37 12.70 L 8.60 13.09 L 7.93 13.56 L 8.77 13.97 L 10.45 14.59 L 13.10 15.24 L 14.24 15.39 L 15.47 15.43 L 16.52 15.35 L 17.27 15.20 L 16.71 14.49 L 15.96 13.78 L 15.27 13.28 L 14.17 12.70 L 14.93 12.14 L 15.57 11.41 L 16.05 10.57 L 16.35 9.62 L 16.41 8.35 L 16.26 7.51 L 15.85 6.50 L 15.21 5.60 L 14.45 4.93 L 13.72 4.50 L 13.05 4.24 L 12.13 4.07 L 11.23 4.09 L 10.51 4.24 L 9.70 4.56 Z M 1.06 9.92 L 1.02 10.85 L 1.43 11.88 L 2.27 12.96 L 3.39 13.97 L 4.90 15.02 L 6.79 16.06 L 8.38 16.73 L 10.49 17.37 L 12.67 17.78 L 14.86 17.97 L 16.65 17.97 L 19.06 17.72 L 20.72 17.28 L 21.73 16.81 L 22.57 16.08 L 22.96 15.24 L 22.96 14.46 L 22.74 13.80 L 22.10 12.79 L 21.36 12.03 L 20.33 11.26 L 19.19 10.63 L 16.99 9.94 L 16.82 10.05 L 19.23 11.71 L 20.46 13.02 L 20.74 13.63 L 20.78 14.14 L 20.57 14.68 L 20.16 15.07 L 19.19 15.50 L 17.79 15.80 L 14.78 15.93 L 11.48 15.41 L 9.74 14.90 L 8.19 14.27 L 6.42 13.32 L 4.75 12.16 L 3.76 11.17 L 3.35 10.37 L 3.32 9.94 L 3.48 9.47 L 4.08 8.70 L 4.94 8.05 L 6.68 7.21 L 6.68 7.10 L 4.38 7.47 L 2.79 8.09 L 1.65 8.93 Z M 5.28 18.08 L 5.28 18.53 L 5.50 18.83 L 5.91 19.07 L 6.62 19.33 L 7.50 19.55 L 8.56 19.72 L 9.80 19.85 L 11.27 19.91 L 13.72 19.85 L 14.99 19.72 L 16.24 19.50 L 16.99 19.31 L 17.77 19.01 L 18.18 18.71 L 18.29 18.45 L 18.26 18.23 L 16.65 18.43 L 14.97 18.47 L 12.99 18.34 L 11.40 18.10 L 10.11 17.82 L 8.58 17.37 L 7.20 16.83 L 5.93 16.19 L 5.56 16.96 L 5.39 17.50 Z"/></svg>');
     }
 
     :scope {
@@ -49,12 +49,29 @@
         align-items: flex-end;
     }
 
+    div.avtt-hotbar-portrait {
+        border: 3px solid rgba(26, 106, 255);
+        box-shadow: 1px 1px 2px 0px #000;
+        margin: -5px 0 -5px -10px;
+        height: 55px;
+        width: 55px;
+        
+        border-radius: 4px;
+        background-color: var(--hotbar-background);
+        background-position: center;
+        background-repeat: no-repeat;
+        background-size: contain;
+        backdrop-filter: var(--hotbar-backdrop-filter);
+    }
+
     div.avtt-hotbar {
         display: flex;
         flex-direction: row;
         padding: 0 5px;
-        border-radius: 16px;
+        border-radius: 10px;
         pointer-events: auto;
+        margin-top: 5px;
+        margin-bottom: 5px;
 
         background: var(--hotbar-background);
         backdrop-filter: var(--hotbar-backdrop-filter);
@@ -62,6 +79,12 @@
         border: var(--hotbar-border);
         box-shadow: var(--hotbar-box-shadow);
         color: var(--hotbar-color);
+
+        &.names > div.avtt-hotbar-portrait {
+            border-radius: 7px;
+            height: 65px;
+            width: 65px;
+        }
 
         & > div.avtt-hotbar-button > span.title {
             display: none;
@@ -122,9 +145,13 @@
             mask-image: var(--hotbar-play-as);
         }
 
-        &.hp > span.icon {
-            -webkit-mask-image: var(--hotbar-hp);
-            mask-image: var(--hotbar-hp);
+        &.hp  {
+            margin-left: 5px;
+
+            & > span.icon {
+                -webkit-mask-image: var(--hotbar-hp);
+                mask-image: var(--hotbar-hp);
+            }
         }
 
         &.abilities > span.icon {
@@ -147,10 +174,9 @@
             mask-image: var(--hotbar-actions);
         }
 
-        /* "conditions" by itself is a keyword, causes wierd render issues. */
-        &.srd-conditions > span.icon {
-            -webkit-mask-image: var(--hotbar-srd-conditions);
-            mask-image: var(--hotbar-srd-conditions);
+        &.status-effects > span.icon {
+            -webkit-mask-image: var(--hotbar-status-effects);
+            mask-image: var(--hotbar-status-effects);
         }
     }
 

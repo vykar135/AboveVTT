@@ -91,6 +91,11 @@ export default class StatBlock {
 
     /** @type {string | undefined} */
     #name;
+    /** @type {string | undefined} */
+    #image;
+    /** @type {string | undefined} */
+    #color;
+
     #proficiency;
     #ac;
     #scores;
@@ -235,8 +240,14 @@ export default class StatBlock {
     /** The context used for any dice actions performed from this stat block. */
     get diceContext() { return this.#diceContext; }
 
-    /** Gets the name of the token */
-    get name() { return this.#name ?? 'Unknown Token'; }
+    /** Gets the name of the stat block */
+    get name() { return this.#name ?? 'Unknown'; }
+
+    /** Gets the image of the stat block */
+    get image() { return this.#image; }
+
+    /** Gets the color of the stat block */
+    get color() { return this.#color; }
 
     /** Details about the current state of the creature's hit points and associated controls. */
     get hp() { return this.#hitPoints; }
@@ -519,6 +530,19 @@ export default class StatBlock {
     /** Retrieves the common Open 5E stat block if the token is an instance of one */
     getOpen5e() { return fetchOpen5eSheetForToken(this.token); }
 
+    /** Refreshes the visual aspects of the stat block. */
+    refreshVisuals() {
+        const tokenOptions = this.token?.options;
+        if (tokenOptions == null) {
+            return;
+        }
+
+        this.#color = tokenOptions?.color;
+        if (!this.#player) {
+            this.#image = tokenOptions?.imgsrc;
+        }
+    }
+
     /** Rebuilds the stat block for the token */
     rebuild() {
         try {
@@ -532,6 +556,9 @@ export default class StatBlock {
             this.#needsRebuild = false;
 
             this.#name = player?.name ?? tokenOptions?.name;
+            this.#image = player?.image ?? tokenOptions?.imgsrc;
+            this.#color = tokenOptions?.color;
+
             this.#characterId = player?.characterId?.toString();
             this.#characterUri = player?.sheet;
             this.#player = (player != null);

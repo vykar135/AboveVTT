@@ -31,12 +31,13 @@ class ActionBarControl {
     #actor;
 
     #actorSelect;
+    #portrait;
     #hp;
     #abilities;
     #saves;
     #skills;
     #actions;
-    #conditions;
+    #statusEffects;
 
     constructor() {
         this.#container = $('<div class="avtt-hotbar-container" />');
@@ -49,12 +50,13 @@ class ActionBarControl {
         this.#actorSelect = this.#createMenuButton('Play As', 'play-as', this.#createPlaceholder());
         this.#actorSelect.button.appendTo(this.#bar);
 
+        this.#portrait = this.#createActorPortrait(this.#createPlaceholder());
         this.#hp = this.#createMenuButton('Health', 'hp', this.#createPlaceholder());
         this.#abilities = this.#createMenuButton('Abilities', 'abilities', this.#createPlaceholder());
         this.#saves = this.#createMenuButton('Saves', 'saves', this.#createPlaceholder());
         this.#skills = this.#createMenuButton('Skills', 'skills', this.#createPlaceholder());
         this.#actions = this.#createMenuButton('Actions', 'actions', this.#createPlaceholder());
-        this.#conditions = this.#createMenuButton('Conditions', 'srd-conditions', this.#createPlaceholder());
+        this.#statusEffects = this.#createMenuButton('Effects', 'status-effects', this.#createPlaceholder());
 
         Tabletop.monitor(this.#changeEnvironment.bind(this));
         $(document.body).append(this.#container);
@@ -91,24 +93,33 @@ class ActionBarControl {
             return;
         }
 
+        const css = {
+            "background-image": `url(${this.#actor.image ?? 'https://www.dndbeyond.com/avatars/4675/675/636747837794884984.jpeg'})`,
+            "border-color": (this.#actor.color ?? '')
+        };
+
+        this.#portrait.button.css(css)
+
         this.#actorSelect.button.detach();
 
+        this.#portrait.button.appendTo(this.#bar);
         this.#hp.button.appendTo(this.#bar);
         this.#abilities.button.appendTo(this.#bar);
         this.#saves.button.appendTo(this.#bar);
         this.#skills.button.appendTo(this.#bar);
         this.#actions.button.appendTo(this.#bar);
-        this.#conditions.button.appendTo(this.#bar);
+        this.#statusEffects.button.appendTo(this.#bar);
     }
 
     /** Removes all buttons from the bar then appends the "Select Actor" button */
     #displayNoActor() {
+        this.#portrait.button.detach();
         this.#hp.button.detach();
         this.#abilities.button.detach();
         this.#saves.button.detach();
         this.#skills.button.detach();
         this.#actions.button.detach();
-        this.#conditions.button.detach();
+        this.#statusEffects.button.detach();
 
         this.#actorSelect.button.appendTo(this.#bar);
     }
@@ -178,6 +189,37 @@ class ActionBarControl {
             onClose: (anchor, content) => {
                 showing = false;
                 onClose(anchor, content);
+            }
+        });
+
+        button.on('click', () => {
+            callback(settings);
+            showing = true;
+        });
+
+        return settings;
+    }
+
+    /**
+     * Initializes the actor portait section of the actor bar..
+     * @returns {ActionBarButton}
+     */
+    #createActorPortrait(render) {
+        const button = $('<div class="avtt-hotbar-portrait"></div>');
+        const callback = this.#showDialog.bind(this);
+
+        let showing = false;
+
+        /** @type {ActionBarButton} */
+        const settings = Object.freeze({
+            name: undefined,
+            button,
+            icon: undefined,
+            title: undefined,
+            render,
+            isShowing: () => showing,
+            onClose: (anchor, content) => {
+                showing = false;
             }
         });
 

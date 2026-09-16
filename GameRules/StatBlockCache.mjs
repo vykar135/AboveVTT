@@ -35,6 +35,7 @@ export class StatBlockCacheManager {
     changeActor(actor) {
         if (actor == null || actor instanceof StatBlock) {
             this.#actor = actor;
+            this.#actor?.refreshVisuals();
 
             const notify = this.#createActorEvent();
             window.dispatchEvent(notify);
