@@ -1,4 +1,4 @@
-/** @import { DialogCloseCallback, EnvironmentChangeEvent } from './Tabletop.mjs*/
+/** @import { DialogOptions, EnvironmentChangeEvent } from './Tabletop.mjs*/
 
 import { Tabletop, TabletopDialog } from './Tabletop.mjs';
 import StatBlock from '../StatBlock.mjs'
@@ -12,7 +12,7 @@ import { StatBlockCache } from '../StatBlockCache.mjs';
  * @property {JQuery<HTMLElement>} title - The HTML element that represents the title being shown.
  * @property {ActionMenuRender} render - Handles a request to rebuild the menu content for the provided actor and return it for binding.
  * @property {() => boolean} isShowing - Whether the button is currently showing the menu associated with it.
- * @property {DialogCloseCallback} onClose - The callback to make when the dialog is closed.
+ * @property {DialogOptions} dialogOptions - The options used to control the dialog.
  * 
  * @callback ActionMenuRender
  * @param {StatBlock} actor - The actor to render the menu for.
@@ -151,8 +151,8 @@ class ActionBarControl {
      * Requests that a menu be shown.
      * @param {ActionBarButton} options - The details of the menu to show. */
     #showDialog(options) {
-        const menu = options.render();
-        this.#dialog.attach(options.button, menu, { classNames: [ 'standard', 'centerX' ], onClose: options.onClose });
+        const menu = options.render(this.#actor, options.button);
+        this.#dialog.attach(options.button, menu, options.dialogOptions);
     }
 
     /**
@@ -160,20 +160,31 @@ class ActionBarControl {
      * @param {string} name - The name of the menu button.
      * @param {string} style - The name of the CSS class that the button will be displayed as.
      * @param {ActionMenuRender} render - A request to rebuild the menu content for the provided actor and return it for binding.
-     * @param {DialogCloseCallback} onClose - The callback to make when the dialog is closed.
+     * @param {DialogOptions} [options] - the options to control the dialog.
      * @returns {ActionBarButton}
      */
-    #createMenuButton(name, style, render, onClose) {
+    #createMenuButton(name, style, render, options) {
         const button = $('<div class="avtt-hotbar-button"></div>');
         const icon = $(`<span class="icon" />`);
         const title = $(`<span class="title" />`);
         const callback = this.#showDialog.bind(this);
 
+        let showing = false;
+        options ??= {
+            classNames: [ 'standard', 'centerX' ],
+            onClose: () => { }
+        }
+
+        let onClose = options.onClose;
         if (typeof onClose !== 'function') {
             onClose = () => { };
         }
 
-        let showing = false;
+        const copiedOptions = { ...options };
+        copiedOptions.onClose = (anchor, content) => {
+            showing = false;
+            onClose(anchor, content);
+        };
 
         title.text(name);
         button.addClass(style);
@@ -188,13 +199,16 @@ class ActionBarControl {
             title,
             render,
             isShowing: () => showing,
-            onClose: (anchor, content) => {
-                showing = false;
-                onClose(anchor, content);
-            }
+            dialogOptions: copiedOptions
         });
 
         button.on('click', () => {
+            callback(settings);
+            showing = true;
+        });
+
+        button.on('contextmenu', (e) => {
+            e.preventDefault();
             callback(settings);
             showing = true;
         });
@@ -212,6 +226,13 @@ class ActionBarControl {
 
         let showing = false;
 
+        /** @type {DialogOptions} */
+        const options = {
+            classNames: [ 'standard' ],
+            onClose: () => { showing = false; },
+            alignment: 'start'
+        };
+
         /** @type {ActionBarButton} */
         const settings = Object.freeze({
             name: undefined,
@@ -220,12 +241,16 @@ class ActionBarControl {
             title: undefined,
             render,
             isShowing: () => showing,
-            onClose: (anchor, content) => {
-                showing = false;
-            }
+            dialogOptions: options
         });
 
         button.on('click', () => {
+            callback(settings);
+            showing = true;
+        });
+
+        button.on('contextmenu', (e) => {
+            e.preventDefault();
             callback(settings);
             showing = true;
         });
@@ -251,33 +276,78 @@ class ActionBarControl {
      */
     #setupActorSelection() {
         /** @type {{ container: JQuery<HTMLElement>, portrait: JQuery<HTMLElement>, name: JQuery<HTMLElement> }[]} */
-        const rows = [];
-        const selectable = $('<div></div>');
+        const options = [];
+        const selectable = $('<div class="avtt-available-actors"></div>');
 
         const rebuild = (/** @type {StatBlock} */ actor) => {
             const available = StatBlockCache.listMine();
 
-            for (let pop = rows.length - 1; pop >= available.length; pop--) {
-                rows[pop].container.detach();
+            for (let validate = options.length - 1; validate >= 0; validate--) {
+                const option = options[validate];
+
+                // Tear down any extra options that once existed for deleted tokens.
+                // We just detach here because tokens like to come back.
+                if (validate >= available.length) {
+                    option.container.detach();
+                    option.showing = false;
+                    continue;
+                }
+
+                // We have hit the point we are showing items so exit.
+                if (option.showing) {
+                    break;
+                }
+
+                // Restore options that were detached due to a previous token deletion.
+                selectable.append(option);
+                option.showing = true;
             }
 
-            for (let push = rows.length; push < available.length; push++) {
+            // Setup new options for newly created tokens that exceed the bounds of the options collection.
+            for (let push = options.length; push < available.length; push++) {
                 const setup = {
+                    showing: true,
                     actor: undefined,
-                    container: $('<div></div>'),
-                    portrait: $('<div></div>'),
-                    name: $('<div></div>')
+                    container: $('<div class="available-actor"></div>'),
+                    portrait: $('<div class="actor-portrait"></div>'),
+                    name: $('<div class="actor-name"></div>')
                 };
 
-                rows.push(setup);
+                setup.container.on('click', () => {
+                    StatBlockCache.changeActor(setup.actor);
+                    this.#dialog.close();
+                })
+
+                setup.container.append(setup.portrait).append(setup.name);
+
+                options.push(setup);
+                selectable.append(setup.container);
             }
 
-            for (const actor of available) {
-                buildActorRow(actor);
+            // Walk through the list of available option and reassign them to an actor.
+            for (let position = 0; position < available.length; position++) {
+                const actor = available[position];
+                const settings = options[position];
+
+                let name = (actor.name ?? '').trim();
+                if (name === '') {
+                    name = 'Unknown';
+                }
+
+                actor.refreshVisuals();
+                settings.actor = actor;
+                settings.name.text(name);
+
+                const css = {
+                    "background-image": `url(${actor.image ?? 'https://www.dndbeyond.com/avatars/4675/675/636747837794884984.jpeg'})`,
+                    "border-color": (actor.color ?? '')
+                };
+
+                settings.portrait.css(css);
             }
         };
 
-        return () => {
+        return (actor, button) => {
             rebuild();
             return selectable;
         }

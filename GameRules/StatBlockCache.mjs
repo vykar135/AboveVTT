@@ -128,11 +128,28 @@ export class StatBlockCacheManager {
     /** Provides an enumeration of all stat blocks that the user is a contributor to. */
     listMine() {
         const available = this.list();
-        if (IsGameMaster()) {
-            return available;
+        return available.filter(entry => StatBlockCacheManager.isPlayable(entry)).sort((a, b) => a.name.localeCompare(b.name));
+    }
+
+    /**
+     * Determines whether a stat block is playable.
+     * @param {StatBlock} actor 
+     */
+    static isPlayable(actor) {
+        if (actor == null || !actor.isContributor) {
+            return false;
         }
 
-        return available.filter(entry => entry.isContributor);
+        if (actor.isPlayer) {
+            return true;
+        }
+
+        const options = actor.tokenLocal?.options;
+        if (options?.itemType == null) {
+            return false;
+        }
+
+        return (options.itemType === 'monster' || options.itemType === 'open5e');
     }
 
     /** Waits for the scene to load then initializes any */

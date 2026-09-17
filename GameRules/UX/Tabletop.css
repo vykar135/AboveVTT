@@ -49,7 +49,32 @@
         align-items: flex-end;
     }
 
+    div.avtt-dialog {
+        display: none;
+        position: fixed;
+        border-radius: 10px;
+        pointer-events: auto;
+
+        &.open {
+            display: flex;
+        }
+
+        &.standard {
+            padding: 5px 0;
+            background: var(--hotbar-background);
+            backdrop-filter: var(--hotbar-backdrop-filter);
+            border: var(--hotbar-border);
+            box-shadow: var(--hotbar-box-shadow);
+            color: var(--hotbar-color);
+        }
+
+        &.centerX {
+            transform: translateX(-50%);
+        }
+    }
+
     div.avtt-hotbar-portrait {
+        cursor: pointer;
         border: 3px solid rgba(26, 106, 255);
         box-shadow: 1px 1px 2px 0px #000;
         margin: -5px 0 -5px -10px;
@@ -168,27 +193,53 @@
         }
     }
 
-    div.avtt-dialog {
-        display: none;
-        position: fixed;
-        border-radius: 10px;
-        pointer-events: auto;
+    @supports selector(::-webkit-scrollbar) {
+        div.avtt-available-actors {
+            scrollbar-width: thin;
+        }    
+    }
 
-        &.open {
+    div.avtt-available-actors {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        max-width: 385px;
+        margin-left: 5px;
+        margin-right: 5px;
+        max-height: 200px;
+        overflow-y: auto;
+
+        & > div.available-actor {
             display: flex;
-        }
+            flex-direction: column;
+            flex: 0 0;
+            padding: 5px;
+            cursor: pointer;
 
-        &.standard {
-            padding: 5px 0;
-            background: var(--hotbar-background);
-            backdrop-filter: var(--hotbar-backdrop-filter);
-            border: var(--hotbar-border);
-            box-shadow: var(--hotbar-box-shadow);
-            color: var(--hotbar-color);
-        }
+            & > div.actor-portrait {
+                cursor: pointer;
+                border: 3px solid rgba(26, 106, 255);
+                height: 65px;
+                width: 65px;
+                
+                border-radius: 4px;
+                background-color: var(--hotbar-background);
+                background-position: center;
+                background-repeat: no-repeat;
+                background-size: contain;
+                backdrop-filter: var(--hotbar-backdrop-filter);
+            }
 
-        &.centerX {
-            transform: translateX(-50%);
+            & > div.actor-name {
+                padding-top: 3px;
+                font-family: monospace;
+                font-size: .7em;
+                width: 65px;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                text-align: center;
+            }
         }
     }
 }

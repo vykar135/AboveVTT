@@ -296,7 +296,7 @@ export class TabletopDialog {
         }
 
         const edgeSize = (isEdgeHorizontal) ? bounds.width : bounds.height;
-        let edgePosition = edgeSize;
+        let edgePosition = 0;
         if (this.#alignment === 'center') {
             edgePosition = (edgeSize / 2);
         } else if (this.#alignment === 'end') {
