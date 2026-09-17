@@ -128,7 +128,9 @@ export class StatBlockCacheManager {
     /** Provides an enumeration of all stat blocks that the user is a contributor to. */
     listMine() {
         const available = this.list();
-        return available.filter(entry => StatBlockCacheManager.isPlayable(entry)).sort((a, b) => a.name.localeCompare(b.name));
+        const filtered = available.filter(entry => StatBlockCacheManager.isPlayable(entry));
+        filtered.sort((a, b) => a.name.localeCompare(b.name));
+        return filtered;
     }
 
     /**

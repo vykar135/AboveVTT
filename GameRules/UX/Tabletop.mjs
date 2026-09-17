@@ -252,6 +252,11 @@ export class TabletopDialog {
             return;
         }
 
+        // Reset current class names
+        for (const name of this.#classNames) {
+            this.#dialog.toggleClass(name, false);
+        }
+
         if ((content?.length ?? 0) > 0) {
             this.#dialog.append(content);
         }

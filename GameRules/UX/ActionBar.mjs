@@ -95,12 +95,18 @@ class ActionBarControl {
             return;
         }
 
+        let name = (this.#actor.name ?? '').trim();
+        if (name === '') {
+            name = 'Unknown';
+        }
+
         const css = {
             "background-image": `url(${this.#actor.image ?? 'https://www.dndbeyond.com/avatars/4675/675/636747837794884984.jpeg'})`,
             "border-color": (this.#actor.color ?? '')
         };
 
         this.#portrait.button.css(css);
+        this.#portrait.button.prop('data-title', name);
 
         this.#actorSelect.button.detach();
 
@@ -282,7 +288,7 @@ class ActionBarControl {
         const rebuild = (/** @type {StatBlock} */ actor) => {
             const available = StatBlockCache.listMine();
 
-            for (let validate = options.length - 1; validate >= 0; validate--) {
+            for (let validate = 0; validate < options.length; validate++) {
                 const option = options[validate];
 
                 // Tear down any extra options that once existed for deleted tokens.
@@ -293,13 +299,13 @@ class ActionBarControl {
                     continue;
                 }
 
-                // We have hit the point we are showing items so exit.
+                // Option is already showing; nothing to do.
                 if (option.showing) {
-                    break;
+                    continue;
                 }
 
-                // Restore options that were detached due to a previous token deletion.
-                selectable.append(option);
+                // Restore options that were detached due to a previous token deletion or scene change.
+                selectable.append(option.container);
                 option.showing = true;
             }
 
@@ -337,6 +343,7 @@ class ActionBarControl {
                 actor.refreshVisuals();
                 settings.actor = actor;
                 settings.name.text(name);
+                settings.container.prop('data-title', name);
 
                 const css = {
                     "background-image": `url(${actor.image ?? 'https://www.dndbeyond.com/avatars/4675/675/636747837794884984.jpeg'})`,

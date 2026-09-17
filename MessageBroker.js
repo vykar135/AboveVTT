@@ -1180,6 +1180,10 @@ class MessageBroker {
 			forceRefresh = true;
 			delete window.WIZARDING;
 		}
+
+		// Reset the actor back to the default.
+		window.statBlocks?.changeActor(undefined);
+
 		try{
 			if(msg.data.scale_factor == undefined || msg.data.scale_factor == ''){
 				msg.data.scale_factor = 1;
