@@ -10,6 +10,7 @@ import { DiceAction, DiceActionContext, DiceActionModifier, DiceRollModifier, Fi
 import DefenseTracker from './DefenseTracker.mjs';
 import ToggleTracker from './ToggleTracker.mjs';
 import StatNormalization from './StatNormalization.mjs';
+import { StatBlockCache } from './StatBlockCache.mjs';
 
 /** @type {{ pending: Set<StatBlock>, allowed: Set<string>, delay: number, timer?: number }} */
 const pendingPlayers = {

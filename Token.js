@@ -637,7 +637,6 @@ class Token {
 		let id = this.options.id;
 		let selector = "#tokens div[data-id='" + id + "']";
 		$(selector).remove();
-	
 
 		delete window.CURRENT_SCENE_DATA.tokens[id];
 		delete window.TOKEN_OBJECTS[id];
@@ -658,8 +657,9 @@ class Token {
 			}
 		}
 
-
-
+		// Clean up the stat block, need to wait until after window.TOKEN_OBJECTS 
+		// because it will be blocked if one exists or it is a player's token
+		window.statBlocks?.delete(id);
 		
 		$("#aura_" + id.replaceAll("/", "")).remove();
 		$(`.aura-element-container-clip[id='${id}']`).parent().remove()

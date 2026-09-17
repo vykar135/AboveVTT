@@ -90,6 +90,26 @@ export class StatBlockCacheManager {
     }
 
     /**
+     * Removes the stat block from the central store
+     * @param {string} id - The identifier of the character or creature to remove the stat block for. */
+    delete(id) {
+        if (!(id in this.#cache)) {
+            return;
+        }
+
+        const removing = this.#cache[id];
+        if (removing.isPlayer || removing.tokenLocal != null) {
+            return;
+        }
+
+        if (this.#actor === removing) {
+            this.changeActor(undefined);
+        }
+
+        delete this.#cache[id];
+    }
+
+    /**
      * Gets the stat block from the central store without initializing it.
      * @param {string} id - The identifier of the character or creature. */
     lookup(id){

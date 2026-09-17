@@ -321,6 +321,9 @@ window.statBlocks = Object.freeze({
     listMine: () => StatBlockCache.listMine(),
 
     get: (id) => StatBlockCache.get(id),
+    lookup: (id) => StatBlockCache.lookup(id),
+    delete: (id) => StatBlockCache.delete(id),
+
     getPrimary: () => StatBlockCache.primary,
     getActor: () => StatBlockCache.actor,
     changeActor: (actor) => StatBlockCache.changeActor(actor),

@@ -47,10 +47,12 @@ class ActionBarControl {
         this.#showingNames = false;
         this.#actor = undefined;
 
-        this.#actorSelect = this.#createMenuButton('Play As', 'play-as', this.#createPlaceholder());
+        const actorSelect = this.#setupActorSelection();
+
+        this.#actorSelect = this.#createMenuButton('Play As', 'play-as', actorSelect);
         this.#actorSelect.button.appendTo(this.#bar);
 
-        this.#portrait = this.#createActorPortrait(this.#createPlaceholder());
+        this.#portrait = this.#createActorPortrait(actorSelect);
         this.#hp = this.#createMenuButton('Health', 'hp', this.#createPlaceholder());
         this.#abilities = this.#createMenuButton('Abilities', 'abilities', this.#createPlaceholder());
         this.#saves = this.#createMenuButton('Saves', 'saves', this.#createPlaceholder());
@@ -98,7 +100,7 @@ class ActionBarControl {
             "border-color": (this.#actor.color ?? '')
         };
 
-        this.#portrait.button.css(css)
+        this.#portrait.button.css(css);
 
         this.#actorSelect.button.detach();
 
@@ -240,6 +242,44 @@ class ActionBarControl {
 
         return (actor, button) => {
             return menu;
+        }
+    }
+
+    /**
+     * Creates a placeholder button for now.
+     * @returns {ActionMenuRender}
+     */
+    #setupActorSelection() {
+        /** @type {{ container: JQuery<HTMLElement>, portrait: JQuery<HTMLElement>, name: JQuery<HTMLElement> }[]} */
+        const rows = [];
+        const selectable = $('<div></div>');
+
+        const rebuild = (/** @type {StatBlock} */ actor) => {
+            const available = StatBlockCache.listMine();
+
+            for (let pop = rows.length - 1; pop >= available.length; pop--) {
+                rows[pop].container.detach();
+            }
+
+            for (let push = rows.length; push < available.length; push++) {
+                const setup = {
+                    actor: undefined,
+                    container: $('<div></div>'),
+                    portrait: $('<div></div>'),
+                    name: $('<div></div>')
+                };
+
+                rows.push(setup);
+            }
+
+            for (const actor of available) {
+                buildActorRow(actor);
+            }
+        };
+
+        return () => {
+            rebuild();
+            return selectable;
         }
     }
 }
