@@ -206,7 +206,7 @@
         max-width: 385px;
         margin-left: 5px;
         margin-right: 5px;
-        max-height: 200px;
+        max-height: 300px;
         overflow-y: auto;
 
         & > div.available-actor {
