@@ -1,7 +1,7 @@
 /** @import { Token } from '../types/Token.types.js' */
 
 import { fetchBeyondSheetForToken, fetchOpen5eSheetForToken, fetchPlayerExtendedSheet } from './StatBlockSources.mjs';
-import { GetCharacterId, GetCurrentUser, IsGameMaster, uriEquals, WaitingForScene } from './CoreEnums.mjs'
+import { TabletopEventHandler, GetCharacterId, GetCurrentUser, IsGameMaster, uriEquals, WaitingForScene } from './CoreEnums.mjs'
 import HitPointBlock from './HitPointBlock.mjs';
 import ConditionTracker, { BlindedDice, CharmedDice, DeafenedDice, ExhaustionDice, FrightenedDice, GrappledDice, IncapacitatedDice, InvisibleDice, ParalyzedDice, PetrifiedDice, PoisonedDice, ProneDice, RestrainedDice, StunnedDice, UnconsciousDice } from './ConditionTracker.mjs';
 import NumericStatTracker from './NumericStatTracker.mjs';
@@ -10,7 +10,8 @@ import { DiceAction, DiceActionContext, DiceActionModifier, DiceRollModifier, Fi
 import DefenseTracker from './DefenseTracker.mjs';
 import ToggleTracker from './ToggleTracker.mjs';
 import StatNormalization from './StatNormalization.mjs';
-import { StatBlockCache } from './StatBlockCache.mjs';
+
+export const RecalculateEvent = 'recalculated';
 
 /** @type {{ pending: Set<StatBlock>, allowed: Set<string>, delay: number, timer?: number }} */
 const pendingPlayers = {
@@ -86,6 +87,7 @@ function syncPendingPlayerOptions() {
 */
 export default class StatBlock {
     #id;
+    #events;
     #needsRebuild;
     /** @type {number | undefined} */
     #pendingRebuild;
@@ -133,6 +135,8 @@ export default class StatBlock {
     constructor(id){
         this.#id = id;
         this.#needsRebuild = true;
+        this.#events = new TabletopEventHandler();
+
         this.#characterUri = undefined;
         this.#characterId = undefined;
 
@@ -288,6 +292,14 @@ export default class StatBlock {
 
     /** The manager for active, passive, and maintained token status effects. */
     get statusEffects() { return this.#effects; }
+
+    /**
+     * Registers a callback to monitor for recalculation of stat blocks.
+     * @param {(event: StatBlock | undefined) => void} callback 
+     * @returns {() => void} Callback used to remove the event listener. */
+    onRecalculated(callback) {
+        return this.#events.on(RecalculateEvent, callback);
+    }
 
     /** Gets the best options container for the stat block. */
     getOptions() {
@@ -639,6 +651,8 @@ export default class StatBlock {
         }
 
         this.sync();
+
+        this.#events.dispatch(RecalculateEvent, this);
     }
 
     /** Generates a snapshot of the creature stat block using the current calculated values. */

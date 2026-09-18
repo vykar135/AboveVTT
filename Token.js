@@ -656,10 +656,6 @@ class Token {
 				}
 			}
 		}
-
-		// Clean up the stat block, need to wait until after window.TOKEN_OBJECTS 
-		// because it will be blocked if one exists or it is a player's token
-		window.statBlocks?.delete(id);
 		
 		$("#aura_" + id.replaceAll("/", "")).remove();
 		$(`.aura-element-container-clip[id='${id}']`).parent().remove()
@@ -706,6 +702,10 @@ class Token {
 		}
 		debounceLightChecks();
 		update_pc_token_rows();
+
+		// Clean up the stat block, need to wait until the end because it will be blocked 
+		// if a token exists anywhere or it is a player's token
+		window.statBlocks?.delete(id);
 	}
 	tinyToken() {
 		return (Math.round(parseFloat(this.options.gridSquares)*2)/2 < 1) || this.isAoe();

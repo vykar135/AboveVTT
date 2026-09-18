@@ -63,7 +63,7 @@ class ActionBarControl {
         Tabletop.monitor(this.#changeEnvironment.bind(this));
         $(document.body).append(this.#container);
 
-        StatBlockCache.monitorActor(this.#changeActor.bind(this));
+        StatBlockCache.onActorChanged(this.#changeActor.bind(this));
 
         Object.freeze(this);
     }
@@ -72,10 +72,10 @@ class ActionBarControl {
      * Handles a change to the tabletop's theme
      * @param {CustomEvent<EnvironmentChangeEvent>} event */
     #changeEnvironment(event) {
-        const theme = event.detail.theme ?? 'dark';
+        const theme = event.theme ?? 'dark';
         this.#container.toggleClass('use-light-mode', (theme === 'light'));
 
-        this.#showingNames = ((event.detail.actionBar?.names ?? false) === true);
+        this.#showingNames = ((event.actionBar?.names ?? false) === true);
         this.#bar.toggleClass('names', this.#showingNames);
 
         this.#dialog.reposition();
@@ -83,13 +83,13 @@ class ActionBarControl {
 
     /**
      * Handles a change to the current actor for the tabletop.
-     * @param {CustomEvent<{ actor: StatBlock | undefined }>} event */
-    #changeActor(event) {
-        if ((this.#actor != null) !== (event.detail.actor != null)) {
+     * @param {StatBlock | undefined} actor */
+    #changeActor(actor) {
+        if ((this.#actor != null) !== (actor != null)) {
             this.#dialog.close();
         }
 
-        this.#actor = event.detail.actor;
+        this.#actor = actor;
         if (this.#actor == null) {
             this.#displayNoActor();
             return;

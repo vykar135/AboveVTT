@@ -123,6 +123,112 @@ function initActiveCharacter() {
     return checkCharacter;
 }
 
+/** Handles the registration and dispatching of events from a non-interface component. */
+export class TabletopEventHandler {
+    /** @type {{ [key: string]: Set<(event: any) => void> }} */
+    #eventTypes;
+
+    constructor() {
+        this.#eventTypes = {};
+        Object.freeze(this);
+    }
+
+    /**
+     * Dispatches an event.
+     * 
+     * @template T
+     * @param {string} eventType - The type of event to attach to.
+     * @param {T} event - The details of the event.
+     */
+    dispatch(eventType, event) {
+        eventType = this.#normalizeEventType(eventType);
+        const callbacks = this.#eventTypes[eventType];
+        if (callbacks == null || callbacks.size === 0) {
+            return;
+        }
+
+        for (const entry of callbacks) {
+            try {
+                entry(event);
+            } catch (error) {
+                console.error('Failed to execute event callback; preventing future attempts', error);
+                callbacks.delete(entry);
+            }
+        }
+    }
+
+    /**
+     * Adds a callback for the specified event type.
+     * 
+     * @template T
+     * @param {string} eventType - The type of event to attach to.
+     * @param {(event: T) => void} callback - The callback to use when the event is dispatched.
+     * @returns {() => void} Callback used to remove the event handler.
+     */
+    on(eventType, callback) {
+        return this.#manage(eventType, callback, true);
+    }
+
+    /**
+     * Removes a callback for the specified event type.
+     * 
+     * @template T
+     * @param {string} eventType - The type of event to attach to.
+     * @param {(event: T) => void} callback - The callback to use when the event is dispatched.
+     */
+    off(eventType, callback) {
+        this.#manage(eventType, callback, false);
+    }
+
+    /**
+     * Adds or removes a callback for the specified event type.
+     * 
+     * @template T
+     * @param {string} eventType - The type of event to attach to.
+     * @param {(event: T) => void} callback - The callback to use when the event is dispatched.
+     * @param {boolean} adding - Whether the callback is being added.
+     * @returns {() => void | undefined} Callback used to remove the event handler.
+     */
+    #manage(eventType, callback, adding) {
+        eventType = this.#normalizeEventType(eventType);
+
+        if (callback == null || typeof callback !== 'function') {
+            throw new Error('Must specifiy the event callback.');
+        }
+
+        let callbacks = this.#eventTypes[eventType];
+        if (callbacks == null) {
+            callbacks = new Set();
+            this.#eventTypes[eventType] = callbacks;
+        }
+        
+        if (adding !== true) {
+            callbacks.delete(callback);
+            return;
+        }
+
+        callbacks.add(callback);
+
+        return () => {
+            callbacks.delete(callback);
+        };
+    }
+
+    /** Normalizes the URI for an event type. */
+    #normalizeEventType(eventType) {
+        if (typeof eventType !== 'string') {
+            throw new Error('Must specifiy the event type as a string.');
+        }
+
+        eventType = eventType.trim().toLowerCase();
+        if (eventType === '') {
+            throw new Error('Must specifiy the event type.');
+        }
+
+        return eventType;
+    }
+}
+
 /** Manages a sealed index of configuration settings for a given type. */
 export class Configuration {
     /** @type {{ [uri: string]: ConfigurationSettings}} */

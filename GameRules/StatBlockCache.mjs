@@ -1,7 +1,9 @@
-import { GetCharacterId, IsGameMaster, WaitingForScene } from './CoreEnums.mjs'
+import { GetCharacterId, TabletopEventHandler, WaitingForScene } from './CoreEnums.mjs'
 import StatBlock from './StatBlock.mjs';
 
-export const ActorEvent = 'avtt.actor';
+export const ActorEvent = 'actor';
+export const CreatedEvent = 'statblock.create';
+export const DeletedEvent = 'statblock.delete';
 
 export class StatBlockCacheManager {
     /** @type {{ [id: string]: StatBlock }} */
@@ -10,9 +12,13 @@ export class StatBlockCacheManager {
     #character;
     /** @type {StatBlock | undefined} */
     #actor;
+    /** @type {TabletopEventHandler} */
+    #events;
 
     constructor() {
         this.#cache = {};
+        this.#events = new TabletopEventHandler();
+
         this.#character = undefined;
         this.#actor = undefined;
 
@@ -36,38 +42,33 @@ export class StatBlockCacheManager {
         if (actor == null || actor instanceof StatBlock) {
             this.#actor = actor;
             this.#actor?.refreshVisuals();
-
-            const notify = this.#createActorEvent();
-            window.dispatchEvent(notify);
+            this.#events.dispatch(ActorEvent, this.actor);
         }
     }
 
     /**
      * Registers a callback to monitor for changes to the tabletop actor.
-     * @param {(event: Event) => void} callback 
+     * @param {(event: StatBlock | undefined) => void} callback 
      * @returns {() => void} Callback used to remove the event listener. */
-    monitorActor(callback) {
-        const notify = this.#createActorEvent();
-        callback(notify);
-
-        window.addEventListener(ActorEvent, callback);
-
-        return () => {
-            window.removeEventListener(ActorEvent, callback);
-        };
+    onActorChanged(callback) {
+        callback(this.actor);
+        return this.#events.on(ActorEvent, callback);
     }
 
-    /** Creates an instance of an event related to the modification of the current actor. */
-    #createActorEvent() {
-        const actor = this.actor;
+    /**
+     * Registers a callback to monitor for the creation of new stat blocks.
+     * @param {(event: StatBlock | undefined) => void} callback 
+     * @returns {() => void} Callback used to remove the event listener. */
+    onCreated(callback) {
+        return this.#events.on(CreatedEvent, callback);
+    }
 
-        return new CustomEvent(ActorEvent, {
-            detail: {
-                actor: actor
-            },
-            bubbles: false,
-            cancelable: false
-        });
+    /**
+     * Registers a callback to monitor for deletion of stat blocks.
+     * @param {(event: StatBlock | undefined) => void} callback 
+     * @returns {() => void} Callback used to remove the event listener. */
+    onDeleted(callback) {
+        return this.#events.on(DeletedEvent, callback);
     }
 
     /**
@@ -86,6 +87,9 @@ export class StatBlockCacheManager {
         this.#cache[stats.id] = stats;
 
         stats.rebuild();
+
+        this.#events.dispatch(CreatedEvent, stats);
+
         return stats;
     }
 
@@ -98,7 +102,7 @@ export class StatBlockCacheManager {
         }
 
         const removing = this.#cache[id];
-        if (removing.isPlayer || removing.tokenLocal != null) {
+        if (removing.isPlayer || removing.token != null) {
             return;
         }
 
@@ -107,6 +111,7 @@ export class StatBlockCacheManager {
         }
 
         delete this.#cache[id];
+        this.#events.dispatch(DeletedEvent, removing);
     }
 
     /**
@@ -177,8 +182,7 @@ export class StatBlockCacheManager {
             }
         }
 
-        const notify = this.#createActorEvent();
-        window.dispatchEvent(notify);
+        this.#events.dispatch(ActorEvent, this.actor);
     }
 }
 

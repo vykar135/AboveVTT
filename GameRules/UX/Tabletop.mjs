@@ -23,6 +23,8 @@
  * @property {ActionBarOptions} actionBar
  */
 
+import { TabletopEventHandler } from '../CoreEnums.mjs'
+
 const EnvironmentLocalStore = 'AVTT-UX-Settings';
 const EnvironmentChangeEvent = 'avtt.ux.change';
 
@@ -30,6 +32,9 @@ export class TabletopEnvironment {
     /** @type {ThemeOptions} */
     #theme;
     #themeObserver;
+
+    /** @type {TabletopEventHandler} */
+    #events;
 
     /** @type {ActionBarOptions} */
     #actionBar;
@@ -53,6 +58,8 @@ export class TabletopEnvironment {
         this.#themeObserver = window.matchMedia('(prefers-color-scheme: light)');
         this.#themeObserver.addEventListener('change', this.#changeSystemTheme.bind(this));
 
+        this.#events = new TabletopEventHandler();
+
         Object.freeze(this);
     }
 
@@ -72,7 +79,7 @@ export class TabletopEnvironment {
     /** Creates and sends an event notifying components of a change to the environment settings. */
     #dispatchEvents() {
         const notify = this.#createEnvironmentChangeEvent();
-        window.dispatchEvent(notify);
+        this.#events.dispatch(EnvironmentChangeEvent, notify);
     }
 
     /** Handles an update to the user's preferred system theme. */
@@ -111,17 +118,13 @@ export class TabletopEnvironment {
 
     /**
      * Registers a callback to monitor for changes to the tabletop theme.
-     * @param {(event: Event) => void} callback 
+     * @param {(event: { thame: string, actionBar: ActionBarOptions }) => void} callback 
      * @returns {() => void} Callback used to remove the event listener. */
     monitor(callback) {
         const notify = this.#createEnvironmentChangeEvent();
         callback(notify);
 
-        window.addEventListener(EnvironmentChangeEvent, callback);
-
-        return () => {
-            window.removeEventListener(EnvironmentChangeEvent, callback);
-        };
+        return this.#events.on(EnvironmentChangeEvent, callback);
     }
 
     /** Generates a custom event to send to the theme change event. */
@@ -131,14 +134,10 @@ export class TabletopEnvironment {
             showing = (this.#themeObserver?.matches ?? false) ? 'light' : 'dark'
         }
 
-        return new CustomEvent(EnvironmentChangeEvent, {
-            detail: {
-                theme: showing,
-                actionBar: structuredClone(this.#actionBar)
-            },
-            bubbles: false,
-            cancelable: false
-        });
+        return {
+            theme: showing,
+            actionBar: structuredClone(this.#actionBar)
+        }
     }
 }
 
@@ -177,8 +176,6 @@ export class TabletopDialog {
         const eventing = $(window);
         eventing.on('keydown', this.#keyboardClose.bind(this));
         eventing.on('resize', this.#position.bind(this));
-
-        
 
         Object.freeze(this);
     }
