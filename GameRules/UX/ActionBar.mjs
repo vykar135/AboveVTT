@@ -106,7 +106,7 @@ class ActionBarControl {
         };
 
         this.#portrait.button.css(css);
-        this.#portrait.button.prop('data-title', name);
+        this.#portrait.button.attr('data-title', name);
 
         this.#actorSelect.button.detach();
 
@@ -183,17 +183,21 @@ class ActionBarControl {
 
         let onClose = options.onClose;
         if (typeof onClose !== 'function') {
-            onClose = () => { };
+            onClose = () => {
+                console.log('standard callback');
+            };
         }
 
         const copiedOptions = { ...options };
         copiedOptions.onClose = (anchor, content) => {
             showing = false;
+            button.toggleClass('open', false);
             onClose(anchor, content);
         };
 
         title.text(name);
         button.addClass(style);
+        button.attr('data-title', name);
 
         button.append(icon).append(title);
 
@@ -209,6 +213,7 @@ class ActionBarControl {
         });
 
         button.on('click', () => {
+            button.toggleClass('open', true);
             callback(settings);
             showing = true;
         });
@@ -235,7 +240,10 @@ class ActionBarControl {
         /** @type {DialogOptions} */
         const options = {
             classNames: [ 'standard' ],
-            onClose: () => { showing = false; },
+            onClose: () => {
+                showing = false;
+                button.toggleClass('open', false);
+            },
             alignment: 'start'
         };
 
@@ -251,6 +259,7 @@ class ActionBarControl {
         });
 
         button.on('click', () => {
+            button.toggleClass('open', true);
             callback(settings);
             showing = true;
         });
@@ -343,7 +352,7 @@ class ActionBarControl {
                 actor.refreshVisuals();
                 settings.actor = actor;
                 settings.name.text(name);
-                settings.container.prop('data-title', name);
+                settings.container.attr('data-title', name);
 
                 const css = {
                     "background-image": `url(${actor.image ?? 'https://www.dndbeyond.com/avatars/4675/675/636747837794884984.jpeg'})`,

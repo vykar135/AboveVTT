@@ -74,6 +74,7 @@
     }
 
     div.avtt-hotbar-portrait {
+        position: relative;
         cursor: pointer;
         border: 3px solid rgba(26, 106, 255);
         box-shadow: 1px 1px 2px 0px #000;
@@ -128,6 +129,7 @@
     }
 
     div.avtt-hotbar-button {
+        position: relative;
         display: flex;
         flex-direction: column;
         justify-content: center;
@@ -193,6 +195,38 @@
         }
     }
 
+    div.avtt-hint, div.avtt-hotbar:not(.names) > div.avtt-hotbar-button:not(.open), div.avtt-hotbar-portrait:not(.open) {
+        &::after {
+            position: absolute;
+            content: attr(data-title);
+
+            bottom: 110%;
+            left: 50%;
+            transform: translateX(-50%) translateY(10px);
+            
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: none;
+            
+            transition: opacity 0.3s ease, transform 0.3s ease, visibility 0.3s;
+
+            background-color: rgba(0, 0, 0, 0.85);
+            color: rgba(255, 255, 255, 1);
+            padding: 3px 5px;
+            border-radius: 4px;
+            font-size: 1em;
+            font-family: Consolas, monospace;
+            white-space: nowrap;
+        }
+
+        &:hover::after {
+            transition-delay: 0.7s;
+            opacity: 1;
+            visibility: visible;
+            transform: translateX(-50%) translateY(0);
+        }
+    }
+
     @supports selector(::-webkit-scrollbar) {
         div.avtt-available-actors {
             scrollbar-width: thin;
@@ -210,6 +244,7 @@
         overflow-y: auto;
 
         & > div.available-actor {
+            position: relative;
             display: flex;
             flex-direction: column;
             flex: 0 0;
@@ -239,6 +274,17 @@
                 overflow: hidden;
                 text-overflow: ellipsis;
                 text-align: center;
+            }
+
+            &:hover > div.actor-name {
+                position: absolute;
+                top: 70px;
+                left: 0px;
+                width: 75px;
+                text-align: center;
+                overflow: visible;
+                white-space: normal;
+                z-index: 100;
             }
         }
     }
