@@ -14,6 +14,7 @@
  * @property {'topleft' | 'bottomleft' | 'topright' | 'bottomright'} [screenOrigin] - How the dialog will position itself relative to the viewport.
  * @property {number} [offset] - The number of pixels to offset the dialog from the bound edge.
  * @property {DialogCloseCallback} [onClose] - The callback to make when the dialog is closed.
+ * @property {boolean} [modal] - Whether the dialog acts as a model window with automatic close when clicked outside of it.
  * 
  * @typedef ActionBarOptions
  * @property {boolean} names - Whether names are shown in the action bar.
@@ -51,9 +52,9 @@ export class TabletopEnvironment {
         }
 
         this.#theme = stored.theme ?? 'system';
-        this.#actionBar = stored.actionBar ?? {
+        this.#actionBar = Object.freeze(stored.actionBar ?? {
             names: true
-        };
+        });
 
         this.#themeObserver = window.matchMedia('(prefers-color-scheme: light)');
         this.#themeObserver.addEventListener('change', this.#changeSystemTheme.bind(this));
@@ -63,11 +64,17 @@ export class TabletopEnvironment {
         Object.freeze(this);
     }
 
+    /** Retrieves the current color theme used by the tabletop. */
+    get theme() { return this.#theme; }
+
+    /** Retrieves the current settings for the action bar within the tabletop. */
+    get actionBar() { return this.#actionBar; }
+
     /** Commits the environment settings to local storage. */
     #commit() {
         const config = {
             theme: this.#theme,
-            actionBar: this.#actionBar
+            actionBar: structuredClone(this.#actionBar)
         };
 
         const json = JSON.stringify(config);
@@ -109,9 +116,9 @@ export class TabletopEnvironment {
         }
 
         const current = this.#actionBar;
-        this.#actionBar = {
+        this.#actionBar = Object.freeze({
             names: options.names ?? current.names ?? true
-        }
+        });
 
         this.#commit();
     }
@@ -147,6 +154,7 @@ export const Tabletop = new TabletopEnvironment();
 /** Provides a common dialog that can anchor to other elements within the tabletop. */
 export class TabletopDialog {
     #dialog;
+    #backdrop;
 
     /** @type {JQuery<HTMLElement> | undefined} */
     #anchor;
@@ -164,10 +172,14 @@ export class TabletopDialog {
     #screenOrigin
     /** @type {number} */
     #offset;
+    /** @type {boolean} */
+    #modal;
 
     /** @param {JQuery<HTMLElement>} container - The container to place the dialog within.  */
     constructor(parent) {
+        this.#backdrop = $('<div class="avtt-dialog-backdrop" />').appendTo(parent);
         this.#dialog = $('<div class="avtt-dialog" />').appendTo(parent);
+
         this.#anchor = undefined;
         this.#content = undefined;
         this.#onClose = undefined;
@@ -176,6 +188,12 @@ export class TabletopDialog {
         const eventing = $(window);
         eventing.on('keydown', this.#keyboardClose.bind(this));
         eventing.on('resize', this.#position.bind(this));
+
+        const clickToClose = this.close.bind(this);
+        this.#backdrop.on('click', () => {
+            console.log('clicking backdrop');
+            clickToClose();
+        });
 
         Object.freeze(this);
     }
@@ -218,6 +236,7 @@ export class TabletopDialog {
         this.#content = undefined;
         this.#onClose = undefined;
         this.#classNames = [];
+        this.#backdrop.toggleClass('open', false);
         this.#dialog.toggleClass('open', false);
     }
 
@@ -261,6 +280,7 @@ export class TabletopDialog {
         this.#anchor = anchor;
         this.#content = content;
         this.#onClose = options?.onClose;
+        this.#modal = (options?.modal === true);
         this.#classNames = options?.classNames ?? ['standard', 'centerX'];
         this.#edge = options?.edge ?? 'top';
         this.#alignment = options?.alignment ?? 'center';
@@ -273,6 +293,7 @@ export class TabletopDialog {
             this.#dialog.toggleClass(name, true);
         }
 
+        this.#backdrop.toggleClass('open', this.#modal);
         this.#dialog.toggleClass('open', true);
     }
 

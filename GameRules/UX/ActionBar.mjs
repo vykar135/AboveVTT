@@ -38,6 +38,7 @@ class ActionBarControl {
     #skills;
     #actions;
     #statusEffects;
+    #settings;
 
     constructor() {
         this.#container = $('<div class="avtt-hotbar-container" />');
@@ -49,7 +50,7 @@ class ActionBarControl {
 
         const actorSelect = this.#setupActorSelection();
 
-        this.#actorSelect = this.#createMenuButton('Play As', 'play-as', actorSelect);
+        this.#actorSelect = this.#createMenuButton('Play As', 'play-as', actorSelect, { modal: true });
         this.#actorSelect.button.appendTo(this.#bar);
 
         this.#portrait = this.#createActorPortrait(actorSelect);
@@ -59,6 +60,7 @@ class ActionBarControl {
         this.#skills = this.#createMenuButton('Skills', 'skills', this.#createPlaceholder());
         this.#actions = this.#createMenuButton('Actions', 'actions', this.#createPlaceholder());
         this.#statusEffects = this.#createMenuButton('Effects', 'status-effects', this.#createPlaceholder());
+        this.#settings = this.#createMenuButton('Settings', 'settings', this.#setupSettingsMenu(), { modal: true });
 
         Tabletop.monitor(this.#changeEnvironment.bind(this));
         $(document.body).append(this.#container);
@@ -117,6 +119,7 @@ class ActionBarControl {
         this.#skills.button.appendTo(this.#bar);
         this.#actions.button.appendTo(this.#bar);
         this.#statusEffects.button.appendTo(this.#bar);
+        this.#settings.button.appendTo(this.#bar);
     }
 
     /** Removes all buttons from the bar then appends the "Select Actor" button */
@@ -130,6 +133,7 @@ class ActionBarControl {
         this.#statusEffects.button.detach();
 
         this.#actorSelect.button.appendTo(this.#bar);
+        this.#settings.button.appendTo(this.#bar);
     }
 
     /** Notifies the action bar that the peer-to-peer video panel is open. */
@@ -170,16 +174,15 @@ class ActionBarControl {
      * @returns {ActionBarButton}
      */
     #createMenuButton(name, style, render, options) {
-        const button = $('<div class="avtt-hotbar-button"></div>');
+        const button = $('<div class="avtt-hotbar-button" />');
         const icon = $(`<span class="icon" />`);
         const title = $(`<span class="title" />`);
         const callback = this.#showDialog.bind(this);
 
         let showing = false;
-        options ??= {
-            classNames: [ 'standard', 'centerX' ],
-            onClose: () => { }
-        }
+        options ??= { };
+        options.classNames ??= [ 'standard', 'centerX' ];
+        options.onClose ??= () => { };
 
         let onClose = options.onClose;
         if (typeof onClose !== 'function') {
@@ -232,7 +235,7 @@ class ActionBarControl {
      * @returns {ActionBarButton}
      */
     #createActorPortrait(render) {
-        const button = $('<div class="avtt-hotbar-portrait"></div>');
+        const button = $('<div class="avtt-hotbar-portrait" />');
         const callback = this.#showDialog.bind(this);
 
         let showing = false;
@@ -244,7 +247,8 @@ class ActionBarControl {
                 showing = false;
                 button.toggleClass('open', false);
             },
-            alignment: 'start'
+            alignment: 'start',
+            modal: true
         };
 
         /** @type {ActionBarButton} */
@@ -292,7 +296,7 @@ class ActionBarControl {
     #setupActorSelection() {
         /** @type {{ container: JQuery<HTMLElement>, portrait: JQuery<HTMLElement>, name: JQuery<HTMLElement> }[]} */
         const options = [];
-        const selectable = $('<div class="avtt-available-actors"></div>');
+        const selectable = $('<div class="avtt-available-actors" />');
 
         const rebuild = (/** @type {StatBlock} */ actor) => {
             const available = StatBlockCache.listMine();
@@ -323,9 +327,9 @@ class ActionBarControl {
                 const setup = {
                     showing: true,
                     actor: undefined,
-                    container: $('<div class="available-actor"></div>'),
-                    portrait: $('<div class="actor-portrait"></div>'),
-                    name: $('<div class="actor-name"></div>')
+                    container: $('<div class="available-actor" />'),
+                    portrait: $('<div class="actor-portrait" />'),
+                    name: $('<div class="actor-name" />')
                 };
 
                 setup.container.on('click', () => {
@@ -363,9 +367,56 @@ class ActionBarControl {
             }
         };
 
-        return (actor, button) => {
+        return () => {
             rebuild();
             return selectable;
+        }
+    }
+
+    #setupSettingsMenu() {
+        const container = $('<div class="avtt-hotbar-settings" />');
+
+        const namesOption = $('<div class="avtt-hotbar-setting"><span class="title">Hotbar Names</span></div>');
+        const namesToggle = $('<button type="button" role="switch" class="avtt-hotbar-toggle" />').appendTo(namesOption);
+
+        const themeOption = $('<div class="avtt-hotbar-setting"><span class="title">Tabletop Theme</span></div>');
+        const systemTheme = $('<button type="button" role="radio" class="avtt-theme-icon" data-theme="system" />').appendTo(themeOption);
+        const darkMode = $('<button type="button" role="radio" class="avtt-theme-icon" data-theme="dark" />').appendTo(themeOption);
+        const lightMode = $('<button type="button" role="radio" class="avtt-theme-icon" data-theme="light" />').appendTo(themeOption);
+
+        container.append(themeOption).append(namesOption);
+
+        const rebuild = () => {
+            namesToggle.toggleClass('checked', Tabletop.actionBar.names);
+            systemTheme.toggleClass('checked', Tabletop.theme === 'system');
+            darkMode.toggleClass('checked', Tabletop.theme ===  'dark');
+            lightMode.toggleClass('checked', Tabletop.theme === 'light');
+        };
+
+        namesToggle.on('click', () => {
+            const updateTo = { ...Tabletop.actionBar };
+            updateTo.names = !updateTo.names;
+
+            Tabletop.changeActionBar(updateTo);
+            namesToggle.toggleClass('checked', updateTo.names);
+        });
+
+        const updateTheme = (event) => {
+            const updateTo = $(event.target).attr('data-theme') ?? 'system';
+            Tabletop.changeTheme(updateTo);
+            
+            systemTheme.toggleClass('checked', updateTo === 'system');
+            darkMode.toggleClass('checked', updateTo ===  'dark');
+            lightMode.toggleClass('checked', updateTo === 'light');
+        };
+
+        systemTheme.on('click', updateTheme);
+        darkMode.on('click', updateTheme);
+        lightMode.on('click', updateTheme);
+
+        return () => {
+            rebuild();
+            return container;
         }
     }
 }
