@@ -376,10 +376,10 @@ class ActionBarControl {
     #setupSettingsMenu() {
         const container = $('<div class="avtt-hotbar-settings" />');
 
-        const namesOption = $('<div class="avtt-hotbar-setting"><span class="title">Hotbar Names</span></div>');
+        const namesOption = $('<div class="avtt-hotbar-setting"><span class="title">Show Hotbar Names</span></div>');
         const namesToggle = $('<button type="button" role="switch" class="avtt-hotbar-toggle" />').appendTo(namesOption);
 
-        const themeOption = $('<div class="avtt-hotbar-setting"><span class="title">Tabletop Theme</span></div>');
+        const themeOption = $('<div class="avtt-hotbar-setting"><span class="title">Action Bar Theme</span></div>');
         const systemTheme = $('<button type="button" role="radio" class="avtt-theme-icon" data-theme="system" />').appendTo(themeOption);
         const darkMode = $('<button type="button" role="radio" class="avtt-theme-icon" data-theme="dark" />').appendTo(themeOption);
         const lightMode = $('<button type="button" role="radio" class="avtt-theme-icon" data-theme="light" />').appendTo(themeOption);

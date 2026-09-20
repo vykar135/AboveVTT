@@ -55,7 +55,7 @@
         height: fit-content;
         z-index: var(--hotbar-z-index);
         pointer-events: none;
-        font-family: Consolas, DejaVu Sans Mono, monospace;
+        font-family: Consolas, monospace;
 
         display: flex;
         flex-direction: row;
