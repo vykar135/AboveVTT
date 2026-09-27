@@ -1,13 +1,14 @@
 @scope (.avtt-hotbar-container) {
     :scope {
         --hotbar-z-index: 9999;
-        --hotbar-background: rgba(0, 0, 0, 0.75); 
+        --hotbar-background: rgba(0, 0, 0, 0.8); 
         --hotbar-backdrop-filter: blur(12px);
         --hotbar-border: 1px solid rgba(255, 255, 255, 0.25);
         --hotbar-box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
         --hotbar-color: #FFF;
         --hotbar-idle-color: rgba(255, 255, 255, 0.45);
         --hotbar-hover: #FFF;
+        --hotbar-hover-bgcolor: transparent;
         --hotbar-active: rgba(180, 60, 53, 1.0);
         --hotbar-icon-size: 32px;
 
@@ -17,12 +18,13 @@
     }
 
     :scope.use-light-mode {
-        --hotbar-background: rgba(255, 255, 255, 0.75);
+        --hotbar-background: rgba(255, 255, 255, 0.85);
         --hotbar-border: 1px solid rgba(0, 0, 0, 0.25);
         --hotbar-box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
-        --hotbar-color: rgba(0, 0, 0, 0.85);
-        --hotbar-idle-color: rgba(0, 0, 0, 0.45);
-        --hotbar-hover: rgba(0, 0, 0, 0.85);
+        --hotbar-color: rgba(0, 0, 0, 1);
+        --hotbar-idle-color: rgba(0, 0, 0, 0.6);
+        --hotbar-hover: rgba(180, 60, 53, 1.0);
+        --hotbar-hover-bgcolor: rgba(180, 60, 53, 0.2);
         --hotbar-active: rgba(150, 30, 23, 1.0);
 
         --hotbar-toggle-track-off: rgba(0, 0, 0, 0.18);
@@ -57,7 +59,7 @@
         height: fit-content;
         z-index: var(--hotbar-z-index);
         pointer-events: none;
-        font-family: Consolas, monospace;
+        font-family: Roboto, Helvetica, sans-serif;
 
         display: flex;
         flex-direction: row;
@@ -170,7 +172,7 @@
         color: var(--hotbar-idle-color);
 
         & > span.title {
-            font-size: .7em;
+            font-size: 1em;
         }
 
         & > span.icon {
@@ -280,7 +282,7 @@
         justify-content: center;
         max-width: 385px;
         margin: 5px;
-        min-height: 91px;
+        min-height: 94px;
         max-height: 300px;
         overflow-y: auto;
 
@@ -289,7 +291,7 @@
             display: flex;
             flex-direction: column;
             flex: 0 0;
-            padding: 5px;
+            padding: 5px 5px 8px 5px;
             cursor: pointer;
 
             & > div.actor-portrait {
@@ -308,7 +310,7 @@
 
             & > div.actor-name {
                 padding-top: 3px;
-                font-size: .7em;
+                font-size: 1em;
                 width: 65px;
                 white-space: nowrap;
                 overflow: hidden;
@@ -333,8 +335,7 @@
         display: flex;
         flex-direction: column;
         width: 220px;
-        margin-left: 5px;
-        margin-right: 5px;
+        margin: 5px;
         max-height: 300px;
         overflow-y: auto;
     }
@@ -347,7 +348,7 @@
 
         & > .title {
             flex: 1;
-            font-size: .9em;
+            font-size: 1.1em;
         }
 
         & > button {
@@ -431,12 +432,16 @@
     div.avtt-menu-title {
         text-align: center;
         padding: 5px;
+        font-size: 1em;
+        text-transform: uppercase;
+        font-weight: 700;
+        letter-spacing: 1px;
     }
 
     div.avtt-hotbar-abilities {
         display: flex;
         flex-direction: column;
-        margin: 0 5px 5px 5px;
+        margin: 0px 10px 5px 10px;
         width: 200px;
 
         & > div.ability-check {
@@ -445,12 +450,17 @@
             flex: 0 0;
             justify-content: center;
             align-items: stretch;
+            padding-bottom: 1px;
+            margin-bottom: 1px;
+            border-bottom: 1px dotted var(--hotbar-idle-color);
 
             & > div.name {
                 display: flex;
                 align-items: center;
                 flex: 1;
                 padding-left: 5px;
+                font-size: 1.2em;
+                font-weight: 400;
             }
 
             & > div.modifier {
@@ -459,14 +469,17 @@
                 flex-basis: 35px;
                 padding: 2px 0;
                 text-align: center;
+                font-size: 1.2em;
                 border: 1px solid var(--hotbar-idle-color);
                 border-radius: 4px;
                 color: var(--hotbar-idle-color);
                 margin: 3px 0;
+                font-weight: 700;
 
                 &:hover {
                     border: 1px solid var(--hotbar-hover);
                     color: var(--hotbar-hover);
+                    background-color: var(--hotbar-hover-bgcolor);
                 }
             }
 
@@ -474,8 +487,10 @@
                 display: flex;
                 align-items: center;
                 justify-content: center;
+                font-size: 1.2em;
+                font-weight: 500;
                 flex: 0;
-                flex-basis: 30px;
+                flex-basis: 28px;
                 margin: 3px;
                 color: var(--hotbar-idle-color);
                 border: 1px solid var(--hotbar-idle-color);
@@ -487,7 +502,7 @@
     div.avtt-hotbar-saves {
         display: flex;
         flex-direction: column;
-        margin: 0 5px 5px 5px;
+        margin: 0 10px 5px 10px;
         width: 180px;
 
         & > div.saving-throw {
@@ -496,19 +511,26 @@
             flex: 0 0;
             justify-content: center;
             align-items: stretch;
+            padding-bottom: 1px;
+            margin-bottom: 1px;
+            border-bottom: 1px dotted var(--hotbar-idle-color);
 
             & > div.name {
                 display: flex;
                 align-items: center;
                 flex: 1;
+                font-size: 1.2em;
+                font-weight: 400;
             }
 
             & > div.modifier {
                 cursor: pointer;
                 flex: 0;
-                flex-basis: 35px;
+                flex-basis: 40px;
                 padding: 2px 0;
                 text-align: center;
+                font-size: 1.2em;
+                font-weight: 700;
                 border: 1px solid var(--hotbar-idle-color);
                 border-radius: 4px;
                 color: var(--hotbar-idle-color);
@@ -517,6 +539,7 @@
                 &:hover {
                     border: 1px solid var(--hotbar-hover);
                     color: var(--hotbar-hover);
+                    background-color: var(--hotbar-hover-bgcolor);
                 }
             }
         }
@@ -525,15 +548,14 @@
     div.avtt-hotbar-skills {
         display: flex;
         flex-direction: column;
-        margin: 0 5px 5px 5px;
-        max-height: 300px;
+        margin: 0 10px 10px 10px;
     }
 
     div.avtt-skill-checks {
         display: grid;
         grid-auto-flow: column;
         grid-template-rows: repeat(9, 1fr);
-        gap: 0 10px;
+        gap: 0 25px;
 
         & > div.skill {
             display: flex;
@@ -541,28 +563,48 @@
             flex: 0 0;
             justify-content: center;
             align-items: stretch;
-            width: 180px;
+            width: 230px;
+            padding-bottom: 1px;
+            margin-bottom: 1px;
+            border-bottom: 1px dotted var(--hotbar-idle-color);
 
             & > div.name {
                 display: flex;
                 align-items: center;
                 flex: 1;
+                font-size: 1.2em;
+                font-weight: 400;
+            }
+
+            & > div.ability {
+                display: flex;
+                flex: 0;
+                flex-basis: 40px;
+                justify-content: center;
+                align-items: center;
+                font-size: 1em;
+                text-transform: uppercase;
+                color: var(--hotbar-idle-color);
+                font-weight: 500;
             }
 
             & > div.modifier {
                 cursor: pointer;
                 flex: 0;
-                flex-basis: 35px;
+                flex-basis: 40px;
                 padding: 2px 0;
+                font-size: 1.2em;
                 text-align: center;
                 border: 1px solid var(--hotbar-idle-color);
                 border-radius: 4px;
                 color: var(--hotbar-idle-color);
                 margin: 3px 0;
+                font-weight: 700;
 
                 &:hover {
                     border: 1px solid var(--hotbar-hover);
                     color: var(--hotbar-hover);
+                    background-color: var(--hotbar-hover-bgcolor);
                 }
             }
         }
