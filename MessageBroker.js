@@ -648,6 +648,7 @@ class MessageBroker {
 
 			if (msg.eventType == "custom/myVTT/token" && (msg.sceneId == window.CURRENT_SCENE_DATA.id || msg.data.id in window.TOKEN_OBJECTS)) {
 				self.handleToken(msg);
+				window.statBlocks.refreshStatBlock(msg?.data?.id);
 			} else if(msg.eventType=="custom/myVTT/delete_token"){
 				let tokenid=msg.data.id;
 				if(tokenid in window.TOKEN_OBJECTS){
@@ -1179,6 +1180,10 @@ class MessageBroker {
 			forceRefresh = true;
 			delete window.WIZARDING;
 		}
+
+		// Reset the actor back to the default.
+		window.statBlocks?.changeActor(undefined);
+
 		try{
 			if(msg.data.scale_factor == undefined || msg.data.scale_factor == ''){
 				msg.data.scale_factor = 1;

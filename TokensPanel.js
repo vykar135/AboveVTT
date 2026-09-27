@@ -2006,6 +2006,7 @@ function search_monsters(searchTerm, skip, callback) {
     if (filterParams.length > 0) {
         searchParam += `&${filterParams}`;
     }
+
     noisy_log(`search_monsters calling API https://monster-service.dndbeyond.com/v1/Monster?skip=${offset}&take=100${searchParam}`);
     window.ajaxQueue.addDDBRequest({
         url: `https://monster-service.dndbeyond.com/v1/Monster?skip=${offset}&take=100${searchParam}`,
@@ -5278,14 +5279,14 @@ const fetch_and_cache_monsters = mydebounce( (monsterIds, callback=()=>{}, open5
             }
         });
     }
-    
 });
 
 function update_monster_item_cache(newItems, callback=()=>{}) {
    
    const promise = new Promise((resolve, reject) =>{
         newItems.forEach(async (item, index, array) => {
-            cached_monster_items[item.monsterData.id] = item 
+            cached_monster_items[item.monsterData.id] = item;
+            window.statBlocks.refreshMonster?.(item.monsterData.id);
             if(index === array.length-1) {
               resolve();
             }
@@ -5298,7 +5299,8 @@ function update_open5e_item_cache(newItems, callback=()=>{}) {
    
    const promise = new Promise((resolve, reject) =>{
         newItems.forEach(async (item, index, array) => {
-            cached_open5e_items[item.monsterData.key] = item
+            cached_open5e_items[item.monsterData.key] = item;
+            window.statBlocks.refreshMonster?.(item.monsterData.key);
             if(index === array.length-1) {
               resolve();
             }
