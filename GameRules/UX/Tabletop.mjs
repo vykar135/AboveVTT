@@ -190,9 +190,13 @@ export class TabletopDialog {
         eventing.on('resize', this.#position.bind(this));
 
         const clickToClose = this.close.bind(this);
-        this.#backdrop.on('click', () => {
-            console.log('clicking backdrop');
+        this.#backdrop.on('click', (e) => {
             clickToClose();
+        });
+        this.#backdrop.on('contextmenu', (e) => {
+            clickToClose();
+            e.stopPropagation();
+            e.preventDefault();
         });
 
         Object.freeze(this);

@@ -1,8 +1,9 @@
 /** @import { DialogOptions, EnvironmentChangeEvent } from './Tabletop.mjs*/
 
 import { Tabletop, TabletopDialog } from './Tabletop.mjs';
-import StatBlock from '../StatBlock.mjs'
+import StatBlock, { BlockAbilityModifier } from '../StatBlock.mjs'
 import { StatBlockCache } from '../StatBlockCache.mjs';
+import { DiceAction } from '../DiceAction.mjs';
 
 /**
  * @typedef {Object} ActionBarButton
@@ -55,9 +56,9 @@ class ActionBarControl {
 
         this.#portrait = this.#createActorPortrait(actorSelect);
         this.#hp = this.#createMenuButton('Health', 'hp', this.#createPlaceholder());
-        this.#abilities = this.#createMenuButton('Abilities', 'abilities', this.#createPlaceholder());
-        this.#saves = this.#createMenuButton('Saves', 'saves', this.#createPlaceholder());
-        this.#skills = this.#createMenuButton('Skills', 'skills', this.#createPlaceholder());
+        this.#abilities = this.#createMenuButton('Abilities', 'abilities', this.#setupAbilitiesMenu(), { modal: true });
+        this.#saves = this.#createMenuButton('Saves', 'saves', this.#setupSavesMenu(), { modal: true });
+        this.#skills = this.#createMenuButton('Skills', 'skills', this.#setupSkillsMenu(), { modal: true });
         this.#actions = this.#createMenuButton('Actions', 'actions', this.#createPlaceholder());
         this.#statusEffects = this.#createMenuButton('Effects', 'status-effects', this.#createPlaceholder());
         this.#settings = this.#createMenuButton('Settings', 'settings', this.#setupSettingsMenu(), { modal: true });
@@ -112,6 +113,8 @@ class ActionBarControl {
 
         this.#actorSelect.button.detach();
 
+        this.#abilities.render(this.#actor, this.#abilities.button);
+
         this.#portrait.button.appendTo(this.#bar);
         this.#hp.button.appendTo(this.#bar);
         this.#abilities.button.appendTo(this.#bar);
@@ -162,6 +165,10 @@ class ActionBarControl {
      * @param {ActionBarButton} options - The details of the menu to show. */
     #showDialog(options) {
         const menu = options.render(this.#actor, options.button);
+        if (menu == null) {
+            return;
+        }
+
         this.#dialog.attach(options.button, menu, options.dialogOptions);
     }
 
@@ -298,7 +305,7 @@ class ActionBarControl {
         const options = [];
         const selectable = $('<div class="avtt-available-actors" />');
 
-        const rebuild = (/** @type {StatBlock} */ actor) => {
+        const rebuild = () => {
             const available = StatBlockCache.listMine();
 
             for (let validate = 0; validate < options.length; validate++) {
@@ -373,6 +380,9 @@ class ActionBarControl {
         }
     }
 
+    /**
+     * Initializes the menu shown when the settings button in the hot bar is clicked.
+     * @returns {ActionMenuRender} */
     #setupSettingsMenu() {
         const container = $('<div class="avtt-hotbar-settings" />');
 
@@ -418,6 +428,195 @@ class ActionBarControl {
             rebuild();
             return container;
         }
+    }
+
+    /**
+     * Initializes the menu shown when the abilities button in the hot bar is clicked.
+     * @returns {ActionMenuRender} */
+    #setupAbilitiesMenu() {
+        const container = $('<div class="avtt-hotbar-abilities" />');
+        $('<div class="avtt-menu-title">Ability Checks</div>').appendTo(container);
+
+        const formatter = new Intl.NumberFormat('en-US', { signDisplay: 'always' });
+
+        const buildAbility = () => {
+            const check = $('<div class="ability-check" />').appendTo(container);
+            const score = $('<div class="score" />').appendTo(check);
+            const name = $('<div class="name" />').appendTo(check);
+            const modifier = $('<div class="modifier" />').appendTo(check);
+
+            const bindTo = (/** @type {BlockAbilityModifier} */ ability) => {
+                score.text(ability.score.current);
+                name.text(ability.score.name);
+                modifier.text(formatter.format(ability.current));
+            }
+
+            return bindTo;
+        };
+
+        const str = buildAbility();
+        const dex = buildAbility();
+        const con = buildAbility();
+        const int = buildAbility();
+        const wis = buildAbility();
+        const cha = buildAbility();
+
+        const rebuild = () => {
+            const actor = this.#actor;
+            if (actor == null) {
+                return undefined;
+            }
+
+            str(actor.modifiers.str);
+            dex(actor.modifiers.dex);
+            con(actor.modifiers.con);
+            int(actor.modifiers.int);
+            wis(actor.modifiers.wis);
+            cha(actor.modifiers.cha);
+
+            return container;
+        };
+
+        return rebuild;
+    }
+
+    /**
+     * Initializes the menu shown when the saving throws button in the hot bar is clicked.
+     * @returns {ActionMenuRender} */
+    #setupSavesMenu() {
+        const container = $('<div class="avtt-hotbar-saves" />');
+        $('<div class="avtt-menu-title">Saving Throws</div>').appendTo(container);
+
+        const formatter = new Intl.NumberFormat('en-US', { signDisplay: 'always' });
+
+        const buildSave = (name) => {
+            const check = $('<div class="saving-throw" />').appendTo(container);
+            $(`<div class="name">${name}</div>`).appendTo(check);
+
+            const modifier = $('<div class="modifier" />').appendTo(check);
+
+            const bindTo = (/** @type {StatBlock} */ actor, /** @type {DiceAction} */ save) => {
+                const pb = actor.proficiencyBonus.current;
+                const diceContext = actor.diceContext;
+                const abilityMod = actor.modifiers[save.ability]?.current ?? 0;
+
+                const bonusAmount = diceContext.convertNumeric(save.bonus) ?? 0;
+                const profAmount = (pb * (diceContext.convertNumeric(save.proficiency) ?? 0));
+
+                const total = abilityMod + bonusAmount + profAmount;
+
+                modifier.text(formatter.format(total));
+            }
+
+            return bindTo;
+        };
+
+        const str = buildSave('Strength');
+        const dex = buildSave('Dexterity');
+        const con = buildSave('Constitution');
+        const int = buildSave('Intellegence');
+        const wis = buildSave('Wisdom');
+        const cha = buildSave('Charisma');
+
+        const rebuild = () => {
+            const actor = this.#actor;
+            if (actor == null) {
+                return undefined;
+            }
+
+            str(actor, actor.saves.str);
+            dex(actor, actor.saves.dex);
+            con(actor, actor.saves.con);
+            int(actor, actor.saves.int);
+            wis(actor, actor.saves.wis);
+            cha(actor, actor.saves.cha);
+
+            return container;
+        };
+
+        return rebuild;
+    }
+
+    /**
+     * Initializes the menu shown when the skill check button in the hot bar is clicked.
+     * @returns {ActionMenuRender} */
+    #setupSkillsMenu() {
+        const container = $('<div class="avtt-hotbar-skills" />');
+        $('<div class="avtt-menu-title">Skill Checks</div>').appendTo(container);
+
+        const options = $('<div class="avtt-skill-checks" />').appendTo(container);
+        const formatter = new Intl.NumberFormat('en-US', { signDisplay: 'always' });
+
+        const buildSkill = () => {
+            const check = $('<div class="skill" />').appendTo(options);
+            const name = $(`<div class="name" />`).appendTo(check);
+            const modifier = $('<div class="modifier" />').appendTo(check);
+
+            const bindTo = (/** @type {StatBlock} */ actor, /** @type {DiceAction} */ skill) => {
+                const pb = actor.proficiencyBonus.current;
+                const diceContext = actor.diceContext;
+                const abilityMod = actor.modifiers[skill.ability]?.current ?? 0;
+
+                const bonusAmount = diceContext.convertNumeric(skill.bonus) ?? 0;
+                const profAmount = (pb * (diceContext.convertNumeric(skill.proficiency) ?? 0));
+
+                const total = abilityMod + bonusAmount + profAmount;
+
+                name.text(skill.name);
+                modifier.text(formatter.format(total));
+            }
+
+            return bindTo;
+        };
+
+        const acrobatics = buildSkill();
+        const animalHandling = buildSkill();
+        const arcana = buildSkill();
+        const athletics = buildSkill();
+        const deception = buildSkill();
+        const history = buildSkill();
+        const insight = buildSkill();
+        const intimidation = buildSkill();
+        const investigation = buildSkill();
+        const medicine = buildSkill();
+        const nature = buildSkill();
+        const perception = buildSkill();
+        const performance = buildSkill();
+        const persuasion = buildSkill();
+        const religion = buildSkill();
+        const sleightOfHand = buildSkill();
+        const stealth = buildSkill();
+        const survival = buildSkill();
+
+        const rebuild = () => {
+            const actor = this.#actor;
+            if (actor == null) {
+                return undefined;
+            }
+
+            acrobatics(actor, actor.skills.acrobatics);
+            animalHandling(actor, actor.skills.animalHandling);
+            arcana(actor, actor.skills.arcana);
+            athletics(actor, actor.skills.athletics);
+            deception(actor, actor.skills.deception);
+            history(actor, actor.skills.history);
+            insight(actor, actor.skills.insight);
+            intimidation(actor, actor.skills.intimidation);
+            investigation(actor, actor.skills.investigation);
+            medicine(actor, actor.skills.medicine);
+            nature(actor, actor.skills.nature);
+            perception(actor, actor.skills.perception);
+            performance(actor, actor.skills.performance);
+            persuasion(actor, actor.skills.persuasion);
+            religion(actor, actor.skills.religion);
+            sleightOfHand(actor, actor.skills.sleightOfHand);
+            stealth(actor, actor.skills.stealth);
+            survival(actor, actor.skills.survival);
+
+            return container;
+        };
+
+        return rebuild;
     }
 }
 

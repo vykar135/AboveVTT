@@ -1,13 +1,14 @@
 @scope (.avtt-hotbar-container) {
     :scope {
         --hotbar-z-index: 9999;
-        --hotbar-background: rgba(0, 0, 0, 0.65); 
+        --hotbar-background: rgba(0, 0, 0, 0.75); 
         --hotbar-backdrop-filter: blur(12px);
         --hotbar-border: 1px solid rgba(255, 255, 255, 0.25);
         --hotbar-box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
         --hotbar-color: #FFF;
         --hotbar-idle-color: rgba(255, 255, 255, 0.45);
         --hotbar-hover: #FFF;
+        --hotbar-active: rgba(180, 60, 53, 1.0);
         --hotbar-icon-size: 32px;
 
         --hotbar-toggle-track-off: rgba(255, 255, 255, 0.12);
@@ -16,12 +17,13 @@
     }
 
     :scope.use-light-mode {
-        --hotbar-background: rgba(255, 255, 255, 0.55);
+        --hotbar-background: rgba(255, 255, 255, 0.75);
         --hotbar-border: 1px solid rgba(0, 0, 0, 0.25);
         --hotbar-box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
         --hotbar-color: rgba(0, 0, 0, 0.85);
-        --hotbar-idle-color: rgba(0, 0, 0, 0.55);
+        --hotbar-idle-color: rgba(0, 0, 0, 0.45);
         --hotbar-hover: rgba(0, 0, 0, 0.85);
+        --hotbar-active: rgba(150, 30, 23, 1.0);
 
         --hotbar-toggle-track-off: rgba(0, 0, 0, 0.18);
         --hotbar-toggle-track-on: rgba(76, 146, 255, 0.8);
@@ -89,7 +91,7 @@
         }
 
         &.standard {
-            padding: 5px 0;
+            padding: 0;
             background: var(--hotbar-background);
             backdrop-filter: var(--hotbar-backdrop-filter);
             border: var(--hotbar-border);
@@ -190,6 +192,14 @@
             }
         }
 
+        &.open {
+            color: var(--hotbar-active);
+
+            & > span.icon {
+                background-color: var(--hotbar-active);
+            }
+        }
+
         &.play-as > span.icon {
             mask-image: var(--hotbar-play-as);
         }
@@ -269,8 +279,8 @@
         flex-wrap: wrap;
         justify-content: center;
         max-width: 385px;
-        margin-left: 5px;
-        margin-right: 5px;
+        margin: 5px;
+        min-height: 91px;
         max-height: 300px;
         overflow-y: auto;
 
@@ -414,6 +424,146 @@
 
             &::before {
                 transform: translateX(16px);
+            }
+        }
+    }
+
+    div.avtt-menu-title {
+        text-align: center;
+        padding: 5px;
+    }
+
+    div.avtt-hotbar-abilities {
+        display: flex;
+        flex-direction: column;
+        margin: 0 5px 5px 5px;
+        width: 200px;
+
+        & > div.ability-check {
+            display: flex;
+            flex-direction: row;
+            flex: 0 0;
+            justify-content: center;
+            align-items: stretch;
+
+            & > div.name {
+                display: flex;
+                align-items: center;
+                flex: 1;
+                padding-left: 5px;
+            }
+
+            & > div.modifier {
+                cursor: pointer;
+                flex: 0;
+                flex-basis: 35px;
+                padding: 2px 0;
+                text-align: center;
+                border: 1px solid var(--hotbar-idle-color);
+                border-radius: 4px;
+                color: var(--hotbar-idle-color);
+                margin: 3px 0;
+
+                &:hover {
+                    border: 1px solid var(--hotbar-hover);
+                    color: var(--hotbar-hover);
+                }
+            }
+
+            & > div.score {
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                flex: 0;
+                flex-basis: 30px;
+                margin: 3px;
+                color: var(--hotbar-idle-color);
+                border: 1px solid var(--hotbar-idle-color);
+                border-radius: 100px;
+            }
+        }
+    }
+
+    div.avtt-hotbar-saves {
+        display: flex;
+        flex-direction: column;
+        margin: 0 5px 5px 5px;
+        width: 180px;
+
+        & > div.saving-throw {
+            display: flex;
+            flex-direction: row;
+            flex: 0 0;
+            justify-content: center;
+            align-items: stretch;
+
+            & > div.name {
+                display: flex;
+                align-items: center;
+                flex: 1;
+            }
+
+            & > div.modifier {
+                cursor: pointer;
+                flex: 0;
+                flex-basis: 35px;
+                padding: 2px 0;
+                text-align: center;
+                border: 1px solid var(--hotbar-idle-color);
+                border-radius: 4px;
+                color: var(--hotbar-idle-color);
+                margin: 3px 0;
+
+                &:hover {
+                    border: 1px solid var(--hotbar-hover);
+                    color: var(--hotbar-hover);
+                }
+            }
+        }
+    }
+
+    div.avtt-hotbar-skills {
+        display: flex;
+        flex-direction: column;
+        margin: 0 5px 5px 5px;
+        max-height: 300px;
+    }
+
+    div.avtt-skill-checks {
+        display: grid;
+        grid-auto-flow: column;
+        grid-template-rows: repeat(9, 1fr);
+        gap: 0 10px;
+
+        & > div.skill {
+            display: flex;
+            flex-direction: row;
+            flex: 0 0;
+            justify-content: center;
+            align-items: stretch;
+            width: 180px;
+
+            & > div.name {
+                display: flex;
+                align-items: center;
+                flex: 1;
+            }
+
+            & > div.modifier {
+                cursor: pointer;
+                flex: 0;
+                flex-basis: 35px;
+                padding: 2px 0;
+                text-align: center;
+                border: 1px solid var(--hotbar-idle-color);
+                border-radius: 4px;
+                color: var(--hotbar-idle-color);
+                margin: 3px 0;
+
+                &:hover {
+                    border: 1px solid var(--hotbar-hover);
+                    color: var(--hotbar-hover);
+                }
             }
         }
     }

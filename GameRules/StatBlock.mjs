@@ -834,7 +834,7 @@ class BlockAbilityModifiers {
 }
 
 /** Defines an ability modifier associated with a stat block. */
-class BlockAbilityModifier {
+export class BlockAbilityModifier {
     #score;
     #bonus;
 
