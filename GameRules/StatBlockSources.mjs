@@ -2,7 +2,7 @@
 
 import { GetCharacterId, IsGameMaster, uriEquals, WaitingForScene } from "./CoreEnums.mjs";
 import StatBlock from "./StatBlock.mjs";
-import { StatBlockCache } from "./StatBlockCache.mjs";
+import { StatBlockCache, StatBlockCacheManager } from "./StatBlockCache.mjs";
 
 /** @param {(stats: StatBlock) => boolean} filter  */
 function refreshFilteredStatBlocks(filter) {
@@ -327,6 +327,7 @@ window.statBlocks = Object.freeze({
     getPrimary: () => StatBlockCache.primary,
     getActor: () => StatBlockCache.actor,
     changeActor: (actor) => StatBlockCache.changeActor(actor),
+    isPlayable: (actor) => StatBlockCacheManager.isPlayable(actor),
 
     refreshStatBlock:  refreshStatBlock,
     refreshPlayer:  refreshPlayerSheets,
