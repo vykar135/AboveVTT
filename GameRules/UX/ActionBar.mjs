@@ -550,6 +550,7 @@ class ActionBarControl {
         const buildSkill = () => {
             const check = $('<div class="skill" />').appendTo(options);
             const name = $(`<div class="name" />`).appendTo(check);
+            const ability = $('<div class="ability" />').appendTo(check);
             const modifier = $('<div class="modifier" />').appendTo(check);
 
             const bindTo = (/** @type {StatBlock} */ actor, /** @type {DiceAction} */ skill) => {
@@ -563,6 +564,7 @@ class ActionBarControl {
                 const total = abilityMod + bonusAmount + profAmount;
 
                 name.text(skill.name);
+                ability.text(skill.ability);
                 modifier.text(formatter.format(total));
             }
 
