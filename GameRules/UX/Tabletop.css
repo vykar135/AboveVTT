@@ -1,0 +1,570 @@
+@scope (.avtt-hotbar-container) {
+    :scope {
+        --hotbar-z-index: 9999;
+        --hotbar-background: rgba(0, 0, 0, 0.75); 
+        --hotbar-backdrop-filter: blur(12px);
+        --hotbar-border: 1px solid rgba(255, 255, 255, 0.25);
+        --hotbar-box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+        --hotbar-color: #FFF;
+        --hotbar-idle-color: rgba(255, 255, 255, 0.45);
+        --hotbar-hover: #FFF;
+        --hotbar-active: rgba(180, 60, 53, 1.0);
+        --hotbar-icon-size: 32px;
+
+        --hotbar-toggle-track-off: rgba(255, 255, 255, 0.12);
+        --hotbar-toggle-track-on: rgba(66, 140, 255, 0.9);
+        --hotbar-toggle-knob: rgba(255, 255, 255, 0.96);
+    }
+
+    :scope.use-light-mode {
+        --hotbar-background: rgba(255, 255, 255, 0.75);
+        --hotbar-border: 1px solid rgba(0, 0, 0, 0.25);
+        --hotbar-box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+        --hotbar-color: rgba(0, 0, 0, 0.85);
+        --hotbar-idle-color: rgba(0, 0, 0, 0.45);
+        --hotbar-hover: rgba(0, 0, 0, 0.85);
+        --hotbar-active: rgba(150, 30, 23, 1.0);
+
+        --hotbar-toggle-track-off: rgba(0, 0, 0, 0.18);
+        --hotbar-toggle-track-on: rgba(76, 146, 255, 0.8);
+        --hotbar-toggle-knob: rgba(255, 255, 255, 0.96);
+    }
+
+    :scope {
+        --hotbar-bug: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="%23e3e3e3"><path d="M480-120q-65 0-120.5-32T272-240H160v-80h84q-3-20-3.5-40t-.5-40h-80v-80h80q0-20 .5-40t3.5-40h-84v-80h112q14-23 31.5-43t40.5-35l-64-66 56-56 86 86q28-9 57-9t57 9l88-86 56 56-66 66q23 15 41.5 34.5T688-640h112v80h-84q3 20 3.5 40t.5 40h80v80h-80q0 20-.5 40t-3.5 40h84v80H688q-32 56-87.5 88T480-120Zm-80-200h160v-80H400v80Zm0-160h160v-80H400v80Z"/></svg>');
+        --hotbar-play-as: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="%23e3e3e3"><path d="M220-464 64-620l156-156 156 156-156 156ZM360-80v-200q-61-5-121-14.5T120-320l20-80q84 23 168.5 31.5T480-360q87 0 171.5-8.5T820-400l20 80q-59 16-119 25.5T600-280v200H360Zm35-635q-35-35-35-85t35-85q35-35 85-35t85 35q35 35 35 85t-35 85q-35 35-85 35t-85-35Zm28.5 291.5Q400-447 400-480t23.5-56.5Q447-560 480-560t56.5 23.5Q560-513 560-480t-23.5 56.5Q513-400 480-400t-56.5-23.5ZM682-480l-68-120 68-120h136l68 120-68 120H682Z"/></svg>');
+        --hotbar-hp: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="%23e3e3e3"><path d="m480-120-58-52q-101-91-167-157T150-447.5Q111-500 95.5-544T80-634q0-94 63-157t157-63q52 0 99 22t81 62q34-40 81-62t99-22q94 0 157 63t63 157q0 46-15.5 90T810-447.5Q771-395 705-329T538-172l-58 52Z"/></svg>');
+        --hotbar-hp-hurt: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="%23e3e3e3"><path d="M645-840q100 0 167.5 74T880-590q0 18-2 35.5t-7 34.5H621l-67-102h-72l-54 172-47-70H89q-5-17-7-34.5T80-589q0-103 67-177t167-74q48 0 90.5 19t75.5 53q32-34 74.5-53t90.5-19ZM479-82 148-415q-6-6-11-12t-10-13h211l69 103h71l54-173 46 70h254l-10 12-10 12L479-82Z"/></svg>');
+        --hotbar-hp-bloody: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="%23e3e3e3"><path d="M121-480q-22-35-31.5-69.5T80-621q0-94 63-156.5T300-840q51 0 98.5 22t81.5 62q34-40 81-62t99-22q94 0 157 63.5T880-619q-32-29-73-45t-87-16q-90 0-156 57.5T484-480h-62L321-632 218-480h-97Zm359 360L353-234q-61-55-101.5-94.5T182-400h79l59-88 59 88h105q9 55 40.5 99t78.5 70L480-120Zm200-280v-200h80v200h-80Zm11.5 108.5Q680-303 680-320t11.5-28.5Q703-360 720-360t28.5 11.5Q760-337 760-320t-11.5 28.5Q737-280 720-280t-28.5-11.5Z"/></svg>');
+        --hotbar-dead: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="%23e3e3e3"><path d="M420-330h120l-60-120-60 120Zm-80-110q33 0 56.5-23.5T420-520q0-33-23.5-56.5T340-600q-33 0-56.5 23.5T260-520q0 33 23.5 56.5T340-440Zm280 0q33 0 56.5-23.5T700-520q0-33-23.5-56.5T620-600q-33 0-56.5 23.5T540-520q0 33 23.5 56.5T620-440ZM240-80v-170q-39-17-68.5-45.5t-50-64.5q-20.5-36-31-77T80-520q0-158 112-259t288-101q176 0 288 101t112 259q0 42-10.5 83t-31 77q-20.5 36-50 64.5T720-250v170H600v-80h-80v80h-80v-80h-80v80H240Z"/></svg>');
+        --hotbar-abilities: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="%23e3e3e3"><path d="M360-120v-200q-62-5-121.5-14T120-360l20-80q83 23 168 31.5t172 8.5q86 0 171-8.5T820-440l20 80q-60 17-119.5 26T600-320v200H360Zm120-320q-34 0-57-23t-23-57q0-33 23-56.5t57-23.5q33 0 56.5 23.5T560-520q0 34-23.5 57T480-440ZM180-560q-26 0-43-17t-17-43q0-25 17-42.5t43-17.5q25 0 42.5 17.5T240-620q0 26-17.5 43T180-560Zm600 0q-26 0-43-17t-17-43q0-25 17-42.5t43-17.5q25 0 42.5 17.5T840-620q0 26-17.5 43T780-560ZM290-710q-26 0-43-17t-17-43q0-25 17-42.5t43-17.5q25 0 42.5 17.5T350-770q0 26-17.5 43T290-710Zm380 0q-26 0-43-17t-17-43q0-25 17-42.5t43-17.5q25 0 42.5 17.5T730-770q0 26-17.5 43T670-710Zm-190-50q-26 0-43-17t-17-43q0-25 17-42.5t43-17.5q25 0 42.5 17.5T540-820q0 26-17.5 43T480-760Z"/></svg>');
+        --hotbar-saves: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="%23e3e3e3"><path d="M324-111.5Q251-143 197-197t-85.5-127Q80-397 80-480q0-114 59.5-210.5T301-838q1 19 4 38.5t10 45.5q-72 44-113.5 116.5T160-480q0 134 93 227t227 93q134 0 227-93t93-227q0-85-41.5-158T644-755q7-26 10-45.5t5-37.5q102 51 161.5 147T880-480q0 83-31.5 156T763-197q-54 54-127 85.5T480-80q-83 0-156-31.5ZM310-310q-70-70-70-170 0-58 25.5-109t72.5-85q5 15 11 34.5t16 48.5q-22 23-33.5 51T320-480q0 66 47 113t113 47q66 0 113-47t47-113q0-32-11.5-60T595-591q8-24 14.5-44.5T621-674q47 34 73 85t26 109q0 100-70 170t-170 70q-100 0-170-70Zm130-310q-37-112-48.5-157.5T380-860q0-42 29-71t71-29q42 0 71 29t29 71q0 37-11.5 82.5T520-620h-80Zm-16.5 196.5Q400-447 400-480t23.5-56.5Q447-560 480-560t56.5 23.5Q560-513 560-480t-23.5 56.5Q513-400 480-400t-56.5-23.5Z"/></svg>');
+        --hotbar-skills: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="%23e3e3e3"><path d="m480-80-20-400-140-40H40v-80h240l280-200 52 61-166 119h114l312-180 48 56-340 264-20 400h-80ZM240-640q-33 0-56.5-23.5T160-720q0-33 23.5-56.5T240-800q33 0 56.5 23.5T320-720q0 33-23.5 56.5T240-640Z"/></svg>');
+        --hotbar-actions: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="%23e3e3e3"><path d="M762-96 645-212l-88 88-28-28q-23-23-23-57t23-57l169-169q23-23 57-23t57 23l28 28-88 88 116 117q12 12 12 28t-12 28l-50 50q-12 12-28 12t-28-12Zm118-628L426-270l5 4q23 23 23 57t-23 57l-28 28-88-88L198-96q-12 12-28 12t-28-12l-50-50q-12-12-12-28t12-28l116-117-88-88 28-28q23-23 57-23t57 23l4 5 454-454h160v160ZM278-526 80-724v-160h160l198 198-160 160Z"/></svg>');
+        --hotbar-status-effects: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24" fill="currentColor" aria-hidden="true"><path d="M 8.79 5.17 L 8.06 5.94 L 7.50 6.91 L 7.20 7.90 L 7.14 9.10 L 7.31 10.03 L 7.78 11.11 L 8.34 11.86 L 9.37 12.70 L 8.60 13.09 L 7.93 13.56 L 8.77 13.97 L 10.45 14.59 L 13.10 15.24 L 14.24 15.39 L 15.47 15.43 L 16.52 15.35 L 17.27 15.20 L 16.71 14.49 L 15.96 13.78 L 15.27 13.28 L 14.17 12.70 L 14.93 12.14 L 15.57 11.41 L 16.05 10.57 L 16.35 9.62 L 16.41 8.35 L 16.26 7.51 L 15.85 6.50 L 15.21 5.60 L 14.45 4.93 L 13.72 4.50 L 13.05 4.24 L 12.13 4.07 L 11.23 4.09 L 10.51 4.24 L 9.70 4.56 Z M 1.06 9.92 L 1.02 10.85 L 1.43 11.88 L 2.27 12.96 L 3.39 13.97 L 4.90 15.02 L 6.79 16.06 L 8.38 16.73 L 10.49 17.37 L 12.67 17.78 L 14.86 17.97 L 16.65 17.97 L 19.06 17.72 L 20.72 17.28 L 21.73 16.81 L 22.57 16.08 L 22.96 15.24 L 22.96 14.46 L 22.74 13.80 L 22.10 12.79 L 21.36 12.03 L 20.33 11.26 L 19.19 10.63 L 16.99 9.94 L 16.82 10.05 L 19.23 11.71 L 20.46 13.02 L 20.74 13.63 L 20.78 14.14 L 20.57 14.68 L 20.16 15.07 L 19.19 15.50 L 17.79 15.80 L 14.78 15.93 L 11.48 15.41 L 9.74 14.90 L 8.19 14.27 L 6.42 13.32 L 4.75 12.16 L 3.76 11.17 L 3.35 10.37 L 3.32 9.94 L 3.48 9.47 L 4.08 8.70 L 4.94 8.05 L 6.68 7.21 L 6.68 7.10 L 4.38 7.47 L 2.79 8.09 L 1.65 8.93 Z M 5.28 18.08 L 5.28 18.53 L 5.50 18.83 L 5.91 19.07 L 6.62 19.33 L 7.50 19.55 L 8.56 19.72 L 9.80 19.85 L 11.27 19.91 L 13.72 19.85 L 14.99 19.72 L 16.24 19.50 L 16.99 19.31 L 17.77 19.01 L 18.18 18.71 L 18.29 18.45 L 18.26 18.23 L 16.65 18.43 L 14.97 18.47 L 12.99 18.34 L 11.40 18.10 L 10.11 17.82 L 8.58 17.37 L 7.20 16.83 L 5.93 16.19 L 5.56 16.96 L 5.39 17.50 Z"/></svg>');
+        --hotbar-settings: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="%23e3e3e3"><path d="m370-80-16-128q-13-5-24.5-12T307-235l-119 50L78-375l103-78q-1-7-1-13.5v-27q0-6.5 1-13.5L78-585l110-190 119 50q11-8 23-15t24-12l16-128h220l16 128q13 5 24.5 12t22.5 15l119-50 110 190-103 78q1 7 1 13.5v27q0 6.5-2 13.5l103 78-110 190-118-50q-11 8-23 15t-24 12L590-80H370Zm112-260q58 0 99-41t41-99q0-58-41-99t-99-41q-59 0-99.5 41T342-480q0 58 40.5 99t99.5 41Z"/></svg>');
+
+        --hotbar-system-theme: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="%23e3e3e3"><path d="M480-540ZM80-160v-80h400v80H80Zm40-120v-520h720v80H200v360h280v80H120Zm680 40v-320H640v320h160Zm-240 80v-480h320v480H560Zm160-300q13 0 21.5-9t8.5-21q0-13-8.5-21.5T720-520q-12 0-21 8.5t-9 21.5q0 12 9 21t21 9Zm0 60Z"/></svg>');
+        --hotbar-dark-mode: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="%23e3e3e3"><path d="M480-120q-150 0-255-105T120-480q0-150 105-255t255-105q14 0 27.5 1t26.5 3q-41 29-65.5 75.5T444-660q0 90 63 153t153 63q55 0 101-24.5t75-65.5q2 13 3 26.5t1 27.5q0 150-105 255T480-120Z"/></svg>');
+        --hotbar-light-mode: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px" fill="%23e3e3e3"><path d="M338.5-338.5Q280-397 280-480t58.5-141.5Q397-680 480-680t141.5 58.5Q680-563 680-480t-58.5 141.5Q563-280 480-280t-141.5-58.5ZM200-440H40v-80h160v80Zm720 0H760v-80h160v80ZM440-760v-160h80v160h-80Zm0 720v-160h80v160h-80ZM256-650l-101-97 57-59 96 100-52 56Zm492 496-97-101 53-55 101 97-57 59Zm-98-550 97-101 59 57-100 96-56-52ZM154-212l101-97 55 53-97 101-59-57Z"/></svg>');
+    }
+
+    :scope {
+        position: fixed;
+        bottom: 15px;
+        left: 0;
+        right: var(--sidebar-width, 340px);
+        height: fit-content;
+        z-index: var(--hotbar-z-index);
+        pointer-events: none;
+        font-family: Consolas, monospace;
+
+        display: flex;
+        flex-direction: row;
+        justify-content: center;
+        align-items: flex-end;
+    }
+
+    div.avtt-dialog-backdrop {
+        display: none;
+        position: fixed;
+        z-index: -1;
+
+        &.open {
+            display: flex;
+            top: 0;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            pointer-events: auto;
+        }
+    }
+
+    div.avtt-dialog {
+        display: none;
+        position: fixed;
+        border-radius: 10px;
+        pointer-events: auto;
+
+        &.open {
+            display: flex;
+        }
+
+        &.standard {
+            padding: 0;
+            background: var(--hotbar-background);
+            backdrop-filter: var(--hotbar-backdrop-filter);
+            border: var(--hotbar-border);
+            box-shadow: var(--hotbar-box-shadow);
+            color: var(--hotbar-color);
+        }
+
+        &.centerX {
+            transform: translateX(-50%);
+        }
+    }
+
+    div.avtt-hotbar-portrait {
+        position: relative;
+        cursor: pointer;
+        border: 3px solid rgba(26, 106, 255);
+        box-shadow: 1px 1px 2px 0px #000;
+        margin: -5px 0 -5px -10px;
+        height: 55px;
+        width: 55px;
+        
+        border-radius: 4px;
+        background-color: var(--hotbar-background);
+        background-position: center;
+        background-repeat: no-repeat;
+        background-size: contain;
+        backdrop-filter: var(--hotbar-backdrop-filter);
+    }
+
+    div.avtt-hotbar {
+        display: flex;
+        flex-direction: row;
+        padding: 0 5px;
+        border-radius: 10px;
+        pointer-events: auto;
+        margin-top: 5px;
+        margin-bottom: 5px;
+
+        background: var(--hotbar-background);
+        backdrop-filter: var(--hotbar-backdrop-filter);
+        border: var(--hotbar-border);
+        box-shadow: var(--hotbar-box-shadow);
+        color: var(--hotbar-color);
+
+        &.names > div.avtt-hotbar-portrait {
+            border-radius: 7px;
+            height: 65px;
+            width: 65px;
+        }
+
+        & > div.avtt-hotbar-button > span.title {
+            display: none;
+        }
+
+        &.names > div.avtt-hotbar-button {
+            min-width: 50px;
+
+            &.play-as {
+                min-width: 0;
+            }
+
+            & > span.title {
+                display: inline-block;
+            }
+        }
+    }
+
+    div.avtt-hotbar-button {
+        position: relative;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        cursor: pointer;
+        padding: 5px 5px;
+        color: var(--hotbar-idle-color);
+
+        & > span.title {
+            font-size: .7em;
+        }
+
+        & > span.icon {
+            display: inline-block;
+            height: var(--hotbar-icon-size);
+            width: var(--hotbar-icon-size);
+            background-color: var(--hotbar-idle-color);
+
+            mask-image: var(--hotbar-bug);
+            mask-size: contain;
+            mask-repeat: no-repeat;
+        }
+
+        &:hover {
+            color: var(--hotbar-hover);
+
+            & > span.icon {
+                background-color: var(--hotbar-hover);
+            }
+        }
+
+        &.open {
+            color: var(--hotbar-active);
+
+            & > span.icon {
+                background-color: var(--hotbar-active);
+            }
+        }
+
+        &.play-as > span.icon {
+            mask-image: var(--hotbar-play-as);
+        }
+
+        &.hp  {
+            margin-left: 5px;
+
+            & > span.icon {
+                mask-image: var(--hotbar-hp);
+            }
+        }
+
+        &.abilities > span.icon {
+            mask-image: var(--hotbar-abilities);
+        }
+
+        &.saves > span.icon {
+            mask-image: var(--hotbar-saves);
+        }
+
+        &.skills > span.icon {
+            mask-image: var(--hotbar-skills);
+        }
+
+        &.actions > span.icon {
+            mask-image: var(--hotbar-actions);
+        }
+
+        &.status-effects > span.icon {
+            mask-image: var(--hotbar-status-effects);
+        }
+
+        &.settings > span.icon {
+            mask-image: var(--hotbar-settings);
+        }
+    }
+
+    div.avtt-hint, div.avtt-hotbar:not(.names) > div.avtt-hotbar-button:not(.open), div.avtt-hotbar-portrait:not(.open) {
+        &::after {
+            position: absolute;
+            content: attr(data-title);
+
+            bottom: 110%;
+            left: 50%;
+            transform: translateX(-50%) translateY(10px);
+            
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: none;
+            
+            transition: opacity 0.3s ease, transform 0.3s ease, visibility 0.3s;
+
+            background-color: rgba(0, 0, 0, 0.85);
+            color: rgba(255, 255, 255, 1);
+            padding: 3px 5px;
+            border-radius: 4px;
+            font-size: 1em;
+            white-space: nowrap;
+        }
+
+        &:hover::after {
+            transition-delay: 0.7s;
+            opacity: 1;
+            visibility: visible;
+            transform: translateX(-50%) translateY(0);
+        }
+    }
+
+    @supports selector(::-webkit-scrollbar) {
+        div.avtt-available-actors {
+            scrollbar-width: thin;
+        }    
+    }
+
+    div.avtt-available-actors {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        max-width: 385px;
+        margin: 5px;
+        min-height: 91px;
+        max-height: 300px;
+        overflow-y: auto;
+
+        & > div.available-actor {
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            flex: 0 0;
+            padding: 5px;
+            cursor: pointer;
+
+            & > div.actor-portrait {
+                cursor: pointer;
+                border: 3px solid rgba(26, 106, 255);
+                height: 65px;
+                width: 65px;
+                
+                border-radius: 4px;
+                background-color: var(--hotbar-background);
+                background-position: center;
+                background-repeat: no-repeat;
+                background-size: contain;
+                backdrop-filter: var(--hotbar-backdrop-filter);
+            }
+
+            & > div.actor-name {
+                padding-top: 3px;
+                font-size: .7em;
+                width: 65px;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                text-align: center;
+            }
+
+            &:hover > div.actor-name {
+                position: absolute;
+                top: 70px;
+                left: 0px;
+                width: 75px;
+                text-align: center;
+                overflow: visible;
+                white-space: normal;
+                z-index: 100;
+            }
+        }
+    }
+
+    div.avtt-hotbar-settings {
+        display: flex;
+        flex-direction: column;
+        width: 220px;
+        margin-left: 5px;
+        margin-right: 5px;
+        max-height: 300px;
+        overflow-y: auto;
+    }
+
+    div.avtt-hotbar-setting {
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+        padding: 5px 0;
+
+        & > .title {
+            flex: 1;
+            font-size: .9em;
+        }
+
+        & > button {
+            flex: none;
+        }
+    }
+
+    button.avtt-theme-icon {
+        display: inline-block;
+        appearance: none;
+        width: 24px;
+        height: 24px;
+        padding: 0;
+        margin: 0 5px 0 0;
+        border: none;
+        border-radius: 0;
+        background-color: var(--hotbar-idle-color);
+        cursor: pointer;
+
+        mask-image: var(--hotbar-bug);
+        mask-size: contain;
+        mask-repeat: no-repeat;
+
+        &.checked {
+            background-color: var(--hotbar-color);
+        }
+
+        &:hover {
+            background-color: var(--hotbar-hover);
+        }
+
+        &[data-theme=system] {
+            mask-image: var(--hotbar-system-theme);
+        }
+
+        &[data-theme=dark] {
+            mask-image: var(--hotbar-dark-mode);
+        }
+
+        &[data-theme=light] {
+            mask-image: var(--hotbar-light-mode);
+        }
+    }
+
+    button.avtt-hotbar-toggle {
+        position: relative;
+        appearance: none;
+        width: 38px;
+        height: 22px;
+        padding: 0;
+        border: 1px solid rgba(255, 255, 255, 0.25);
+        border-radius: 50px;
+        background: var(--hotbar-toggle-track-off);
+        box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.18);
+        cursor: pointer;
+        transition: background-color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+
+        &::before {
+            content: "";
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            width: 15px;
+            height: 15px;
+            border-radius: 50%;
+            background: var(--hotbar-toggle-knob);
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.45);
+            transition: transform 0.2s ease;
+        }
+
+        &.checked {
+            background: var(--hotbar-toggle-track-on);
+            border-color: rgba(255, 255, 255, 0.35);
+
+            &::before {
+                transform: translateX(16px);
+            }
+        }
+    }
+
+    div.avtt-menu-title {
+        text-align: center;
+        padding: 5px;
+    }
+
+    div.avtt-hotbar-abilities {
+        display: flex;
+        flex-direction: column;
+        margin: 0 5px 5px 5px;
+        width: 200px;
+
+        & > div.ability-check {
+            display: flex;
+            flex-direction: row;
+            flex: 0 0;
+            justify-content: center;
+            align-items: stretch;
+
+            & > div.name {
+                display: flex;
+                align-items: center;
+                flex: 1;
+                padding-left: 5px;
+            }
+
+            & > div.modifier {
+                cursor: pointer;
+                flex: 0;
+                flex-basis: 35px;
+                padding: 2px 0;
+                text-align: center;
+                border: 1px solid var(--hotbar-idle-color);
+                border-radius: 4px;
+                color: var(--hotbar-idle-color);
+                margin: 3px 0;
+
+                &:hover {
+                    border: 1px solid var(--hotbar-hover);
+                    color: var(--hotbar-hover);
+                }
+            }
+
+            & > div.score {
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                flex: 0;
+                flex-basis: 30px;
+                margin: 3px;
+                color: var(--hotbar-idle-color);
+                border: 1px solid var(--hotbar-idle-color);
+                border-radius: 100px;
+            }
+        }
+    }
+
+    div.avtt-hotbar-saves {
+        display: flex;
+        flex-direction: column;
+        margin: 0 5px 5px 5px;
+        width: 180px;
+
+        & > div.saving-throw {
+            display: flex;
+            flex-direction: row;
+            flex: 0 0;
+            justify-content: center;
+            align-items: stretch;
+
+            & > div.name {
+                display: flex;
+                align-items: center;
+                flex: 1;
+            }
+
+            & > div.modifier {
+                cursor: pointer;
+                flex: 0;
+                flex-basis: 35px;
+                padding: 2px 0;
+                text-align: center;
+                border: 1px solid var(--hotbar-idle-color);
+                border-radius: 4px;
+                color: var(--hotbar-idle-color);
+                margin: 3px 0;
+
+                &:hover {
+                    border: 1px solid var(--hotbar-hover);
+                    color: var(--hotbar-hover);
+                }
+            }
+        }
+    }
+
+    div.avtt-hotbar-skills {
+        display: flex;
+        flex-direction: column;
+        margin: 0 5px 5px 5px;
+        max-height: 300px;
+    }
+
+    div.avtt-skill-checks {
+        display: grid;
+        grid-auto-flow: column;
+        grid-template-rows: repeat(9, 1fr);
+        gap: 0 10px;
+
+        & > div.skill {
+            display: flex;
+            flex-direction: row;
+            flex: 0 0;
+            justify-content: center;
+            align-items: stretch;
+            width: 180px;
+
+            & > div.name {
+                display: flex;
+                align-items: center;
+                flex: 1;
+            }
+
+            & > div.modifier {
+                cursor: pointer;
+                flex: 0;
+                flex-basis: 35px;
+                padding: 2px 0;
+                text-align: center;
+                border: 1px solid var(--hotbar-idle-color);
+                border-radius: 4px;
+                color: var(--hotbar-idle-color);
+                margin: 3px 0;
+
+                &:hover {
+                    border: 1px solid var(--hotbar-hover);
+                    color: var(--hotbar-hover);
+                }
+            }
+        }
+    }
+}
