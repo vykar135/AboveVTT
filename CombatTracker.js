@@ -1242,7 +1242,7 @@ function ct_add_token(token,persist=true,disablerolling=false, adv=false, dis=fa
 		imageRow.append(ac)
 	}
 
-	if (token.stats?.isContributor === true) {
+	if (window.statBlocks?.isPlayable(token.stats) === true) {
 		imageRow.on('click', () => {
 			if (window.tabletop.environment.actionBar.enabled !== true) {
 				window.tabletop.environment.changeActionBar({ enabled: true });
