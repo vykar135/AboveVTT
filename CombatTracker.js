@@ -1241,6 +1241,12 @@ function ct_add_token(token,persist=true,disablerolling=false, adv=false, dis=fa
 	if(window.DM && !token.options.combatGroupToken){
 		imageRow.append(ac)
 	}
+
+	if (token.stats?.isContributor === true) {
+		imageRow.on('click', () => { window.statBlocks.changeActor(token.stats); });
+		imageRow.css({ "cursor": "pointer" });
+	}
+
 	entry.append(imageRow);
 	let init=$("<input class='init' maxlength=5'>");
 	init.css('-webkit-appearance','none');

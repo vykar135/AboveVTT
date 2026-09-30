@@ -30,6 +30,8 @@ class ActionBarControl {
 
     /** @type {StatBlock | undefined} */
     #actor;
+    /** @type {() => void} */
+    #detachActor;
 
     #actorSelect;
     #portrait;
@@ -48,6 +50,7 @@ class ActionBarControl {
         this.#dialog = new TabletopDialog(this.#container);
         this.#showingNames = false;
         this.#actor = undefined;
+        this.#detachActor = undefined;
 
         const actorSelect = this.#setupActorSelection();
 
@@ -85,6 +88,22 @@ class ActionBarControl {
     }
 
     /**
+     * Callback used when the actor is changed or rebuilt.
+     * @param {StatBlock | undefined} actor - The actor that was updated.
+    */
+    #actorRebuilt(actor) {
+        if (this.#actor == null || this.#actor !== actor) {
+            return;
+        }
+
+        this.#hp.icon.text(actor.hp.remaining);
+
+        this.#abilities.render(actor, this.#abilities.button);
+        this.#saves.render(actor, this.#abilities.button);
+        this.#skills.render(actor, this.#abilities.button);
+    }
+
+    /**
      * Handles a change to the current actor for the tabletop.
      * @param {StatBlock | undefined} actor */
     #changeActor(actor) {
@@ -92,11 +111,18 @@ class ActionBarControl {
             this.#dialog.close();
         }
 
+        if (this.#detachActor != null) {
+            this.#detachActor();
+            this.#detachActor = undefined;
+        }
+
         this.#actor = actor;
         if (this.#actor == null) {
             this.#displayNoActor();
             return;
         }
+
+        this.#detachActor = this.#actor.onRecalculated(this.#actorRebuilt.bind(this));
 
         let name = (this.#actor.name ?? '').trim();
         if (name === '') {
@@ -113,7 +139,7 @@ class ActionBarControl {
 
         this.#actorSelect.button.detach();
 
-        this.#abilities.render(this.#actor, this.#abilities.button);
+        this.#actorRebuilt(this.#actor);
 
         this.#portrait.button.appendTo(this.#bar);
         this.#hp.button.appendTo(this.#bar);
