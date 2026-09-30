@@ -1243,7 +1243,13 @@ function ct_add_token(token,persist=true,disablerolling=false, adv=false, dis=fa
 	}
 
 	if (token.stats?.isContributor === true) {
-		imageRow.on('click', () => { window.statBlocks.changeActor(token.stats); });
+		imageRow.on('click', () => {
+			if (window.tabletop.environment.actionBar.enabled !== true) {
+				window.tabletop.environment.changeActionBar({ enabled: true });
+			}
+			
+			window.statBlocks.changeActor(token.stats);
+		});
 		imageRow.css({ "cursor": "pointer" });
 	}
 
