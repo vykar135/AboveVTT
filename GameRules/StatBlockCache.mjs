@@ -39,7 +39,7 @@ export class StatBlockCacheManager {
      * @param {StatBlock | undefined} actor - The stat block for the current actor.
      */
     changeActor(actor) {
-        if (actor == null || actor instanceof StatBlock) {
+        if (actor == null || (actor instanceof StatBlock && actor.isContributor === true)) {
             this.#actor = actor;
             this.#actor?.refreshVisuals();
             this.#events.dispatch(ActorEvent, this.actor);
