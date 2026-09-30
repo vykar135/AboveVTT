@@ -48,7 +48,7 @@ class ActionBarControl {
         this.#container = $('<div class="avtt-hotbar-container" />');
 
         this.#bar = $('<div class="avtt-hotbar" />').appendTo(this.#container);
-        this.#revive = $('<div class="avtt-hotbar-revive avtt-hint" data-title="Restore Hotbar"><span class="icon" /></div>');
+        this.#revive = $('<div class="avtt-hotbar-revive avtt-hint" data-title="Restore Action Bar"><span class="icon" /></div>');
         this.#revive.appendTo(this.#container);
 
         this.#revive.on('click', this.#onRevive.bind(this));
@@ -432,7 +432,7 @@ class ActionBarControl {
         const container = $('<div class="avtt-hotbar-settings" />');
         $('<div class="avtt-menu-title">Tabletop Settings</div>').appendTo(container);
 
-        const namesOption = $('<div class="avtt-hotbar-setting"><span class="title">Show Hotbar Names</span></div>');
+        const namesOption = $('<div class="avtt-hotbar-setting"><span class="title">Show Action Bar Names</span></div>');
         const namesToggle = $('<button type="button" role="switch" class="avtt-hotbar-toggle" />').appendTo(namesOption);
 
         const themeOption = $('<div class="avtt-hotbar-setting"><span class="title">Action Bar Theme</span></div>');
@@ -441,7 +441,7 @@ class ActionBarControl {
         const lightMode = $('<button type="button" role="radio" class="avtt-theme-icon" data-theme="light" />').appendTo(themeOption);
 
         const collapse = $('<div class="avtt-hotbar-setting"></div>');
-        const collapseButton = $('<span class="collapse">Collapse Hotbar</span>').appendTo(collapse);
+        const collapseButton = $('<span class="collapse">Hide Action Bar</span>').appendTo(collapse);
 
         container.append(themeOption).append(namesOption).append(collapse);
 
