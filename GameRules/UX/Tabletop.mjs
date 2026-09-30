@@ -17,6 +17,7 @@
  * @property {boolean} [modal] - Whether the dialog acts as a model window with automatic close when clicked outside of it.
  * 
  * @typedef ActionBarOptions
+ * @property {boolean} enabled - Whether the action bar is currently enabled.
  * @property {boolean} names - Whether names are shown in the action bar.
  * 
  * @typedef EnvironmentChangeEvent
@@ -53,6 +54,7 @@ export class TabletopEnvironment {
 
         this.#theme = stored.theme ?? 'system';
         this.#actionBar = Object.freeze(stored.actionBar ?? {
+            enabled: true,
             names: true
         });
 
@@ -117,6 +119,7 @@ export class TabletopEnvironment {
 
         const current = this.#actionBar;
         this.#actionBar = Object.freeze({
+            enabled: options.enabled ?? current.enabled ?? true,
             names: options.names ?? current.names ?? true
         });
 

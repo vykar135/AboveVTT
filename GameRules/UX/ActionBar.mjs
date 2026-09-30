@@ -25,6 +25,7 @@ import { DiceAction } from '../DiceAction.mjs';
 class ActionBarControl {
     #container;
     #bar;
+    #revive;
     #dialog;
     #showingNames;
 
@@ -47,6 +48,15 @@ class ActionBarControl {
         this.#container = $('<div class="avtt-hotbar-container" />');
 
         this.#bar = $('<div class="avtt-hotbar" />').appendTo(this.#container);
+        this.#revive = $('<div class="avtt-hotbar-revive avtt-hint" data-title="Restore Hotbar"><span class="icon" /></div>');
+        this.#revive.appendTo(this.#container);
+
+        this.#revive.on('click', this.#onRevive.bind(this));
+
+        var disabled = (Tabletop.actionBar.enabled === false);
+        this.#bar.toggleClass('disabled', disabled);
+        this.#revive.toggleClass('enabled', disabled);
+
         this.#dialog = new TabletopDialog(this.#container);
         this.#showingNames = false;
         this.#actor = undefined;
@@ -84,7 +94,16 @@ class ActionBarControl {
         this.#showingNames = ((event.actionBar?.names ?? false) === true);
         this.#bar.toggleClass('names', this.#showingNames);
 
+        var disabled = (Tabletop.actionBar.enabled === false);
+        this.#bar.toggleClass('disabled', disabled);
+        this.#revive.toggleClass('enabled', disabled);
+
         this.#dialog.reposition();
+    }
+
+    /** Restores the action bar. */
+    #onRevive() {
+        Tabletop.changeActionBar({ enabled: true });
     }
 
     /**
@@ -411,6 +430,7 @@ class ActionBarControl {
      * @returns {ActionMenuRender} */
     #setupSettingsMenu() {
         const container = $('<div class="avtt-hotbar-settings" />');
+        $('<div class="avtt-menu-title">Tabletop Settings</div>').appendTo(container);
 
         const namesOption = $('<div class="avtt-hotbar-setting"><span class="title">Show Hotbar Names</span></div>');
         const namesToggle = $('<button type="button" role="switch" class="avtt-hotbar-toggle" />').appendTo(namesOption);
@@ -420,7 +440,10 @@ class ActionBarControl {
         const darkMode = $('<button type="button" role="radio" class="avtt-theme-icon" data-theme="dark" />').appendTo(themeOption);
         const lightMode = $('<button type="button" role="radio" class="avtt-theme-icon" data-theme="light" />').appendTo(themeOption);
 
-        container.append(themeOption).append(namesOption);
+        const collapse = $('<div class="avtt-hotbar-setting"></div>');
+        const collapseButton = $('<span class="collapse">Collapse Hotbar</span>').appendTo(collapse);
+
+        container.append(themeOption).append(namesOption).append(collapse);
 
         const rebuild = () => {
             namesToggle.toggleClass('checked', Tabletop.actionBar.names);
@@ -435,6 +458,11 @@ class ActionBarControl {
 
             Tabletop.changeActionBar(updateTo);
             namesToggle.toggleClass('checked', updateTo.names);
+        });
+
+        collapseButton.on('click', () => {
+            this.#dialog.close();
+            Tabletop.changeActionBar({ enabled: false });
         });
 
         const updateTheme = (event) => {
