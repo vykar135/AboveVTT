@@ -123,8 +123,9 @@ export default class HitPointBlock {
             }
         }
 
-        if (info.removedHp == null) {
-            info.removedHp = (info.maximum - info.current);
+        const expected = (info.maximum - info.current);
+        if (info.removedHp == null || info.removedHp !== expected) {
+            info.removedHp = expected;
         }
 
         this.#maximum.setBaseValue(info.maximum ?? 0);
