@@ -185,8 +185,12 @@
         box-shadow: var(--hotbar-box-shadow);
         color: var(--hotbar-color);
 
+        opacity: 1;
+        transition: opacity 0.3s ease;
+
         &.disabled {
             display: none;
+            opacity: 0;
         }
 
         &.names > div.avtt-hotbar-portrait {
@@ -209,6 +213,12 @@
             & > span.title {
                 display: inline-block;
             }
+        }
+    }
+
+    @starting-style {
+        div.avtt-hotbar {
+            opacity: 0;
         }
     }
 
@@ -413,13 +423,14 @@
         }
 
         & > .collapse {
-            font-size: 1.1em;
+            font-size: 0.9em;
+            font-weight: 500;
             cursor: pointer;
             margin-top: 10px;
             margin-right: auto;
             margin-left: auto;
             text-align: center;
-            padding: 5px 5px;
+            padding: 3px;
             border: 1px solid var(--hotbar-idle-color);
             color: var(--hotbar-idle-color);
             border-radius: 6px;
