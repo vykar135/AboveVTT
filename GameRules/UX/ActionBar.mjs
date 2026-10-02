@@ -84,6 +84,13 @@ class ActionBarControl {
         Object.freeze(this);
     }
 
+    /** Restores the action bar if it was hidden. */
+    restore() {
+        if (Tabletop.actionBar.enabled !== true) {
+            Tabletop.changeActionBar({ enabled: true });
+        }
+    }
+
     /**
      * Handles a change to the tabletop's theme
      * @param {CustomEvent<EnvironmentChangeEvent>} event */

@@ -1244,10 +1244,7 @@ function ct_add_token(token,persist=true,disablerolling=false, adv=false, dis=fa
 
 	if (window.statBlocks?.isPlayable(token.stats) === true) {
 		imageRow.on('click', () => {
-			if (window.tabletop.environment.actionBar.enabled !== true) {
-				window.tabletop.environment.changeActionBar({ enabled: true });
-			}
-			
+			window.tabletop.actionBar.restore();
 			window.statBlocks.changeActor(token.stats);
 		});
 		imageRow.css({ "cursor": "pointer" });

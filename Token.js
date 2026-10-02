@@ -4276,10 +4276,7 @@ function token_menu() {
 			event.preventDefault();
 			event.stopPropagation();
 
-			if (window.tabletop.environment.actionBar.enabled !== true) {
-				window.tabletop.environment.changeActionBar({ enabled: true });
-			}
-			
+			window.tabletop.actionBar.restore();
 			window.statBlocks.changeActor(stats);
 		});
 		return;

@@ -1108,10 +1108,7 @@ function token_context_menu_expanded(tokenIds, e, crossScenePortalData) {
 		if (window.statBlocks?.isPlayable(token.stats) === true) {
 			let button = $(`<button style="padding-left: 0;"><span class="material-symbols-outlined">person_play</span><span style="padding-left: 3px;">Assign To Action Bar</span></button>`);
 			button.on("click", function() {
-				if (window.tabletop.environment.actionBar.enabled !== true) {
-					window.tabletop.environment.changeActionBar({ enabled: true });
-				}
-
+				window.tabletop.actionBar.restore();
 				window.statBlocks?.changeActor(token.stats);
 				close_token_context_menu();
 			});
