@@ -4269,7 +4269,7 @@ function token_menu() {
 
 			const id = $(event.currentTarget).attr("data-id");
 			const stats = window.statBlocks?.get(id);
-			if (stats == null) {
+			if (stats == null || window.statBlocks?.isPlayable(stats) !== true) {
 				return;
 			}
 
