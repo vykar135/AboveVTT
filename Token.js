@@ -4276,6 +4276,10 @@ function token_menu() {
 			event.preventDefault();
 			event.stopPropagation();
 
+			if (window.tabletop.environment.actionBar.enabled !== true) {
+				window.tabletop.environment.changeActionBar({ enabled: true });
+			}
+			
 			window.statBlocks.changeActor(stats);
 		});
 		return;
