@@ -4262,6 +4262,22 @@ function token_menu() {
 				token_context_menu_expanded([$(event.currentTarget).attr("data-id")], event);
 			}
 		});
+		$("#tokens").on("auxclick", ".VTTToken", function(event) {
+			if (event.button !== 1) {
+				return;
+			}
+
+			const id = $(event.currentTarget).attr("data-id");
+			const stats = window.statBlocks?.get(id);
+			if (stats == null) {
+				return;
+			}
+
+			event.preventDefault();
+			event.stopPropagation();
+
+			window.statBlocks.changeActor(stats);
+		});
 		return;
 }
 
