@@ -283,7 +283,27 @@ class ActionBarControl {
 
         button.on('contextmenu', (e) => {
             e.preventDefault();
+            button.toggleClass('open', true);
             callback(settings);
+            showing = true;
+        });
+
+        button.on('auxclick', (e) => {
+            if (e.button !== 1) {
+                return;
+            }
+
+            const persist = {
+                ...settings,
+                dialogOptions: {
+                    ...settings.dialogOptions,
+                    modal: false
+                }
+            };
+
+            e.preventDefault();
+            button.toggleClass('open', true);
+            callback(persist);
             showing = true;
         });
 
