@@ -193,16 +193,68 @@ export class TabletopDialog {
         eventing.on('resize', this.#position.bind(this));
 
         const clickToClose = this.close.bind(this);
+        const clickBelow = (e, context) => {
+            const below = document.elementFromPoint(e.clientX, e.clientY);
+            if (below == null) {
+                return;
+            }
+
+            if (context !== true) {
+                below.click();
+                return;
+            }
+
+            const clicked = new MouseEvent('contextmenu', {
+                bubbles: true,
+                cancelable: true,
+                clientX: e.clientX,
+                clientY: e.clientY,
+                button: 2
+            });
+
+            below.dispatchEvent(clicked);
+        };
+
         this.#backdrop.on('click', (e) => {
             clickToClose();
+            clickBelow(e, false);
         });
         this.#backdrop.on('contextmenu', (e) => {
             clickToClose();
             e.stopPropagation();
             e.preventDefault();
+            clickBelow(e, true);
         });
+        this.#backdrop.on('auxclick', (e) => {
+            if (e.button !== 1) {
+                return;
+            }
 
-        Object.freeze(this);
+            e.stopPropagation();
+            e.preventDefault();
+
+            this.#backdrop.toggleClass('open', false);
+            const below = document.elementFromPoint(e.clientX, e.clientY);
+            this.#backdrop.toggleClass('open', true);
+
+            if (below == null) {
+                return;
+            }
+
+            const clicked = new PointerEvent('auxclick', {
+                bubbles: true,
+                cancelable: true,
+                view: window,
+                clientX: e.clientX,
+                clientY: e.clientY,
+                button: e.button,
+                buttons: e.buttons,
+                pointerId: e.pointerId,
+                pointerType: e.pointerType
+            });
+
+            below.dispatchEvent(clicked);
+        });
     }
 
     /** @param {JQuery.KeyDownEvent} event  */
