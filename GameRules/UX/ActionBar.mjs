@@ -38,6 +38,7 @@ class ActionBarControl {
     #actorSelect;
     #portrait;
     #hp;
+    #defense;
     #abilities;
     #saves;
     #skills;
@@ -70,11 +71,12 @@ class ActionBarControl {
 
         this.#portrait = this.#createActorPortrait(actorSelect);
         this.#hp = this.#createMenuButton('Health', 'hp', this.#setupHealthMenu(), { modal: true });
+        this.#defense = this.#createMenuButton('Defense', 'defense', this.#createPlaceholder(), { modal: true });
         this.#abilities = this.#createMenuButton('Abilities', 'abilities', this.#setupAbilitiesMenu(), { modal: true });
         this.#saves = this.#createMenuButton('Saves', 'saves', this.#setupSavesMenu(), { modal: true });
         this.#skills = this.#createMenuButton('Skills', 'skills', this.#setupSkillsMenu(), { modal: true });
-        this.#actions = this.#createMenuButton('Actions', 'actions', this.#createPlaceholder());
-        this.#statusEffects = this.#createMenuButton('Effects', 'status-effects', this.#createPlaceholder());
+        this.#actions = this.#createMenuButton('Actions', 'actions', this.#createPlaceholder(), { modal: true });
+        this.#statusEffects = this.#createMenuButton('Effects', 'status-effects', this.#createPlaceholder(), { modal: true });
         this.#settings = this.#createMenuButton('Settings', 'settings', this.#setupSettingsMenu(), { modal: true });
 
         Tabletop.monitor(this.#changeEnvironment.bind(this));
@@ -123,7 +125,11 @@ class ActionBarControl {
             return;
         }
 
-        this.#hp.icon.text(actor.hp.total);
+        const total = actor.hp.total;
+        this.#hp.icon.text(total > 0 ? actor.hp.total : '');
+        this.#hp.icon.toggleClass('unconscious', total <= 0);
+
+        this.#defense.icon.text(actor.ac.current);
 
         this.#hp.render(actor, this.#hp.button);
         this.#abilities.render(actor, this.#abilities.button);
@@ -171,6 +177,7 @@ class ActionBarControl {
 
         this.#portrait.button.appendTo(this.#bar);
         this.#hp.button.appendTo(this.#bar);
+        this.#defense.button.appendTo(this.#bar);
         this.#abilities.button.appendTo(this.#bar);
         this.#saves.button.appendTo(this.#bar);
         this.#skills.button.appendTo(this.#bar);
@@ -183,6 +190,7 @@ class ActionBarControl {
     #displayNoActor() {
         this.#portrait.button.detach();
         this.#hp.button.detach();
+        this.#defense.button.detach();
         this.#abilities.button.detach();
         this.#saves.button.detach();
         this.#skills.button.detach();
@@ -520,9 +528,92 @@ class ActionBarControl {
         const container = $('<div class="avtt-actionbar-health" />');
         $('<div class="avtt-menu-title">Hit Points</div>').appendTo(container);
 
-        const remaining = $('<div class="hp-amount" />');
+        const remaining = $('<input type="text" class="hp-amount" maxlength="5" />');
         const maximum = $('<div class="hp-amount" />');
-        const temp = $('<div class="hp-amount" />');
+        const temp = $('<input type="text" class="hp-amount" maxlength="5" />');
+
+        const commitReminaing = () => {
+            const target = this.#actor.hp;
+
+            const requested = remaining.val().trim();
+            if (requested.length === 0) {
+                remaining.val(target.remaining);
+                temp.val(target.temp <= 0 ? '--' : target.temp);
+                return;
+            }
+
+            const amount = parseInt(requested);
+            if (amount !== NaN) {
+                if (amount < 0) {
+                    target.damage(Math.abs(amount));
+                } else if (requested.startsWith('+')) {
+                    target.heal(amount);
+                } else {
+                    target.setRemaining(amount);
+                }
+            }
+
+            remaining.val(target.remaining);
+            temp.val(target.temp <= 0 ? '--' : target.temp);
+        };
+
+        const commitTemp = () => {
+            const target = this.#actor.hp;
+
+            const requested = temp.val().trim();
+            if (requested.length === 0) {
+                temp.val(target.temp <= 0 ? '--' : target.temp);
+                return;
+            }
+
+            const amount = parseInt(requested);
+            if (amount !== NaN) {
+                target.setTemp(amount);
+            }
+
+            temp.val(target.temp <= 0 ? '--' : target.temp);
+        };
+
+        const keyPressed = (/** @type {JQuery.KeyDownEvent} */ e) => {
+            if (e.key === 'Escape') {
+                e.preventDefault();
+                e.stopPropagation();
+                e.target.value = '';
+                e.target.blur();
+                return;
+            }
+
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                e.target.blur();
+                return;
+            }
+
+            if (e.key === ' ' || e.key.length > 1) {
+                return;
+            }
+
+            if (e.key !== '+' && e.key !== '-' && !(e.key >= '0' && e.key <= '9')) {
+                e.preventDefault();
+                return;
+            }
+        }
+
+        remaining.on('blur', commitReminaing);
+        remaining.on('keydown', keyPressed);
+        remaining.on('focus', () => {
+            remaining.trigger('select');
+        });
+
+        temp.on('blur', commitTemp);
+        temp.on('keydown', keyPressed);
+        temp.on('focus', () => {
+            if (temp.val() === '--') {
+                temp.val(0);
+            }
+
+            temp.trigger('select');
+        });
 
         $('<div class="hit-points" />')
             .append($('<div class="hp-type">Current</div>'))
@@ -541,9 +632,9 @@ class ActionBarControl {
                 return undefined;
             }
 
-            remaining.text(actor.hp.remaining);
+            remaining.val(actor.hp.remaining);
             maximum.text(actor.hp.maximum);
-            temp.text(actor.hp.temp <= 0 ? '--' : actor.hp.temp);
+            temp.val(actor.hp.temp <= 0 ? '--' : actor.hp.temp);
 
             return container;
         };

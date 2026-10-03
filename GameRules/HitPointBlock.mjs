@@ -37,7 +37,13 @@ export default class HitPointBlock {
     }
 
     /** The total number of hit points the creature or object has including temporary hit hpoints */
-    get total() { return this.remaining + this.temp; }
+    get total() {
+        if (this.remaining <= 0) {
+            return 0;
+        }
+
+        return this.remaining + this.temp;
+    }
 
     /** Provides the numeric stat tracker for the maximum hit point. */
     get maximumChanges() { return this.#maximum; }
@@ -175,6 +181,7 @@ export default class HitPointBlock {
             temp = temp - amount;
             this.#temp = info.temp = temp;
             
+            this.#commit();
             return this.total;
 
         } else if (temp > 0) {
@@ -302,7 +309,7 @@ export default class HitPointBlock {
 
         if (!this.#statBlock.isPlayer) {
             this.#statBlock.hasPendingChanges(true);
-            this.#statBlock.sync();
+            this.#statBlock.update_and_sync();
             return;
         }
 
