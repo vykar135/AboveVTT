@@ -570,8 +570,13 @@
 
     div.avtt-actionbar-abilities {
         display: flex;
-        flex-direction: column;
+        flex-direction: row;
         margin: 0px 10px 5px 10px;
+    }
+
+    div.avtt-actionbar-scores {
+        display: flex;
+        flex-direction: column;
         width: 200px;
 
         & > div.ability-check {
@@ -625,6 +630,44 @@
                 color: var(--actionbar-idle-color);
                 border: 1px solid var(--actionbar-idle-color);
                 border-radius: 100px;
+            }
+        }
+    }
+
+    div.avtt-actionbar-movement {
+        display: flex;
+        flex-direction: column;
+        width: 140px;
+        margin-left: 25px;
+
+        & > div.movement {
+            display: flex;
+            flex-direction: row;
+            flex: 0 0;
+            justify-content: center;
+            align-items: stretch;
+            padding-bottom: 1px;
+            margin-bottom: 1px;
+            border-bottom: 1px dotted var(--actionbar-idle-color);
+
+            & > div.name {
+                display: flex;
+                align-items: center;
+                flex: 1;
+                padding-left: 5px;
+                font-size: 1.2em;
+                font-weight: 400;
+            }
+
+            & > div.modifier {
+                flex: 0;
+                flex-basis: 65px;
+                padding: 3px 0;
+                text-align: center;
+                font-size: 1.2em;
+                color: var(--actionbar-idle-color);
+                margin: 3px 0;
+                font-weight: 700;
             }
         }
     }
