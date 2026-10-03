@@ -1019,7 +1019,7 @@ class BlockDefenses {
 }
 
 /** Defines the standard set of movement options that can be applied to a stat block. */
-class BlockMovement {
+export class BlockMovement {
     /** @param {StatBlock} stats */
     constructor(stats) {
         this.walk = new NumericStatTracker(stats, 'speed:walk', 30, 'Walk');

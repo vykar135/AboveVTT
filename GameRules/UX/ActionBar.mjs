@@ -4,6 +4,7 @@ import { Tabletop, TabletopDialog } from './Tabletop.mjs';
 import StatBlock, { BlockAbilityModifier } from '../StatBlock.mjs'
 import { StatBlockCache } from '../StatBlockCache.mjs';
 import { DiceAction } from '../DiceAction.mjs';
+import NumericStatTracker from '../NumericStatTracker.mjs';
 
 /**
  * @typedef {Object} ActionBarButton
@@ -555,20 +556,39 @@ class ActionBarControl {
      * @returns {ActionMenuRender} */
     #setupAbilitiesMenu() {
         const container = $('<div class="avtt-actionbar-abilities" />');
-        $('<div class="avtt-menu-title">Ability Checks</div>').appendTo(container);
+
+        const scores = $('<div class="avtt-actionbar-scores" />').appendTo(container);
+        $('<div class="avtt-menu-title">Ability Checks</div>').appendTo(scores);
+
+        const movement = $('<div class="avtt-actionbar-movement" />').appendTo(container);
+        $('<div class="avtt-menu-title">Movement</div>').appendTo(movement);
 
         const formatter = new Intl.NumberFormat('en-US', { signDisplay: 'always' });
 
         const buildAbility = () => {
-            const check = $('<div class="ability-check" />').appendTo(container);
-            const score = $('<div class="score" />').appendTo(check);
-            const name = $('<div class="name" />').appendTo(check);
-            const modifier = $('<div class="modifier" />').appendTo(check);
+            const row = $('<div class="ability-check" />').appendTo(scores);
+            const score = $('<div class="score" />').appendTo(row);
+            const name = $('<div class="name" />').appendTo(row);
+            const modifier = $('<div class="modifier" />').appendTo(row);
 
             const bindTo = (/** @type {BlockAbilityModifier} */ ability) => {
                 score.text(ability.score.current);
                 name.text(ability.score.name);
                 modifier.text(formatter.format(ability.current));
+            }
+
+            return bindTo;
+        };
+
+        const buildSpeed = () => {
+            const row = $('<div class="movement" />').appendTo(movement);
+            const name = $('<div class="name" />').appendTo(row);
+            const modifier = $('<div class="modifier" />').appendTo(row);
+
+            const bindTo = (/** @type {NumericStatTracker} */ speed) => {
+                const current = speed.current;
+                name.text(speed.name);
+                modifier.text(current <= 0 ? '--' : `${current} ft.`);
             }
 
             return bindTo;
@@ -580,6 +600,13 @@ class ActionBarControl {
         const int = buildAbility();
         const wis = buildAbility();
         const cha = buildAbility();
+
+        const walk = buildSpeed();
+        const crawl = buildSpeed();
+        const climb = buildSpeed();
+        const swim = buildSpeed();
+        const burrow = buildSpeed();
+        const fly = buildSpeed();
 
         const rebuild = () => {
             const actor = this.#actor;
@@ -593,6 +620,13 @@ class ActionBarControl {
             int(actor.modifiers.int);
             wis(actor.modifiers.wis);
             cha(actor.modifiers.cha);
+
+            walk(actor.movement.walk);
+            crawl(actor.movement.crawl);
+            climb(actor.movement.climb);
+            swim(actor.movement.swim);
+            burrow(actor.movement.burrow);
+            fly(actor.movement.fly);
 
             return container;
         };
