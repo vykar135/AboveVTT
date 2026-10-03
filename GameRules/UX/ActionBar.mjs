@@ -45,10 +45,10 @@ class ActionBarControl {
     #settings;
 
     constructor() {
-        this.#container = $('<div class="avtt-hotbar-container" />');
+        this.#container = $('<div class="avtt-actionbar-container" />');
 
         this.#bar = $('<div class="avtt-hotbar" />').appendTo(this.#container);
-        this.#revive = $('<div class="avtt-hotbar-revive avtt-hint" data-title="Restore Action Bar"><span class="icon" /></div>');
+        this.#revive = $('<div class="avtt-actionbar-revive avtt-hint" data-title="Restore Action Bar"><span class="icon" /></div>');
         this.#revive.appendTo(this.#container);
 
         this.#revive.on('click', this.#onRevive.bind(this));
@@ -68,7 +68,7 @@ class ActionBarControl {
         this.#actorSelect.button.appendTo(this.#bar);
 
         this.#portrait = this.#createActorPortrait(actorSelect);
-        this.#hp = this.#createMenuButton('Health', 'hp', this.#createPlaceholder());
+        this.#hp = this.#createMenuButton('Health', 'hp', this.#setupHealthMenu(), { modal: true });
         this.#abilities = this.#createMenuButton('Abilities', 'abilities', this.#setupAbilitiesMenu(), { modal: true });
         this.#saves = this.#createMenuButton('Saves', 'saves', this.#setupSavesMenu(), { modal: true });
         this.#skills = this.#createMenuButton('Skills', 'skills', this.#setupSkillsMenu(), { modal: true });
@@ -122,8 +122,9 @@ class ActionBarControl {
             return;
         }
 
-        this.#hp.icon.text(actor.hp.remaining);
+        this.#hp.icon.text(actor.hp.total);
 
+        this.#hp.render(actor, this.#hp.button);
         this.#abilities.render(actor, this.#abilities.button);
         this.#saves.render(actor, this.#abilities.button);
         this.#skills.render(actor, this.#abilities.button);
@@ -233,7 +234,7 @@ class ActionBarControl {
      * @returns {ActionBarButton}
      */
     #createMenuButton(name, style, render, options) {
-        const button = $('<div class="avtt-hotbar-button" />');
+        const button = $('<div class="avtt-actionbar-button" />');
         const icon = $(`<span class="icon" />`);
         const title = $(`<span class="title" />`);
         const callback = this.#showDialog.bind(this);
@@ -294,7 +295,7 @@ class ActionBarControl {
      * @returns {ActionBarButton}
      */
     #createActorPortrait(render) {
-        const button = $('<div class="avtt-hotbar-portrait" />');
+        const button = $('<div class="avtt-actionbar-portrait" />');
         const callback = this.#showDialog.bind(this);
 
         let showing = false;
@@ -433,21 +434,21 @@ class ActionBarControl {
     }
 
     /**
-     * Initializes the menu shown when the settings button in the hot bar is clicked.
+     * Initializes the menu shown when the settings button in the action bar is clicked.
      * @returns {ActionMenuRender} */
     #setupSettingsMenu() {
-        const container = $('<div class="avtt-hotbar-settings" />');
+        const container = $('<div class="avtt-actionbar-settings" />');
         $('<div class="avtt-menu-title">Tabletop Settings</div>').appendTo(container);
 
-        const namesOption = $('<div class="avtt-hotbar-setting"><span class="title">Show Action Bar Names</span></div>');
-        const namesToggle = $('<button type="button" role="switch" class="avtt-hotbar-toggle" />').appendTo(namesOption);
+        const namesOption = $('<div class="avtt-actionbar-setting"><span class="title">Show Action Bar Names</span></div>');
+        const namesToggle = $('<button type="button" role="switch" class="avtt-actionbar-toggle" />').appendTo(namesOption);
 
-        const themeOption = $('<div class="avtt-hotbar-setting"><span class="title">Action Bar Theme</span></div>');
+        const themeOption = $('<div class="avtt-actionbar-setting"><span class="title">Action Bar Theme</span></div>');
         const systemTheme = $('<button type="button" role="radio" class="avtt-theme-icon" data-theme="system" />').appendTo(themeOption);
         const darkMode = $('<button type="button" role="radio" class="avtt-theme-icon" data-theme="dark" />').appendTo(themeOption);
         const lightMode = $('<button type="button" role="radio" class="avtt-theme-icon" data-theme="light" />').appendTo(themeOption);
 
-        const collapse = $('<div class="avtt-hotbar-setting"></div>');
+        const collapse = $('<div class="avtt-actionbar-setting"></div>');
         const collapseButton = $('<span class="collapse">Hide Action Bar</span>').appendTo(collapse);
 
         container.append(themeOption).append(namesOption).append(collapse);
@@ -492,10 +493,48 @@ class ActionBarControl {
     }
 
     /**
-     * Initializes the menu shown when the abilities button in the hot bar is clicked.
+     * Initializes the menu shown when the health button in the action bar is clicked.
+     * @returns {ActionMenuRender} */
+    #setupHealthMenu() {
+        const container = $('<div class="avtt-actionbar-health" />');
+        $('<div class="avtt-menu-title">Hit Points</div>').appendTo(container);
+
+        const remaining = $('<div class="hp-amount" />');
+        const maximum = $('<div class="hp-amount" />');
+        const temp = $('<div class="hp-amount" />');
+
+        $('<div class="hit-points" />')
+            .append($('<div class="hp-type">Current</div>'))
+            .append($('<div class="hp-type"></div>'))
+            .append($('<div class="hp-type">Max</div>'))
+            .append($('<div class="hp-type">Temp</div>'))
+            .append(remaining)
+            .append($('<div class="hp-divider">/</div>'))
+            .append(maximum)
+            .append(temp)
+            .appendTo(container);
+
+        const rebuild = () => {
+            const actor = this.#actor;
+            if (actor == null) {
+                return undefined;
+            }
+
+            remaining.text(actor.hp.remaining);
+            maximum.text(actor.hp.maximum);
+            temp.text(actor.hp.temp <= 0 ? '--' : actor.hp.temp);
+
+            return container;
+        };
+
+        return rebuild;
+    }
+
+    /**
+     * Initializes the menu shown when the abilities button in the action bar is clicked.
      * @returns {ActionMenuRender} */
     #setupAbilitiesMenu() {
-        const container = $('<div class="avtt-hotbar-abilities" />');
+        const container = $('<div class="avtt-actionbar-abilities" />');
         $('<div class="avtt-menu-title">Ability Checks</div>').appendTo(container);
 
         const formatter = new Intl.NumberFormat('en-US', { signDisplay: 'always' });
@@ -542,10 +581,10 @@ class ActionBarControl {
     }
 
     /**
-     * Initializes the menu shown when the saving throws button in the hot bar is clicked.
+     * Initializes the menu shown when the saving throws button in the action bar is clicked.
      * @returns {ActionMenuRender} */
     #setupSavesMenu() {
-        const container = $('<div class="avtt-hotbar-saves" />');
+        const container = $('<div class="avtt-actionbar-saves" />');
         $('<div class="avtt-menu-title">Saving Throws</div>').appendTo(container);
 
         const formatter = new Intl.NumberFormat('en-US', { signDisplay: 'always' });
@@ -599,10 +638,10 @@ class ActionBarControl {
     }
 
     /**
-     * Initializes the menu shown when the skill check button in the hot bar is clicked.
+     * Initializes the menu shown when the skill check button in the action bar is clicked.
      * @returns {ActionMenuRender} */
     #setupSkillsMenu() {
-        const container = $('<div class="avtt-hotbar-skills" />');
+        const container = $('<div class="avtt-actionbar-skills" />');
         $('<div class="avtt-menu-title">Skill Checks</div>').appendTo(container);
 
         const options = $('<div class="avtt-skill-checks" />').appendTo(container);
