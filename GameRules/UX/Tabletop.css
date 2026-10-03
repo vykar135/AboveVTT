@@ -1,6 +1,6 @@
 @scope (.avtt-actionbar-container) {
     :scope {
-        --actionbar-z-index: 9999;
+        --actionbar-z-index: 100100;
         --actionbar-background: rgba(0, 0, 0, 0.8); 
         --actionbar-backdrop-filter: blur(12px);
         --actionbar-border: 1px solid rgba(255, 255, 255, 0.25);
