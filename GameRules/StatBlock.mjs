@@ -341,7 +341,10 @@ export default class StatBlock {
      * @returns Whether the stat block requested to be synced.
      */
     update_and_sync() {
-        return this.#syncWithCallback('update_and_sync', (target) => target.update_and_sync());
+        return this.#syncWithCallback('update_and_sync', (target) => {
+            target.place();
+            target.update_and_sync();
+        });
     }
 
     /**
@@ -353,6 +356,8 @@ export default class StatBlock {
         if (this.#pendingChanges === undefined) {
             return false;
         }
+
+        this.#events.dispatch(RecalculateEvent, this);
 
         if (this.#player) {
             this.#pendingChanges = undefined;

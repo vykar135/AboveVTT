@@ -113,6 +113,14 @@ export default class NumericStatTracker {
      * @param {NumericTrackerBase} value - The new value to assign
      */
     setBaseValue(value) {
+        if (typeof value === 'string') {
+            value = parseInt(value);
+        }
+
+        if (typeof value !== 'function' && Number.isNaN(value)) {
+            value = 0;
+        }
+
         this.#base = value;
     }
 
