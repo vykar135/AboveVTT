@@ -1106,7 +1106,7 @@ function token_context_menu_expanded(tokenIds, e, crossScenePortalData) {
 		}
 
 		if (window.statBlocks?.isPlayable(token.stats) === true) {
-			let button = $(`<button style="padding-left: 0;"><span class="material-symbols-outlined">person_play</span><span style="padding-left: 3px;">Assign To Action Bar</span></button>`);
+			let button = $(`<button style="padding-left: 0;"><span class="material-symbols-outlined">person_play</span><span style="padding-left: 3px;">Assign To Action Bar (MMB)</span></button>`);
 			button.on("click", function() {
 				window.tabletop.actionBar.restore();
 				window.statBlocks?.changeActor(token.stats);

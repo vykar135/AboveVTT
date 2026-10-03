@@ -1243,11 +1243,21 @@ function ct_add_token(token,persist=true,disablerolling=false, adv=false, dis=fa
 	}
 
 	if (window.statBlocks?.isPlayable(token.stats) === true) {
+		imageRow.css({ "cursor": "pointer" });
+
 		imageRow.on('click', () => {
 			window.tabletop.actionBar.restore();
 			window.statBlocks.changeActor(token.stats);
 		});
-		imageRow.css({ "cursor": "pointer" });
+
+		imageRow.on('auxclick', (e) => {
+			if (e.button !== 1) {
+				return;
+			}
+
+			window.tabletop.actionBar.restore();
+			window.statBlocks.changeActor(token.stats);
+		});
 	}
 
 	entry.append(imageRow);
