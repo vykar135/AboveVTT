@@ -604,6 +604,29 @@
         }
     }
 
+    div.avtt-actionbar-defense-menu {
+        display: flex;
+        flex-direction: row;
+        margin: 0px 10px 5px 10px;
+    }
+
+    div.avtt-actionbar-defenses {
+        display: flex;
+        flex-direction: column;
+        width: 120px;
+
+        & > div.damage-defense {
+            display: flex;
+            flex-direction: row;
+            justify-content: flex-start;
+            align-items: stretch;
+            padding-bottom: 2px;
+
+            font-size: 1.2em;
+            font-weight: 400;
+        }
+    }
+
     div.avtt-actionbar-abilities {
         display: flex;
         flex-direction: row;

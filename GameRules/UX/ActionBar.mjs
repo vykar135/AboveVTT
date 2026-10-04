@@ -5,6 +5,7 @@ import StatBlock, { BlockAbilityModifier } from '../StatBlock.mjs'
 import { StatBlockCache } from '../StatBlockCache.mjs';
 import { DiceAction } from '../DiceAction.mjs';
 import NumericStatTracker from '../NumericStatTracker.mjs';
+import DefenseTracker from '../DefenseTracker.mjs';
 
 /**
  * @typedef {Object} ActionBarButton
@@ -71,7 +72,7 @@ class ActionBarControl {
 
         this.#portrait = this.#createActorPortrait(actorSelect);
         this.#hp = this.#createMenuButton('Health', 'hp', this.#setupHealthMenu(), { modal: true });
-        this.#defense = this.#createMenuButton('Defense', 'defense', this.#createPlaceholder(), { modal: true });
+        this.#defense = this.#createMenuButton('Defense', 'defense', this.#setupDefenseMenu(), { modal: true });
         this.#abilities = this.#createMenuButton('Abilities', 'abilities', this.#setupAbilitiesMenu(), { modal: true });
         this.#saves = this.#createMenuButton('Saves', 'saves', this.#setupSavesMenu(), { modal: true });
         this.#skills = this.#createMenuButton('Skills', 'skills', this.#setupSkillsMenu(), { modal: true });
@@ -132,6 +133,7 @@ class ActionBarControl {
         this.#defense.icon.text(actor.ac.current);
 
         this.#hp.render(actor, this.#hp.button);
+        this.#defense.render(actor, this.#defense.button);
         this.#abilities.render(actor, this.#abilities.button);
         this.#saves.render(actor, this.#abilities.button);
         this.#skills.render(actor, this.#abilities.button);
@@ -635,6 +637,94 @@ class ActionBarControl {
             remaining.val(actor.hp.remaining);
             maximum.text(actor.hp.maximum);
             temp.val(actor.hp.temp <= 0 ? '--' : actor.hp.temp);
+
+            return container;
+        };
+
+        return rebuild;
+    }
+
+    /**
+     * Initializes the menu shown when the defense button in the action bar is clicked.
+     * @returns {ActionMenuRender} */
+    #setupDefenseMenu() {
+        const container = $('<div class="avtt-actionbar-defense-menu" />');
+
+        const immune = $('<div class="avtt-actionbar-defenses" />').appendTo(container);
+        $('<div class="avtt-menu-title">Immune</div>').appendTo(immune);
+
+        const resist = $('<div class="avtt-actionbar-defenses" />').appendTo(container);
+        $('<div class="avtt-menu-title">Resistant</div>').appendTo(resist);
+
+        const vulnerable = $('<div class="avtt-actionbar-defenses" />').appendTo(container);
+        $('<div class="avtt-menu-title">Vulnerable</div>').appendTo(vulnerable);
+
+        const buildDefense = () => {
+            const row = $('<div class="damage-defense" />');
+
+            /** @type {JQuery<HTMLElement> | undefined} */
+            let parent = undefined;
+
+            const bindTo = (/** @type {DefenseTracker} */ effective) => {
+                row.text(effective.name);
+
+                let moveTo = undefined;
+                if (effective.immune) {
+                    moveTo = immune;
+                } else if (effective.resistant) {
+                    moveTo = !effective.vulnerable ? resist : undefined;
+                } else if (effective.vulnerable) {
+                    moveTo = vulnerable;
+                }
+
+                if (parent === moveTo) {
+                    return;
+                }
+
+                if (parent !== undefined) {
+                    row.detach();
+                }
+
+                parent = moveTo;
+                row.appendTo(moveTo);
+            }
+
+            return bindTo;
+        };
+
+        const acid = buildDefense();
+        const bludgeoning = buildDefense();
+        const cold = buildDefense();
+        const fire = buildDefense();
+        const force = buildDefense();
+        const lightning = buildDefense();
+        const necrotic = buildDefense();
+        const poison = buildDefense();
+        const piercing = buildDefense();
+        const psychic = buildDefense();
+        const radiant = buildDefense();
+        const slashing = buildDefense();
+        const thunder = buildDefense();
+
+        const rebuild = () => {
+            const actor = this.#actor;
+            if (actor == null) {
+                return undefined;
+            }
+
+            acid(actor.defenses.acid);
+            bludgeoning(actor.defenses.bludgeoning);
+            cold(actor.defenses.cold);
+            fire(actor.defenses.fire);
+            force(actor.defenses.force);
+            lightning(actor.defenses.lightning);
+            necrotic(actor.defenses.necrotic);
+            poison(actor.defenses.poison);
+            piercing(actor.defenses.piercing);
+            psychic(actor.defenses.psychic);
+            radiant(actor.defenses.radiant);
+            slashing(actor.defenses.slashing);
+            thunder(actor.defenses.thunder);
 
             return container;
         };
