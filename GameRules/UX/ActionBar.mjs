@@ -576,7 +576,7 @@ class ActionBarControl {
             temp.val(target.temp <= 0 ? '--' : target.temp);
         };
 
-        const keyPressed = (/** @type {JQuery.KeyDownEvent} */ e) => {
+        const keyPressed = (/** @type {JQuery.KeyDownEvent} */ e, /** @type {boolean} */ temp) => {
             if (e.key === 'Escape') {
                 e.preventDefault();
                 e.stopPropagation();
@@ -595,20 +595,24 @@ class ActionBarControl {
                 return;
             }
 
-            if (e.key !== '+' && e.key !== '-' && !(e.key >= '0' && e.key <= '9')) {
+            if (!temp && e.target.selectionStart === 0 && (e.key === '+' || e.key === '-')) {
+                return;
+            }
+
+            if (e.key < '0' || e.key > '9') {
                 e.preventDefault();
                 return;
             }
         }
 
         remaining.on('blur', commitReminaing);
-        remaining.on('keydown', keyPressed);
+        remaining.on('keydown', (e) => keyPressed(e, false));
         remaining.on('focus', () => {
             remaining.trigger('select');
         });
 
         temp.on('blur', commitTemp);
-        temp.on('keydown', keyPressed);
+        temp.on('keydown', (e) => keyPressed(e, true));
         temp.on('focus', () => {
             if (temp.val() === '--') {
                 temp.val(0);
