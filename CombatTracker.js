@@ -1243,6 +1243,25 @@ function ct_add_token(token,persist=true,disablerolling=false, adv=false, dis=fa
 	if(window.DM && !token.options.combatGroupToken){
 		imageRow.append(ac)
 	}
+
+	if (window.statBlocks?.isPlayable(token.stats) === true) {
+		imageRow.css({ "cursor": "pointer" });
+
+		imageRow.on('click', () => {
+			window.tabletop.actionBar.restore();
+			window.statBlocks.changeActor(token.stats);
+		});
+
+		imageRow.on('auxclick', (e) => {
+			if (e.button !== 1) {
+				return;
+			}
+
+			window.tabletop.actionBar.restore();
+			window.statBlocks.changeActor(token.stats);
+		});
+	}
+
 	entry.append(imageRow);
 	let init=$("<input class='init' maxlength=5'>");
 	init.css('-webkit-appearance','none');

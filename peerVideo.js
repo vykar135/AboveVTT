@@ -79,7 +79,7 @@ function init_peerVideo_box() {
                 });
             }
             
-                
+            window.tabletop?.actionBar?.setVideoOpen(false);
             window.MB.sendMessage("custom/myVTT/videoPeerDisconnect", {id: window.videoPeer.id})
             window.videoPeer.destroy();
             $("#peervideo-entry-modal").remove();
@@ -87,6 +87,8 @@ function init_peerVideo_box() {
         }
     );
     setVideoHeightCssVar();
+
+    window.tabletop?.actionBar?.setVideoOpen(true);
 }
 
 function create_peerVideo_button() {

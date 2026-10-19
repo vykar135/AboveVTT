@@ -82,6 +82,8 @@
         "Settings.js",
         "SidebarPanel.js",
         "StatHandler.js",
+        "GameRules/StatBlockSources.mjs",
+        "GameRules/UX/ActionBar.mjs",
         "Token.js",
         "constants/names.js",
         "TokenMenu.js",
@@ -129,7 +131,8 @@
         "color-picker.min.css",
         "spectrum-2.0.8.min.css",
         "magnific-popup.css",
-        "DiceContextMenu/DiceContextMenu.css"
+        "DiceContextMenu/DiceContextMenu.css",
+        "GameRules/UX/Tabletop.css"
     ];
     const simpleAvttStyles = [
         "DiceContextMenu/DiceContextMenu.css", "jquery.contextMenu.css"
