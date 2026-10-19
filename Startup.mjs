@@ -87,19 +87,23 @@ $(function() {
         startup_step("Fetching Party Inventory/Items/Spells")
         let inventoryTimeout;
         try{
-          await Promise.race([
-            Promise.all([
-              DDBApi.debounceGetPartyInventory(),
-              DDBApi.fetchSpellsJsonWithToken(),
-              DDBApi.fetchItemsJsonWithToken()
-            ]),
-            new Promise((resolve) => {
-              inventoryTimeout = setTimeout(() => {
-                showError(new Error("Timed out fetching party inventory/items/spells after 30 seconds"));
-                resolve();
-              }, 60000);
-            })
-          ]);
+          if (new URLSearchParams(window.location.search).get('simple_load') !== 'true') {
+            await Promise.race([
+              Promise.all([
+                DDBApi.debounceGetPartyInventory(),
+                DDBApi.fetchSpellsJsonWithToken(),
+                DDBApi.fetchItemsJsonWithToken()
+              ]),
+              new Promise((resolve) => {
+                inventoryTimeout = setTimeout(() => {
+                  showError(new Error("Timed out fetching party inventory/items/spells after 30 seconds"));
+                  resolve();
+                }, 60000);
+              })
+            ]);
+          } else {
+            console.log('Fast load requested: Preventing party inventory/spells/items');
+          }
         } catch (error) {
           console.warn(`Failed to fetch party inventory/items/spells`, error)
         } finally {
