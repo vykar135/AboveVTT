@@ -3941,6 +3941,7 @@ function show_sidebar(dispatchResize = true) {
 	
 	$('#combat_carousel_container.tracker-list').toggleClass('sidebarClosed', false)
 	$('canvas.dice-container, canvas.dice-rolling-panel__container, .roll-mod-container, canvas.streamer-canvas, #character-tools-target>canvas, .boss-hp-bar').css('--sidebar-width', get_sidebar_width() + 'px');
+	$('.avtt-actionbar-container').css('--sidebar-width', '');
 
 	if(dispatchResize)
 		window.dispatchEvent(new Event('resize'));
@@ -4432,6 +4433,7 @@ function hide_sidebar(triggerResize = true) {
 
 	$('#combat_carousel_container.tracker-list').toggleClass('sidebarClosed', true)
 	$('canvas.dice-container, canvas.dice-rolling-panel__container, .roll-mod-container, canvas.streamer-canvas, #character-tools-target>canvas, .boss-hp-bar').css('--sidebar-width', '0px');
+	$('.avtt-actionbar-container').css('--sidebar-width', '0px');
 
 	if(triggerResize)
 		window.dispatchEvent(new Event('resize'));
