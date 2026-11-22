@@ -488,6 +488,10 @@
         }
     }
 
+    select.avtt-actionbar-select {
+        font-size: calc(1rem * var(--action-bar-scale));
+    }
+
     button.avtt-actionbar-toggle {
         position: relative;
         appearance: none;

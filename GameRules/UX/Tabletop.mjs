@@ -19,6 +19,7 @@
  * @typedef ActionBarOptions
  * @property {boolean} enabled - Whether the action bar is currently enabled.
  * @property {boolean} names - Whether names are shown in the action bar.
+ * @property {number} scale - The scale of the interface.
  * 
  * @typedef EnvironmentChangeEvent
  * @property {ThemeOptions} theme
@@ -55,7 +56,8 @@ export class TabletopEnvironment {
         this.#theme = stored.theme ?? 'system';
         this.#actionBar = Object.freeze(stored.actionBar ?? {
             enabled: true,
-            names: true
+            names: true,
+            scale: 1
         });
 
         this.#themeObserver = window.matchMedia('(prefers-color-scheme: light)');
@@ -120,7 +122,8 @@ export class TabletopEnvironment {
         const current = this.#actionBar;
         this.#actionBar = Object.freeze({
             enabled: options.enabled ?? current.enabled ?? true,
-            names: options.names ?? current.names ?? true
+            names: options.names ?? current.names ?? true,
+            scale: options.scale ?? current.scale ?? 1
         });
 
         this.#commit();

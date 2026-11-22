@@ -50,6 +50,9 @@ class ActionBarControl {
     constructor() {
         this.#container = $('<div class="avtt-actionbar-container" />');
 
+        let scale = Tabletop.actionBar.scale ?? 1;
+        this.#container.css('--action-bar-scale', isNaN(scale) ? 1 : scale.toString());
+
         this.#bar = $('<div class="avtt-hotbar" />').appendTo(this.#container);
         this.#revive = $('<div class="avtt-actionbar-revive avtt-hint" data-title="Restore Action Bar"><span class="icon" /></div>');
         this.#revive.appendTo(this.#container);
@@ -101,6 +104,9 @@ class ActionBarControl {
     #changeEnvironment(event) {
         const theme = event.theme ?? 'dark';
         this.#container.toggleClass('use-light-mode', (theme === 'light'));
+
+        let scale = event.actionBar?.scale ?? 1;
+        this.#container.css('--action-bar-scale', isNaN(scale) ? 1 : scale.toString());
 
         this.#showingNames = ((event.actionBar?.names ?? false) === true);
         this.#bar.toggleClass('names', this.#showingNames);
@@ -479,16 +485,27 @@ class ActionBarControl {
         const darkMode = $('<button type="button" role="radio" class="avtt-theme-icon" data-theme="dark" />').appendTo(themeOption);
         const lightMode = $('<button type="button" role="radio" class="avtt-theme-icon" data-theme="light" />').appendTo(themeOption);
 
+        const scaleOption = $('<div class="avtt-actionbar-setting"><span class="title">UI Scale</span></div>');
+        const scaleToggle = $('<select class="avtt-actionbar-select" />').appendTo(scaleOption);
+
+        // Floating point math is kind of annoying
+        for (const entry of [0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 2.0]) {
+            $(`<option value="${entry}">${Math.round(entry * 100)}%</option>`).appendTo(scaleToggle);
+        }
+
         const collapse = $('<div class="avtt-actionbar-setting"></div>');
         const collapseButton = $('<span class="collapse">Hide Action Bar</span>').appendTo(collapse);
 
-        container.append(themeOption).append(namesOption).append(collapse);
+        container.append(themeOption).append(scaleOption).append(namesOption).append(collapse);
 
         const rebuild = () => {
             namesToggle.toggleClass('checked', Tabletop.actionBar.names);
             systemTheme.toggleClass('checked', Tabletop.theme === 'system');
             darkMode.toggleClass('checked', Tabletop.theme ===  'dark');
             lightMode.toggleClass('checked', Tabletop.theme === 'light');
+
+            const scale = (Tabletop.actionBar.scale ?? 1);
+            scaleToggle.val((isNaN(scale) ? 1 : scale).toString());
         };
 
         namesToggle.on('click', () => {
@@ -497,6 +514,12 @@ class ActionBarControl {
 
             Tabletop.changeActionBar(updateTo);
             namesToggle.toggleClass('checked', updateTo.names);
+        });
+
+        scaleToggle.on('change', () => {
+            const updateTo = { ...Tabletop.actionBar };
+            updateTo.scale = parseFloat(scaleToggle.val());
+            Tabletop.changeActionBar(updateTo);
         });
 
         collapseButton.on('click', () => {
