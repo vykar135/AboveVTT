@@ -158,7 +158,10 @@ export default class ConditionTracker {
         this.#sources.sort((a, b) => (a.priority ?? 0) - (b.priority ?? 0));
 
         for (const applied of this.#sources) {
-            active = true;
+            if (applied.immunity == null || applied.intensity != null) {
+                active = true;
+            }
+            
             intensity += (applied.intensity ?? 1);
             immunity = applied.immunity ?? immunity;
         }

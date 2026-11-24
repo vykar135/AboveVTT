@@ -5,6 +5,8 @@
  *  'lightning' | 'necrotic' | 'poison' | 'psychic' | 'radiant' | 'thunder'} HitPointEffect
  * 
  * @typedef {number | FixedValueModifier | undefined} NumericDiceSetting
+ * 
+ * @typedef {'standard' | 'double' | 'perfect' | undefined} CriticalCalculation
 */
 
 /** Defines the information from a creature stat block that is needed for a dice action to be executed. */
@@ -44,7 +46,7 @@ export class DiceActionContext {
     }
 }
 
-/** The base features for a dice action */
+/** The configuration for a dice action */
 class DiceActionFeatures {
     /** @type {DiceRollConfig[]} */
     #die;
@@ -58,12 +60,15 @@ class DiceActionFeatures {
 
         this.#die = [];
         this.#rollModifiers = [];
+        Object.seal(this);
     }
 
     /** The baseline set of dice rolls to include; such as weapon damage die. */
     get die() { return this.#die; }
     /** The set of dice roll modifiers that are specific to this action. */
     get rollModifiers() { return this.#rollModifiers; }
+    /** @type {AbilityModifierType | undefined} The ability modifier to apply to the dice roll. */
+    ability;
     /** @type {NumericDiceSetting} The multiplier for the proficiency bonus to apply to the roll and rounded down. */
     proficiency;
     /** @type {NumericDiceSetting} The fixed bonus to apply to the base roll */
@@ -78,12 +83,79 @@ class DiceActionFeatures {
     disadvantageSize;
     /** @type {boolean | undefined} Whether the dice action is permitted to be execute critical rolls. */
     canCritical;
-    /** @type {'standard' | 'double' | 'perfect' | undefined} The method used to calculate the effect of a critical dice action. */
+    /** @type {CriticalCalculation} The method used to calculate the effect of a critical dice action. */
     criticalStyle;
     /** @type {NumericDiceSetting} For a d20 test, if the roll is at or over this amount, it is considered a critical success. */
     criticalThreshold;
     /** @type {NumericDiceSetting} For a d20 test, if the roll is at or under this amount, it is considered a critical failure. */
     fumbleThreshold;
+}
+
+/** Defines the outcome of a dice action. */
+class DiceActionResult {
+    /** @type {DiceRollResult[]} */
+    #rolls;
+    /** @type {DiceTagSet} */
+    #tags;
+
+    constructor() {
+        this.#rolls = [];
+        this.#tags = new DiceTagSet();
+        Object.seal(this);
+    }
+
+    /** The collection of tags associated with the dice action.  */
+    get tags() { return this.#tags; }
+    /** The collection of dice roll results for the dice action.  */
+    get rolls() { return this.#rolls; }
+    /** @type {boolean} Whether the dice roll was for a d20 test. */
+    d20test = false;
+    /** @type {number | undefined} The result of the dice roll without modifiers from a d20 test. */
+    d20result;
+    /** @type {boolean} Defines whether advantage (true) or disadvantage (false) is active for d20 tests. */
+    advantage = false;
+    /** @type {boolean} Whether the roll was a critical success. */
+    critical = false;
+    /** @type {boolean} Whether the roll was a critical fumble. */
+    fumble = false;
+    /** @type {CriticalCalculation} The method used to calculate the effect of a critical dice action. */
+    criticalStyle = 'standard';
+}
+
+/** Defines the outcome of an individual dice roll. */
+class DiceRollResult {
+    /** @type {DiceTagSet} */
+    #tags;
+
+    constructor() {
+        this.#tags = new DiceTagSet();
+        Object.seal(this);
+    }
+
+    /** The collection of tags associated with the dice roll.  */
+    get tags() { return this.#tags; }
+    /** @type {number} The final amount for the dice roll. */
+    total = 0;
+    /** @type {number | undefined} The number of dice that were rolled. */
+    count;
+    /** @type {number | undefined} The number of sides on the die that was rolled. */
+    sides;
+    /** @type {number | undefined} The fixed amount that was included in the roll. */
+    fixed;
+    /** @type {HitPointEffect | undefined} How the result of damage rolls are applied to the target's hit points. */
+    hp;
+    /** @type {boolean | undefined} Whether the effect of the dice roll is against the target's hit point pool */
+    hitsTarget;
+    /** @type {boolean | undefined} Whether the effect of the dice roll is against the source's hit point pool */
+    hitsSelf;
+    /** @type {boolean} Whether the result of the roll is considered a penalty against the final result. */
+    penalty = false;
+    /** @type {boolean} Whether the roll was ignored. */
+    ignored = false;
+    /** @type {boolean} Whether the roll was replayed and added to the final result. */
+    exploded = false;
+    /** @type {boolean} Whether the roll was replayed and replaced the previous result. */
+    rerolled = false;
 }
 
 export class DiceAction extends DiceActionFeatures {
@@ -99,8 +171,6 @@ export class DiceAction extends DiceActionFeatures {
     #properties;
     /** @type {boolean} */
     #d20test;
-    /** @type {AbilityModifierType | undefined} */
-    #ability;
     /** @type {boolean} */
     #abilityLocked;
     /** @type {DiceTagSet} */
@@ -123,12 +193,13 @@ export class DiceAction extends DiceActionFeatures {
         this.#uri = uri;
         this.#name = name;
         this.#d20test = d20test;
-        this.#ability = ability;
-        this.#abilityLocked = (abilityLocked === true);
+        this.#abilityLocked = (abilityLocked !== false);
         this.#tags = new DiceTagSet();
         this.#properties = new DiceTagSet();
         this.#resultTags = new DiceTagSet();
         this.#actionModifiers = [];
+
+        this.ability = ability;
 
         Object.seal(this);
     }
@@ -151,8 +222,6 @@ export class DiceAction extends DiceActionFeatures {
     get actionModifiers() { return this.#actionModifiers; }
     /** Whether the ability modifier can be changed for the roll; defaults to true. */
     get abilityLocked() { return this.#abilityLocked; }
-    /** The ability modifier to apply to the dice roll. */
-    get ability() { return this.#ability; }
 
     tagFreeze() {
         this.#tags.freeze();
@@ -197,8 +266,6 @@ export class DiceActionModifier extends DiceActionFeatures {
     level;
     /** @type {number | undefined} The minimum spell slot required for this modifier to be active. */
     spellSlot;
-    /** @type {AbilityModifierType | undefined} The ability modifier to apply to the dice roll. */
-    ability;
 }
 
 /** The base feature for a dice roll */
@@ -278,6 +345,17 @@ class DiceRoll extends DiceRollFeatures {
 
     /** Whether this dice roll is considered a d20 test */
     get d20test() { return this.#d20test; }
+
+    /**
+     * Performs the dice roll.
+     * @param {DiceActionResult} tohit - The results from a To Hit roll that preceded this roll.
+     * @returns {DiceRollResult}
+     */
+    roll(tohit) {
+        const result = new DiceRollResult();
+
+        return result;
+    }
 
     /**
      * Imports the provided dice roll features.

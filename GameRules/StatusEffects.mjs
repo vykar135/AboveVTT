@@ -1,4 +1,4 @@
-/** @import { TokenStatusEffectContainer, Concentration, MaintainedStatusEffect, ActiveStatusEffect, PassiveStatusEffect, StatusEffect } from './types/StatusEffects.types.js' */
+/** @import { TokenStatusEffectContainer, Concentration, MaintainedStatusEffect, ActiveStatusEffect, PassiveStatusEffect, RecurringDamageEffect, StatusEffect } from './types/StatusEffects.types.js' */
 
 import StatBlock from './StatBlock.mjs';
 import { StatBlockCache } from './StatBlockCache.mjs';
@@ -56,14 +56,15 @@ export default class StatusEffects {
         
         this.#affectedTokens = {};
 
-        this.#stats.recalculate();
+        this.#stats.recalculate(true);
+        callback(this.#stats);
         if (callback(this.#stats) === true) {
             const target = this.id;
             delete affected[target];
         }
 
         for (const target of Object.values(affected)) {
-            target.recalculate();
+            target.recalculate(true);
             callback(target);
         }
     }
@@ -288,6 +289,59 @@ export default class StatusEffects {
         return removed;
     }
 
+    /**
+     * Retrieves or initialized the collection of recurring damage effects for the token.
+     * @returns {RecurringDamageEffect[]}
+     */
+    getRecurringDamage() {
+        const container = this.#getContainer();
+        if (container.recurringDamage == null) {
+            container.recurringDamage = [];
+        }
+
+        return container.recurringDamage;
+    }
+
+    /**
+     * Appends a recurring damage effect to the to the token.
+     * @param {RecurringDamageEffect} effect - The status effect to append to the token.
+     * @returns {string} The tracking identifier of the effect.
+     */
+    applyRecurringDamage(effect) {
+        if (effect.tracking == null) {
+            effect.tracking = uuid();
+        }
+
+        const current = this.getRecurringDamage();
+        const cloned = structuredClone(effect);
+        current.push(cloned);
+        this.#stats.hasPendingChanges(true);
+
+        return effect.tracking;
+    }
+
+    /**
+     * Clears a recurring damage status effect from the token by its tracking identifier.
+     * @param {string} tracking - The tracking identifier of the effect to drop.
+     * @returns {boolean} - Whether an effect was removed.
+     */
+    dropRecurringDamage(tracking) {
+        const current = this.getRecurringDamage();
+        if (current.length === 0) {
+            return false;
+        }
+
+        const rebuild = current.filter(item => item.tracking !== tracking);
+
+        const container = this.#getContainer();
+        container.recurringDamage = rebuild;
+
+        const removed = (rebuild.length !== current.length);
+        this.#stats.hasPendingChanges(removed);
+
+        return removed;
+    }
+
     /** Drops all ongoing concentration effects */
     dropConcentration() {
         console.log(`Dropping concentration for ${this.#stats.token?.options?.itemType} ${this.id} => ${this.#stats.name}`);
@@ -379,8 +433,9 @@ export default class StatusEffects {
 
         const available = StatBlockCache.list();
         for (const target of available) {
-            const localRemove = target.statusEffects.dropActiveEffect(tracking);
-            if (localRemove) {
+            const localActive = target.statusEffects.dropActiveEffect(tracking);
+            const localDamage = target.statusEffects.dropRecurringDamage(tracking);
+            if (localActive || localDamage) {
                 this.#affectedTokens[target.id] = target;
                 removed = true;
             }

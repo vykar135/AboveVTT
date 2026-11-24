@@ -8,10 +8,15 @@
  * @property {PassiveStatusEffect[]} passive - Collection of status effects that the token is under the effects of at all times
  * @property {ActiveStatusEffect[]} active - Collection of status effects that the token is temporarily under the effects of
  * @property {MaintainedStatusEffect[]} maintaining - Collection of status effects that the token is maintaining on itself and others
+ * @property {RecurringDamageEffect[]} recurringDamage - Collection of recurring damage or healing effects.
  * 
  * @typedef Concentration
  * @property {boolean} [allowed] - Whether the token is permitted to concentrate
  * @property {number} [limit] - The maximum number of items that the token is allowed to concentrate on
+ * 
+ * @typedef RecurringDamageEffect
+ * @property {string} tracking - The tracking identifier for the status effect across tokens
+ * @property {number} remaining - The remaining number of times the effect can trigger.
  * 
  * @typedef StatusEffect
  * @property {string} tracking - The tracking identifier for the status effect across tokens

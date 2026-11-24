@@ -617,11 +617,14 @@ export default class StatBlock {
             this.reportFailure('rebuild', `Failed to rebuild character sheet`, error);
         }
 
-        this.recalculate();
+        this.recalculate(false);
     }
 
-    /** Recalculates the values for the properties within the stat block after changes have been applied. */
-    recalculate() {
+    /**
+     * Recalculates the values for the properties within the stat block after changes have been applied.
+     * @param {boolean} preventSync - Whether to prevent automatically syncing any changes.
+     */
+    recalculate(preventSync) {
         if (this.#needsRebuild) {
             return;
         }
@@ -647,7 +650,7 @@ export default class StatBlock {
                 wellKnown.recalculate();
             }
 
-            this.#hitPoints.checkMaximum();
+            this.#hitPoints.checkMaximum(preventSync);
 
             delete this.#warnings['recalculate'];
         } catch (error) {
@@ -655,8 +658,10 @@ export default class StatBlock {
             this.reportFailure('recalculate', `Failed to recalculate status efforts`, error);
         }
 
-        this.sync();
-
+        if (preventSync !== true) {
+            this.sync();
+        }
+        
         this.#events.dispatch(RecalculateEvent, this);
     }
 
